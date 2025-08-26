@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Bootstrap (???? ????? ?? BOOTSTRAP=.. ???? ?????)
+# Bootstrap (Kafka server address)
 BOOTSTRAP="${BOOTSTRAP:-localhost:9092}"
 
-# Retention (????? ???? 7 ????)
+# Retention (default retention 7 days)
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 RETENTION_MS=$((RETENTION_DAYS*24*60*60*1000))
 
-# ??????? ?? ????? 7 ????
+# Creating topics with a retention of 7 days
 TOPICS=(dev.robot.alerts dev.robot.commands dev.robot.status dev.robot.telemetry.raw)
 
 for T in "${TOPICS[@]}"; do
@@ -19,7 +19,7 @@ for T in "${TOPICS[@]}"; do
     --config "retention.ms=${RETENTION_MS}"
 done
 
-# ????? state: compact+delete + 7 ????
+# Creating state topic with compact+delete policy and 7 days retention
 STATE_TOPIC=dev.robot.state
 /opt/bitnami/kafka/bin/kafka-topics.sh \
   --bootstrap-server "$BOOTSTRAP" \

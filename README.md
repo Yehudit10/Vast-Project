@@ -29,3 +29,13 @@ kubectl run kcat-consumer --restart=Never --rm -i --image=edenhill/kcat:1.7.1 --
 - Deployed with a **single Kafka broker** (no replication).
 - **Auto topic creation** is disabled via Helm values.
 - Topics are created explicitly with **7-day retention** using `create-topics.sh`.
+
+#### Getting Started
+
+To reproduce locally:
+
+- Install Kafka with the provided `values-kafka.yaml`.
+- Run the `create-topics.sh` script (creates topics with 7-day retention).
+- Verify setup with the kcat smoke test (produce + consume).
+
+See commands above for exact usage.
