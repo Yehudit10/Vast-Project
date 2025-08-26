@@ -55,7 +55,9 @@ def test_reversed_comparison_coerces_correctly():
 
 
 
-
+def test_string_rhs_is_not_ellipsis():
+    plan = Query().where("ts < 'kl'").to_plan()
+    assert plan["ops"][0]["predicate"]["rhs"] == {"literal": "kl"}
 
 # ---------- Parsing string predicates ----------
 
@@ -74,6 +76,27 @@ def test_reversed_comparison_coerces_correctly():
         ("ts > -5",         {"op": ">",  "lhs": {"field": "ts"}, "rhs": {"literal": -5}}),
         ("ts >= -3.5",      {"op": ">=", "lhs": {"field": "ts"}, "rhs": {"literal": -3.5}}),
         ("ts<'2024-01-01T00:00:00Z'", {"op": "<", "lhs": {"field": "ts"}, "rhs": {"literal": "2024-01-01T00:00:00Z"}}),
+        ("flag == True",    {"op": "==", "lhs": {"field": "flag"}, "rhs": {"literal": True}}),
+        ("flag == False",   {"op": "==", "lhs": {"field": "flag"}, "rhs": {"literal": False}}),
+        ("x == null",       {"op": "==", "lhs": {"field": "x"}, "rhs": {"literal": None}}),
+        ("x == None",       {"op": "==", "lhs": {"field": "x"}, "rhs": {"literal": None}}),
+        ("val == .5",       {"op": "==", "lhs": {"field": "val"}, "rhs": {"literal": 0.5}}),
+        ("val == 5.",       {"op": "==", "lhs": {"field": "val"}, "rhs": {"literal": 5.0}}),
+        ("val == 1e3",      {"op": "==", "lhs": {"field": "val"}, "rhs": {"literal": 1000.0}}),
+        ("val == -2.5E-4",  {"op": "==", "lhs": {"field": "val"}, "rhs": {"literal": -0.00025}}),
+
+        # No-space variant (lexer must still parse it)
+        ("ts>100",          {"op": ">", "lhs": {"field": "ts"}, "rhs": {"literal": 100}}),
+
+        # Field on the right side
+        ("5 < ts",          {"op": "<", "lhs": {"literal": 5}, "rhs": {"field": "ts"}}),
+
+        # Dotted identifier on RHS (treated as field)
+        ("lhs == t.col",    {"op": "==", "lhs": {"field": "lhs"}, "rhs": {"field": "t.col"}}),
+
+        # Escaped quotes inside strings
+        (r"name == 'a \'quote\''", {"op": "==", "lhs": {"field": "name"}, "rhs": {"literal": "a 'quote'"}}),
+        (r'name == "a \"quote\""', {"op": "==", "lhs": {"field": "name"}, "rhs": {"literal": 'a "quote"'}}),
     ],
 )
 def test_parse_predicate_happy(expr, expect):
