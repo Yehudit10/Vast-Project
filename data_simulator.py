@@ -1,7 +1,11 @@
 from collections import deque
 import argparse
+import json
+import time
 from pathlib import Path
-from pandas import pd
+import pandas as pd
+from typing import Any, Iterator, Dict
+
 
 class DummyMQTTClient:
     MQTT_ERR_SUCCESS = 0
@@ -86,12 +90,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--duration", type=positive_float, required=True,
                    help="Total run time in seconds (must be > 0)")
     parser.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
-                   help="Where to publish messages: mqtt, kafka of both (default: both)")
+                   help="Where to publish messages: mqtt, kafka or both (default: both)")
     parser.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
     parser.add_argument("--mqtt-host", default="localhost", help="MQTT broker hostname (default: localhost)")
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
     parser.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic to publish to (default: telemetry)")
-    parser.add_argument("--kafka-brokers", default="localhost:9092",
+    parser.add_argument("--kafka-bootstrap", default="localhost:9092",
                    help="Kafka bootstrap servers (default: localhost:9092)")
     parser.add_argument("--kafka-topic", default="telemetry",
                    help="Kafka topic to publish to (default: telemetry)")
@@ -99,25 +103,71 @@ def build_parser() -> argparse.ArgumentParser:
 
 def load_data(file_path: Path) -> pd.DataFrame:
     """
-    Load CSV or Paquet file. Fail fast on anything else.
+    Load CSV or Parquet file. Fail fast on anything else.
     """
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
     
     name = file_path.name.lower()
     if name.endswith((".parquet", ".parq", ".pq")):
-        return pd.read_parquet(file_path)
+        try:
+            return pd.read_parquet(file_path)
+        except Exception as e:
+            raise RuntimeError("Failed to read parquet. Install 'pyarrow' or 'fastparquet'.") from e
     if name.endswith(".csv"):
         return pd.read_csv(file_path)
     
     raise ValueError(f"Unsupported file type: {file_path.name} (expected .csv or .parquet)")
 
+def iterate_records(df: pd.DataFrame) -> Iterator[Dict[str, Any]]:
+    cols = list(df.columns)
+    for row in df.itertuples(index=False, name=None):
+        yield dict(zip(cols, row))
 
 def main():
     parser = build_parser()
     args = parser.parse_args()
-    print(f"CLI OK: qps={args.qps}, duration={args.duration}, out={args.out}")
+    
+    df = load_data(Path(args.file))
+    print(f"[info] Loaded {len(df)} records from {args.file}")
+    
+    mqtt = DummyMQTTClient(client_id="sim")
+    mqtt.connect(args.mqtt_host, args.mqtt_port)
+    kafka_producer = DummyKafkaProducer()
+    
+    interval = 1.0 / args.qps
+    start = time.perf_counter()
+    end_time = time.perf_counter() + args.duration
+    sent = 0
 
-
+    for record in iterate_records(df):
+        now = time.perf_counter()
+        if now >= end_time:
+            break
+        
+        payload_str = json.dumps(record, separators=(",", ":"))
+        if args.out in ("mqtt", "both"):
+            mqtt.publish(args.mqtt_topic, payload_str, qos = 1)
+        if args.out in ("kafka", "both"):
+            kafka_producer.produce(args.kafka_topic,
+                                   key=str(record.get("device_id") or ""),
+                                   value=payload_str.encode())
+            kafka_producer.poll(0)
+        sent += 1
+        
+        elapsed = now - start
+        target_elapsed = sent * interval
+        sleep_for = target_elapsed - elapsed
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+        
+    kafka_producer.flush()
+    mqtt.disconnect()
+    
+    runtime = time.perf_counter() - start
+    qps = sent / runtime if runtime > 0 else 0.0
+    print(f"[summary] sent={sent} runtime={runtime:.2f}s qps≈{qps:.1f}")
+            
+    
 if __name__ == "__main__":
     main()
