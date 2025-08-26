@@ -1,4 +1,7 @@
 from collections import deque
+import argparse
+from pathlib import Path
+from pandas import pd
 
 class DummyMQTTClient:
     MQTT_ERR_SUCCESS = 0
@@ -67,8 +70,6 @@ class DummyKafkaProducer:
         self._closed = True
 
 
-import argparse
-
 def positive_float(x: str) -> float:
     try:
         value = float(x)
@@ -95,6 +96,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--kafka-topic", default="telemetry",
                    help="Kafka topic to publish to (default: telemetry)")
     return parser
+
+def load_data(file_path: Path) -> pd.DataFrame:
+    """
+    Load CSV or Paquet file. Fail fast on anything else.
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    name = file_path.name.lower()
+    if name.endswith((".parquet", ".parq", ".pq")):
+        return pd.read_parquet(file_path)
+    if name.endswith(".csv"):
+        return pd.read_csv(file_path)
+    
+    raise ValueError(f"Unsupported file type: {file_path.name} (expected .csv or .parquet)")
 
 
 def main():
