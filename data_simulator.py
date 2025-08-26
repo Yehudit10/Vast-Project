@@ -1,53 +1,67 @@
-from typing import Optional
+from collections import deque
 
 class DummyMQTTClient:
-    """A lightweight stand‑in for a real MQTT client.
+    MQTT_ERR_SUCCESS = 0
+    def __init__(self, client_id: str):
+        self.client_id = client_id
+        self.connected = False
+        self._mid = 0
+        self._userdata = None
+        self.on_publish = None  # callable(client, userdata, mid)
 
-    This class mimics the interface of paho.mqtt.client.Client but
-    doesn't actually send any data.  It prints a debug message when
-    messages are 'published'.  Replace this with
-    `import paho.mqtt.client as mqtt` and use `mqtt.Client()` in your
-    production environment.
-    """
+    def username_pw_set(self, username=None, password=None): pass
+    def tls_set(self, *_, **__): pass
+    def user_data_set(self, userdata): self._userdata = userdata
+    def loop_start(self): pass
+    def loop_stop(self): pass
 
-    def __init__(self, host: str, port: int, username: Optional[str] = None,
-                 password: Optional[str] = None):
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        # In a real implementation you would establish the connection here.
-        print(f"[DummyMQTTClient] Initialized for {host}:{port}")
+    def connect(self, host, port=1883, keepalive=60):
+        self.connected = True
+        return self.MQTT_ERR_SUCCESS
 
-    def publish(self, topic: str, payload: str, qos: int = 0):
-        """Pretend to publish a message to MQTT."""
-        # Replace this print with the real publish call:
-        # self.client.publish(topic, payload, qos=qos)
-        print(f"[MQTT] Topic: {topic} Payload: {payload}")
+    def publish(self, topic, payload=None, qos=0, retain=False):
+        if not self.connected:
+            raise RuntimeError("MQTT not connected")
+        self._mid += 1
+        mid = self._mid
+        # simulate immediate ACK
+        if callable(self.on_publish):
+            self.on_publish(self, self._userdata, mid)
+        return self.MQTT_ERR_SUCCESS, mid
 
     def disconnect(self):
-        # In a real client you'd close the connection here
-        print("[DummyMQTTClient] Disconnecting")
+        self.connected = False
 
 
 class DummyKafkaProducer:
-    """A lightweight stand‑in for a real Kafka producer.
+    class _Msg:
+        def __init__(self, topic, key, value):
+            self._topic, self._key, self._value = topic, key, value
+        def topic(self): return self._topic
+        def key(self):   return self._key
+        def value(self): return self._value
 
-    This class mimics the interface of confluent_kafka.Producer but
-    simply prints messages instead of sending them.  Replace this
-    implementation with `from confluent_kafka import Producer` and
-    construct the Producer with appropriate configuration.
-    """
+    def __init__(self, conf=None):
+        self._q = deque()
+        self._closed = False
 
-    def __init__(self, bootstrap_servers: str):
-        self.bootstrap_servers = bootstrap_servers
-        print(f"[DummyKafkaProducer] Initialized for {bootstrap_servers}")
+    def produce(self, topic, key=None, value=None, callback=None, **kwargs):
+        if self._closed:
+            raise RuntimeError("Producer closed")
+        self._q.append((topic, key, value, callback))
 
-    def produce(self, topic: str, key: Optional[str], value: bytes):
-        # In a real producer you'd call producer.produce(topic, key=key, value=value)
-        print(f"[Kafka] Topic: {topic} Key: {key} Value: {value.decode('utf-8')}")
+    def poll(self, timeout=0):
+        delivered = 0
+        while self._q:
+            topic, key, value, cb = self._q.popleft()
+            if cb:
+                cb(None, DummyKafkaProducer._Msg(topic, key, value))  # err=None => success
+            delivered += 1
+        return delivered
 
-    def flush(self):
-        # In a real producer you'd wait for all messages to be delivered
-        print("[DummyKafkaProducer] Flushing messages")
+    def flush(self, timeout=None):
+        self.poll(0)
 
+    def close(self):
+        self.flush()
+        self._closed = True
