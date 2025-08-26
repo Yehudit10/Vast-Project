@@ -65,3 +65,34 @@ class DummyKafkaProducer:
     def close(self):
         self.flush()
         self._closed = True
+
+
+import argparse
+
+def positive_float(x: str) -> float:
+    try:
+        value = float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be a number")
+    if value <= 0:
+        raise argparse.ArgumentTypeError("must be > 0")
+    return value
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Replay telemetry at a fixed QPS to MQTT/Kafka")
+    parser.add_argument("--qps", type=positive_float, required=True,
+                   help="Messages per second to send (must be > 0)")
+    parser.add_argument("--duration", type=positive_float, required=True,
+                   help="Total run time in seconds (must be > 0)")
+    parser.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
+                   help="Where to publish messages: mqtt, kafka of both (default: both)")
+    return parser
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    print(f"CLI OK: qps={args.qps}, duration={args.duration}, out={args.out}")
+
+
+if __name__ == "__main__":
+    main()
