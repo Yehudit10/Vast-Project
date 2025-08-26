@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package query;
+
+// Machine-readable job status
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  PENDING   = 1;
+  SUBMITTED = 2;
+  RUNNING   = 3;
+  FAILED    = 4;
+  COMPLETED = 5;
+}
+
+// We pass the DSL plan as raw JSON text (keeps things flexible)
+message Plan {
+  string json = 1;
+}
+
+// Runner replies with job id and a Status enum
+message RunResponse {
+  string jobId = 1;
+  Status status = 2;
+  // Optional human-readable message (errors, notes, etc.)
+  string message = 3;
+}
+
+service QueryRunner {
+  rpc RunQuery(Plan) returns (RunResponse);
+}
+
