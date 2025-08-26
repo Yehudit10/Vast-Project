@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: runner/Dockerfile
+    environment:
+      - RUNNER_MODE=mock         # change to "real" when wiring real Flink REST
+      # - FLINK_REST_URL=http://flink:8081
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    environment:
+      - RUNNER_ADDR=runner:50051
+    ports:
+      - "8000:8000"
+    depends_on:
+      - runner
+    restart: unless-stopped
