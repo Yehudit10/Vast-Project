@@ -1,16 +1,16 @@
 ﻿fullnameOverride: kafka
 
-# לעבוד ב-KRaft (ללא ZooKeeper)
+# use KRaft mode (without ZooKeeper)
 kraft:
   enabled: true
 
-# רפליקה אחת לכל רכיב
+# Run with a single controller and a single broker
 controller:
   replicaCount: 1
 broker:
   replicaCount: 1
 
-# שירות פנימי ו-PLAINTEXT בתוך הקלאסטר
+# Expose PLAINTEXT listener on port 9092
 service:
   type: ClusterIP
   ports:
@@ -20,15 +20,15 @@ listeners:
   client:
     protocol: PLAINTEXT
 
-# משתני סביבה חשובים
+# Extra environment variables for Kafka configuration
 extraEnvVars:
-  # לכבות יצירה אוטומטית של טופיקים
+  # Disable automatic topic creation
   - name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE
     value: "false"
-  # לאפשר PLAINTEXT (ל-dev בתוך הקלאסטר)
+  # Allow PLAINTEXT listener (used for dev / testing purposes) 
   - name: ALLOW_PLAINTEXT_LISTENER
     value: "yes"
-  # כי זה קלאסטר יחיד - פנימי של Kafka צריך replication=1
+  # Configure internal Kafka topics with replication factor = 1
   - name: KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR
     value: "1"
   - name: KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
