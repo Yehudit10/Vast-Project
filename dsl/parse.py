@@ -5,7 +5,6 @@ Keeps parsing concerns separate from the AST definitions.
 
 from __future__ import annotations
 import re
-from typing import Any
 from .expr import Field, Predicate, Operator
 
 # Identifiers: allow dotted names like table.column, no dashes/spaces.
@@ -20,34 +19,55 @@ _PREDICATE_RE = re.compile(
     rf"^(?P<lhs>{_TOKEN})\s*(?P<op>{_OP_PATTERN}|=)\s*(?P<rhs>{_TOKEN})$"
 )
 
+_INT_RE = re.compile(r"^-?\d+$")
+# Floats: 1.0, .5, 5., 1e3, -2.5E-4, etc.
+_FLOAT_RE = re.compile(r"^-?(?:\d+\.\d*|\d*\.\d+|\d+)(?:[eE][+-]?\d+)?$")
 
 def _unquote(s: str) -> str:
     """Remove surrounding single/double quotes if present; unescape common sequences."""
     if len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
         body = s[1:-1]
-        return bytes(body, "utf-8").decode("unicode_escape")
+        # Minimal, safe unescape: handle common escapes without over-decoding
+        body = body.replace(r"\\", "\\").replace(r"\'", "'").replace(r"\"", '"').replace(r"\n", "\n").replace(r"\t", "\t").replace(r"\r", "\r")
+        return body
     return s
 
-
-def _parse_term(term_raw: str) -> Any:
+def _parse_term(term_raw: str):
     """
     Convert a token to a Field or primitive:
-    - Identifiers -> Field
     - Quoted strings -> str (unescaped)
+    - Booleans/null -> bool/None
     - Integers/floats -> int/float
+    - Identifiers -> Field
     - Else -> str
     """
-    if _FIELD_RE.match(term_raw):
-        return Field(term_raw)
+    s = term_raw.strip()
 
-    s = _unquote(term_raw)
+    # Quoted string → string literal
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
+        return _unquote(s)
 
-    if re.fullmatch(r"-?\d+", s):
+    # Booleans / null-ish (lowercase recommended; accept Pythonic 'None' too)
+    if s in ("True", "False"):
+        return s == "True"
+    if s in ("null", "None"):
+        return None
+
+    # Numbers
+    if _INT_RE.fullmatch(s):
         return int(s)
-    if re.fullmatch(r"-?\d+\.\d+", s):
-        return float(s)
-    return s
+    if _FLOAT_RE.fullmatch(s):
+        try:
+            return float(s)
+        except ValueError:
+            pass  # fall through to identifier/string
 
+    # Identifier → Field
+    if _FIELD_RE.fullmatch(s):
+        return Field(s)
+
+    # Fallback → treat as bare string literal
+    return _unquote(s)
 
 def parse_predicate(expr: str) -> Predicate:
     """

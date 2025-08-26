@@ -7,8 +7,8 @@ def main() -> None:
     plan = (
         Query()
         .select("sensor")
-        .where("ts < 'kl'")
-        .where(Field("ts") < 'kl')
+        .where("ts == True")
+        .where(Field("ts") == True)
         .to_json(pretty=True)
     )
     print(plan)
