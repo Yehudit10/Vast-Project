@@ -86,7 +86,16 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Total run time in seconds (must be > 0)")
     parser.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
                    help="Where to publish messages: mqtt, kafka of both (default: both)")
+    parser.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
+    parser.add_argument("--mqtt-host", default="localhost", help="MQTT broker hostname (default: localhost)")
+    parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
+    parser.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic to publish to (default: telemetry)")
+    parser.add_argument("--kafka-brokers", default="localhost:9092",
+                   help="Kafka bootstrap servers (default: localhost:9092)")
+    parser.add_argument("--kafka-topic", default="telemetry",
+                   help="Kafka topic to publish to (default: telemetry)")
     return parser
+
 
 def main():
     parser = build_parser()
