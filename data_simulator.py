@@ -1,173 +1,121 @@
-from collections import deque
+from __future__ import annotations
+
 import argparse
-import json
-import time
 from pathlib import Path
-import pandas as pd
-from typing import Any, Iterator, Dict
+import sys
+from typing import Optional
 
+from simulator import Simulator
+from metrics import Metrics
+from utils import positive_float, load_data
 
-class DummyMQTTClient:
-    MQTT_ERR_SUCCESS = 0
-    def __init__(self, client_id: str):
-        self.client_id = client_id
-        self.connected = False
-        self._mid = 0
-        self._userdata = None
-        self.on_publish = None  # callable(client, userdata, mid)
-
-    def username_pw_set(self, username=None, password=None): pass
-    def tls_set(self, *_, **__): pass
-    def user_data_set(self, userdata): self._userdata = userdata
-    def loop_start(self): pass
-    def loop_stop(self): pass
-
-    def connect(self, host, port=1883, keepalive=60):
-        self.connected = True
-        return self.MQTT_ERR_SUCCESS
-
-    def publish(self, topic, payload=None, qos=0, retain=False):
-        if not self.connected:
-            raise RuntimeError("MQTT not connected")
-        self._mid += 1
-        mid = self._mid
-        # simulate immediate ACK
-        if callable(self.on_publish):
-            self.on_publish(self, self._userdata, mid)
-        return self.MQTT_ERR_SUCCESS, mid
-
-    def disconnect(self):
-        self.connected = False
-
-
-class DummyKafkaProducer:
-    class _Msg:
-        def __init__(self, topic, key, value):
-            self._topic, self._key, self._value = topic, key, value
-        def topic(self): return self._topic
-        def key(self):   return self._key
-        def value(self): return self._value
-
-    def __init__(self, conf=None):
-        self._q = deque()
-        self._closed = False
-
-    def produce(self, topic, key=None, value=None, callback=None, **kwargs):
-        if self._closed:
-            raise RuntimeError("Producer closed")
-        self._q.append((topic, key, value, callback))
-
-    def poll(self, timeout=0):
-        delivered = 0
-        while self._q:
-            topic, key, value, cb = self._q.popleft()
-            if cb:
-                cb(None, DummyKafkaProducer._Msg(topic, key, value))  # err=None => success
-            delivered += 1
-        return delivered
-
-    def flush(self, timeout=None):
-        self.poll(0)
-
-    def close(self):
-        self.flush()
-        self._closed = True
-
-
-def positive_float(x: str) -> float:
-    try:
-        value = float(x)
-    except ValueError:
-        raise argparse.ArgumentTypeError("must be a number")
-    if value <= 0:
-        raise argparse.ArgumentTypeError("must be > 0")
-    return value
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Replay telemetry at a fixed QPS to MQTT/Kafka")
-    parser.add_argument("--qps", type=positive_float, required=True,
-                   help="Messages per second to send (must be > 0)")
-    parser.add_argument("--duration", type=positive_float, required=True,
-                   help="Total run time in seconds (must be > 0)")
-    parser.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
-                   help="Where to publish messages: mqtt, kafka or both (default: both)")
-    parser.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
-    parser.add_argument("--mqtt-host", default="localhost", help="MQTT broker hostname (default: localhost)")
-    parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
-    parser.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic to publish to (default: telemetry)")
-    parser.add_argument("--kafka-bootstrap", default="localhost:9092",
+    """
+    Build the CLI parser for the simulator.
+    """
+    p = argparse.ArgumentParser(description="Replay telemetry at a fixed QPS to MQTT/Kafka (Dummy drivers)")
+    p.add_argument("--qps", type=positive_float, help="Messages per second to send (>0)")
+    p.add_argument("--duration", type=positive_float, help="Total run time in seconds (>0)")
+    p.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
+                   help="Where to publish messages (default: both)")
+    p.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
+
+    p.add_argument("--mqtt-host", default="localhost", help="MQTT broker hostname (default: localhost)")
+    p.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
+    p.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic (default: telemetry)")
+
+    p.add_argument("--kafka-bootstrap", default="localhost:9092",
                    help="Kafka bootstrap servers (default: localhost:9092)")
-    parser.add_argument("--kafka-topic", default="telemetry",
-                   help="Kafka topic to publish to (default: telemetry)")
-    return parser
+    p.add_argument("--kafka-topic", default="telemetry",
+                   help="Kafka topic (default: telemetry)")
 
-def load_data(file_path: Path) -> pd.DataFrame:
+    p.add_argument("--window-sec", type=positive_float, default=5.0,
+                   help="Rolling window (seconds) for instantaneous QPS (default: 5)")
+    p.add_argument("--status-every", type=positive_float, default=1.0,
+                   help="Print status every N seconds (default: 1)")
+
+    p.add_argument("--loop", action="store_true",
+                   help="Loop over the sample data until duration elapses")
+    p.add_argument("--stability", action="store_true",
+                   help="Shortcut: run 60s at 1k msgs/s and report KPI PASS/FAIL")
+    p.add_argument("--perf", action="store_true",
+                   help="Shortcut: run 15m at 10k msgs/s, Kafka recommended; report KPI PASS/FAIL")
+    return p
+
+
+def _apply_shortcuts(args: argparse.Namespace) -> None:
     """
-    Load CSV or Parquet file. Fail fast on anything else.
+    Apply --stability/--perf shortcuts by overriding qps/duration/out/loop defaults.
     """
-    if not file_path.exists():
-        raise FileNotFoundError(f"File not found: {file_path}")
-    
-    name = file_path.name.lower()
-    if name.endswith((".parquet", ".parq", ".pq")):
-        try:
-            return pd.read_parquet(file_path)
-        except Exception as e:
-            raise RuntimeError("Failed to read parquet. Install 'pyarrow' or 'fastparquet'.") from e
-    if name.endswith(".csv"):
-        return pd.read_csv(file_path)
-    
-    raise ValueError(f"Unsupported file type: {file_path.name} (expected .csv or .parquet)")
+    if args.stability:
+        args.qps = 1000.0
+        args.duration = 60.0
+        # keep args.out as the user passed; default is 'both'
+        if not args.loop:
+            args.loop = True
 
-def iterate_records(df: pd.DataFrame) -> Iterator[Dict[str, Any]]:
-    cols = list(df.columns)
-    for row in df.itertuples(index=False, name=None):
-        yield dict(zip(cols, row))
+    if args.perf:
+        args.qps = 10000.0
+        args.duration = 15 * 60.0
+        if not args.loop:
+            args.loop = True
 
-def main():
+
+def _kpi_verdict(args: argparse.Namespace, metrics: Metrics) -> Optional[bool]:
+    """
+    Return KPI PASS/FAIL if in test mode; None otherwise.
+    KPI: loss_rate <= 0.5% for all selected transports.
+    """
+    if not (args.stability or args.perf):
+        return None
+
+    loss = metrics.loss_rates()
+    targets = []
+    if args.out in ("kafka", "both"):
+        targets.append(loss["kafka_loss_pct"])
+    if args.out in ("mqtt", "both"):
+        targets.append(loss["mqtt_loss_pct"])
+
+    ok = all(l <= 0.5 for l in targets)
+    print("  KPI verdict:", "PASS" if ok else "FAIL (loss > 0.5%)")
+    return ok
+
+
+def main() -> None:
+    """
+    Entry point: parse args, apply profiles, run simulator, print KPI verdict when relevant.
+    """
     parser = build_parser()
     args = parser.parse_args()
-    
+
+    if args.stability and args.perf:
+        parser.error("Choose only one profile: --stability OR --perf")
+
+    # Require qps/duration unless a profile provides them.
+    if not (args.stability or args.perf):
+        if args.qps is None or args.duration is None:
+            parser.error("--qps and --duration are required unless --stability or --perf is set")
+
+    _apply_shortcuts(args)
+
+    if args.out is None:
+        args.out = "kafka" if args.perf else "both"
+
+    print(f"[config] qps={args.qps} duration={args.duration}s out={args.out} loop={bool(args.loop)}")
+
     df = load_data(Path(args.file))
     print(f"[info] Loaded {len(df)} records from {args.file}")
-    
-    mqtt = DummyMQTTClient(client_id="sim")
-    mqtt.connect(args.mqtt_host, args.mqtt_port)
-    kafka_producer = DummyKafkaProducer()
-    
-    interval = 1.0 / args.qps
-    start = time.perf_counter()
-    end_time = time.perf_counter() + args.duration
-    sent = 0
 
-    for record in iterate_records(df):
-        now = time.perf_counter()
-        if now >= end_time:
-            break
-        
-        payload_str = json.dumps(record, separators=(",", ":"))
-        if args.out in ("mqtt", "both"):
-            mqtt.publish(args.mqtt_topic, payload_str, qos = 1)
-        if args.out in ("kafka", "both"):
-            kafka_producer.produce(args.kafka_topic,
-                                   key=str(record.get("device_id") or ""),
-                                   value=payload_str.encode())
-            kafka_producer.poll(0)
-        sent += 1
-        
-        elapsed = now - start
-        target_elapsed = sent * interval
-        sleep_for = target_elapsed - elapsed
-        if sleep_for > 0:
-            time.sleep(sleep_for)
-        
-    kafka_producer.flush()
-    mqtt.disconnect()
-    
-    runtime = time.perf_counter() - start
-    qps = sent / runtime if runtime > 0 else 0.0
-    print(f"[summary] sent={sent} runtime={runtime:.2f}s qps≈{qps:.1f}")
-            
-    
+    sim = Simulator(args, df)
+    sim.run()
+
+    verdict = _kpi_verdict(args, sim.metrics)
+
+    # Exit non-zero on KPI fail when in a profile mode (useful for CI).
+    if verdict is False:
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     main()
