@@ -12,7 +12,7 @@ import pandas as pd
 from drivers import DummyKafkaProducer, DummyMQTTClient
 from metrics import Metrics
 from utils import iterate_records, percentile, fmt_latency, extract_sid_from_headers
-
+from confluent_kafka import Producer
 
 class Simulator:
     """
@@ -26,8 +26,14 @@ class Simulator:
 
         # Transports (Dummy for now)
         self.mqtt = DummyMQTTClient(client_id="simulator")
-        self.kafka = DummyKafkaProducer()
+        # self.kafka = DummyKafkaProducer()
 
+        conf = {
+            "bootstrap.servers": "localhost:9094", 
+            "client.id": "simulator"
+        }
+        self.kafka = Producer(conf)
+        
         # Inflight maps: mid/sid -> send_time
         self.inflight_mqtt: Dict[int, float] = {}
         self.inflight_kafka: Dict[str, float] = {}
