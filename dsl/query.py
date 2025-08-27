@@ -6,11 +6,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field as dc_field
 from typing import Any, Dict, List, Union
-from .expr import Expr
+from .expr import Expr, Predicate
 from .parse import parse_predicate
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True,slots=True)
 class Operation:
     """
     One plan step, e.g.:
@@ -64,7 +64,7 @@ class Query:
           - an Expr (typically a Predicate built via Field() operators)
         """
         pred = parse_predicate(predicate) if isinstance(predicate, str) else predicate
-        if not isinstance(pred, Expr):
+        if not isinstance(pred, Predicate):
             raise ValueError(f"Unsupported predicate: {predicate!r}")
         self._ops.append(Operation("filter", {"predicate": pred.to_plan()}))
         return self

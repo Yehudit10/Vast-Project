@@ -62,7 +62,7 @@ class Field(Expr):
 
 
 @dataclass(slots=True)
-class Predicate(Expr):
+class Predicate():
     """
     A simple binary predicate: <lhs> <op> <rhs>
 
