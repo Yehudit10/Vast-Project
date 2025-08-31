@@ -34,9 +34,15 @@ STATE_TOPIC="dev-robot-state"
   --partitions 1 \
   --replication-factor 1
 
+# /opt/bitnami/kafka/bin/kafka-configs.sh \
+#   --bootstrap-server "$BOOTSTRAP" \
+#   --alter --topic "$STATE_TOPIC" \
+#   --add-config "cleanup.policy=compact,delete,retention.ms=${RETENTION_MS}"
+
 /opt/bitnami/kafka/bin/kafka-configs.sh \
   --bootstrap-server "$BOOTSTRAP" \
   --alter --topic "$STATE_TOPIC" \
-  --add-config "cleanup.policy=compact,delete,retention.ms=${RETENTION_MS}"
+  --add-config "cleanup.policy=[compact,delete],retention.ms=${RETENTION_MS}"
+
 
 echo "✅ Topics ensured on $BOOTSTRAP with retention=${RETENTION_MS}ms"
