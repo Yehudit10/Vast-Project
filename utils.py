@@ -19,6 +19,8 @@ def positive_float(x: str) -> float:
 
 def load_data(file_path: Path) -> pd.DataFrame:
     """Load CSV or Parquet."""
+    if file_path.is_dir():
+        raise ValueError(f"Path points to a directory, not a file: {file_path}")
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
 
