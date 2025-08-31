@@ -1,68 +1,68 @@
-# runner_server.py
-"""
-Runner service (gRPC):
-- Implements QueryRunner.RunQuery to receive a JSON plan from the gateway.
-- Validates JSON syntactically and (in mock mode) returns a fake job id.
-- Real mode is left unimplemented to be wired into Flink REST later.
-"""
+# runner_server.py (replace the earlier file)
 
-import os, json, uuid, logging
+import os, json, uuid, logging, time
 from concurrent import futures
+from typing import Dict, Any
 import grpc
 import query_pb2, query_pb2_grpc
+# import requests  # sync is fine; runner uses sync gRPC
 
-# -------- Config --------
-RUNNER_MODE = os.getenv("RUNNER_MODE", "mock")                 # "mock" or "real"
-FLINK_REST_URL = os.getenv("FLINK_REST_URL", "http://flink:8081")  # used in 'real' mode
+RUNNER_MODE = os.getenv("RUNNER_MODE", "mock")  # "mock" or "real"
+SQL_GATEWAY = os.getenv("FLINK_SQL_GATEWAY_URL", "http://flink-sql-gateway:8083")  # adjust
 PORT = int(os.getenv("PORT", "50051"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
-# -------- Logging --------
 logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("runner")
 
 class QueryRunnerImpl(query_pb2_grpc.QueryRunnerServicer):
-    """gRPC servicer implementing the QueryRunner API."""
-
     def RunQuery(self, request, context):
-        """
-        Handle a submitted plan:
-        - Extract x-request-id from metadata (or generate one) for tracing.
-        - Parse and minimally validate the plan JSON.
-        - In 'mock' mode, return a fake job id with Status.SUBMITTED.
-        - In 'real' mode, abort with UNIMPLEMENTED (placeholder for Flink).
-        """
-        # Correlate logs across gateway/runner
         md = dict(context.invocation_metadata())
         request_id = md.get("x-request-id", str(uuid.uuid4()))
-        log.info("RunQuery called request_id=%s mode=%s", request_id, RUNNER_MODE)
+        log.info("RunQuery request_id=%s mode=%s", request_id, RUNNER_MODE)
 
-        # Basic JSON validation only (structure/content checks are out of scope here)
+        # Parse the JSON plan (optionally extract SQL)
         try:
-            plan = json.loads(request.json)
-            log.info("Plan received request_id=%s keys=%s", request_id, list(plan.keys()))
+            plan: Dict[str,Any] = json.loads(request.json) if request.json else {}
         except Exception as e:
-            log.error("Invalid plan JSON request_id=%s error=%s", request_id, e)
+            log.error("Invalid plan JSON req=%s err=%s", request_id, e)
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Invalid plan JSON")
 
         if RUNNER_MODE == "mock":
-            # Simulate async job submission and return an enum status
-            job_id = f"mock-{uuid.uuid4().hex[:8]}"
-            log.info("Mock job submitted request_id=%s job_id=%s", request_id, job_id)
-            return query_pb2.RunResponse(jobId=job_id, status=query_pb2.Status.SUBMITTED)
+            sensors = [
+        {"sensor_id":"A-101", "lat":31.8998, "lon":34.849524, "name":"Soil Probe A",
+        "battery":"3.86V", "moisture":"21%", "status":"ok"},
+        {"sensor_id":"D-404", "lat":31.8978, "lon":34.849524, "name":"Soil Probe B",
+        "battery":"3.86V", "moisture":"21%", "status":"ok"},
+        {"sensor_id":"E-505", "lat":31.8978, "lon":34.850924, "name":"Soil Probe C",
+        "battery":"3.86V", "moisture":"21%", "status":"ok"},
+        {"sensor_id":"B-202", "lat":31.8996, "lon":34.849524, "label":"Valve East 4",
+        "battery":"3.55V", "status":"warning"},
+        {"sensor_id":"C-303", "lat":31.8999,   "lon":34.851734,   "status":"offline"}  
+    ]
 
-        # Real mode: compile plan → Flink REST (not implemented yet)
-        log.warning("Real mode not implemented request_id=%s flink_url=%s", request_id, FLINK_REST_URL)
-        context.abort(grpc.StatusCode.UNIMPLEMENTED,
-                      "RUNNER_MODE=real not implemented in this example")
+            return _pack_sensors(sensors)
 
-# -------- Server bootstrap --------
+        # --- REAL: fetch sensors from Flink SQL Gateway ---
+        context.abort(grpc.StatusCode.UNIMPLEMENTED, "Real runner is not implemented")
+
+def _pack_sensors(sensors_list):
+    """Convert list[dict] → query_pb2.SensorList."""
+    result = query_pb2.SensorList()
+    for s in sensors_list:
+        sensor = query_pb2.Sensor(
+            sensor_id=str(s.get("sensor_id", "")),
+            lat=float(s.get("lat", 0.0)),
+            lon=float(s.get("lon", 0.0)),
+        )
+        # move the rest into props (strings)
+        for k, v in s.items():
+            if k in ("sensor_id", "lat", "lon"): continue
+            sensor.props[k] = "" if v is None else str(v)
+        result.sensors.append(sensor)
+    return result
+
 def serve(port: int = PORT):
-    """
-    Start the gRPC server:
-    - Registers the QueryRunner servicer.
-    - Binds to [::]:PORT (insecure for local/dev; add TLS in prod).
-    """
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
     query_pb2_grpc.add_QueryRunnerServicer_to_server(QueryRunnerImpl(), server)
     server.add_insecure_port(f"[::]:{port}")

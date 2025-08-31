@@ -1,31 +1,21 @@
+// query.proto
 syntax = "proto3";
-
 package query;
 
-// Machine-readable job status
-enum Status {
-  STATUS_UNSPECIFIED = 0;
-  PENDING   = 1;
-  SUBMITTED = 2;
-  RUNNING   = 3;
-  FAILED    = 4;
-  COMPLETED = 5;
+message Plan { string json = 1; }
+
+// Extra sensor fields live in props to stay flexible
+message Sensor {
+  string sensor_id = 1;
+  double lat       = 2;
+  double lon       = 3;
+  map<string, string> props = 4; // e.g. battery, status, name...
 }
 
-// We pass the DSL plan as raw JSON text (keeps things flexible)
-message Plan {
-  string json = 1;
-}
-
-// Runner replies with job id and a Status enum
-message RunResponse {
-  string jobId = 1;
-  Status status = 2;
-  // Optional human-readable message (errors, notes, etc.)
-  string message = 3;
+message SensorList {
+  repeated Sensor sensors = 1;
 }
 
 service QueryRunner {
-  rpc RunQuery(Plan) returns (RunResponse);
+  rpc RunQuery(Plan) returns (SensorList);
 }
-
