@@ -28,8 +28,10 @@ Files in this repo:
 
 #### 1. Build the image
 
-- cd kafka-kind
-- docker build -t kafka-kind:local .
+```bash
+cd kafka-kind
+docker build -t kafka-kind:local .
+```
 
 #### 2. Start KinD + Kafka
 
@@ -45,21 +47,25 @@ Run the container and mount the YAML and topic script. This will:
 
 Linux / macOS (bash):
 
+```bash
 docker run --privileged --rm -it \
   -v "$PWD/values-kafka.yaml:/work/values-kafka.yaml:ro" \
   -v "$PWD/create-topics.sh:/work/create-topics.sh:ro" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -p 29092:29092 \
   kafka-kind:local
+```
 
 Windows (PowerShell):
 
+```powershell
     docker run --privileged --rm -it `
     -v "${PWD}\values-kafka.yaml:/work/values-kafka.yaml:ro" `
     -v "${PWD}\create-topics.sh:/work/create-topics.sh:ro" `
     -v //var/run/docker.sock:/var/run/docker.sock `
     -p 29092:29092 `
     kafka-kind:local
+```
 
 At the end you should see:
 
@@ -69,25 +75,33 @@ Kafka reachable at: localhost:29092
 
 #### 1. Create kcat pod
 
+```bash
 kubectl --kubeconfig $kc run kcat \
   --restart=Never \
   --image=docker.io/edenhill/kcat:1.7.1 \
   --image-pull-policy=IfNotPresent \
   --command -- /bin/sh -c "while true; do sleep 3600; done"
+```
 
 Wait until the pod is ready:
 
+```bash
 kubectl --kubeconfig $kc wait pod/kcat --for=condition=Ready --timeout=180s
+```
 
 #### 2. Produce a message
 
+```bash
 kubectl --kubeconfig $kc exec -it kcat -- sh -lc \
   "echo 'smoke-test' | kcat -P -b kafka.default.svc.cluster.local:9092 -t dev-robot-alerts -v"
+```
 
 #### 3. Consume a message
 
+```bash
 kubectl --kubeconfig $kc exec -it kcat -- sh -lc \
   "kcat -C -b kafka.default.svc.cluster.local:9092 -t dev-robot-alerts -o -1 -c 1 -q"
+```
 
 If you see smoke-test printed back, the setup works.
 
