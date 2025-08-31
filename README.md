@@ -1,49 +1,102 @@
-# AgCloud
+# AgCloud-Sounds
 
-## AgCloud - Sounds
+## AgCloud – Kafka on KinD
 
-### Streaming & Simulation 2 - Kafka on KinD
+This project demonstrates how to deploy Kafka on KinD using the Bitnami Helm chart, configure topics with 7-day retention, and verify the setup with a smoke test using kcat.
 
-This section explains how to deploy Kafka on KinD using the Bitnami Helm chart, create topics with 7-day retention, and run a smoke test with kcat.
+### Prerequisites
 
-#### Deploy Kafka on KinD using Bitnami Helm chart
+- Docker Desktop installed and running
 
-```bash
-# Add Bitnami repo and install Kafka
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
-helm install my-kafka bitnami/kafka -f kafka-kind/values-kafka.yaml
+- Internet access for pulling images and charts
 
-# Run create-topics.sh from ConfigMap
-kubectl run topic-admin --restart=Never --rm -i \
-  --image=bitnami/kafka:latest --command -- \
-  sh -lc "bash <(kubectl get cm create-topics -o jsonpath='{.data.create-topics\.sh}')"
+- Git (for cloning and versioning)
 
-# Producer - send test message
-kubectl run kcat-producer --restart=Never --rm -i \
-  --image=edenhill/kcat:1.7.1 --command -- \
-  sh -lc "echo smoke | kcat -P -b kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092 -t dev-robot-status"
+Files in this repo:
 
-# Consumer - read one message from the beginning
-kubectl run kcat-consumer --restart=Never --rm -i \
-  --image=edenhill/kcat:1.7.1 -- \
-  -C -b kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092 -t dev-robot-status -o beginning -c 1
-```
+- Dockerfile – container with kubectl, kind, and helm
 
-### Notes
+- values-kafka.yaml – Helm values for Kafka (single broker, auto topic creation disabled)
 
-Deployed with a single Kafka broker (no replication).
+- create-topics.sh – script that creates topics with 7-day retention
 
-Auto topic creation is disabled via Helm values.
+- .gitattributes – ensures LF line endings for scripts
 
-Topics are created explicitly with 7-day retention using create-topics.sh.
+- .dockerignore – ignores irrelevant files during Docker build
 
-### Getting Started
+### Build and Run
 
-To reproduce locally:
+#### 1. Build the image
 
-Install Kafka with the provided values-kafka.yaml.
+- cd kafka-kind
+- docker build -t kafka-kind:local .
 
-Run the create-topics.sh script (creates topics with 7-day retention).
+#### 2. Start KinD + Kafka
 
-Verify setup with the kcat smoke test (produce + consume).
+Run the container and mount the YAML and topic script. This will:
+
+- Create a KinD cluster
+
+- Deploy Kafka with Helm
+
+- Copy and run create-topics.sh inside the broker pod
+
+- Expose Kafka at localhost:29092
+
+Linux / macOS (bash):
+
+docker run --privileged --rm -it \
+  -v "$PWD/values-kafka.yaml:/work/values-kafka.yaml:ro" \
+  -v "$PWD/create-topics.sh:/work/create-topics.sh:ro" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -p 29092:29092 \
+  kafka-kind:local
+
+Windows (PowerShell):
+
+    docker run --privileged --rm -it `
+    -v "${PWD}\values-kafka.yaml:/work/values-kafka.yaml:ro" `
+    -v "${PWD}\create-topics.sh:/work/create-topics.sh:ro" `
+    -v //var/run/docker.sock:/var/run/docker.sock `
+    -p 29092:29092 `
+    kafka-kind:local
+
+At the end you should see:
+
+Kafka reachable at: localhost:29092
+
+### Smoke Test with kcat
+
+#### 1. Create kcat pod
+
+kubectl --kubeconfig $kc run kcat \
+  --restart=Never \
+  --image=docker.io/edenhill/kcat:1.7.1 \
+  --image-pull-policy=IfNotPresent \
+  --command -- /bin/sh -c "while true; do sleep 3600; done"
+
+Wait until the pod is ready:
+
+kubectl --kubeconfig $kc wait pod/kcat --for=condition=Ready --timeout=180s
+
+#### 2. Produce a message
+
+kubectl --kubeconfig $kc exec -it kcat -- sh -lc \
+  "echo 'smoke-test' | kcat -P -b kafka.default.svc.cluster.local:9092 -t dev-robot-alerts -v"
+
+#### 3. Consume a message
+
+kubectl --kubeconfig $kc exec -it kcat -- sh -lc \
+  "kcat -C -b kafka.default.svc.cluster.local:9092 -t dev-robot-alerts -o -1 -c 1 -q"
+
+If you see smoke-test printed back, the setup works.
+
+#### Notes
+
+- Deployment uses 1 controller and 1 broker (no replication).
+
+- Auto topic creation is disabled — topics are explicitly created via create-topics.sh.
+
+- All topics have 7-day retention by default.
+
+- Kafka is exposed at localhost:29092 for producers/consumers outside the cluster.
