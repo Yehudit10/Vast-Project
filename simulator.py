@@ -8,29 +8,32 @@ import time
 from typing import Dict, Optional
 
 import pandas as pd
+from confluent_kafka import Producer
+import paho.mqtt.client as mqtt
 
-from drivers import DummyKafkaProducer, DummyMQTTClient
 from metrics import Metrics
 from utils import iterate_records, percentile, fmt_latency, extract_sid_from_headers
-from confluent_kafka import Producer
+
 
 class Simulator:
-    """
-    Encapsulates the send loop, rate control, and metrics aggregation.
-    WHY: Using a class removes globals, makes testing easier, and keeps main() tidy.
-    """
+    """Send loop, rate control, and metrics aggregation."""
 
     def __init__(self, args: argparse.Namespace, df: pd.DataFrame):
         self.args = args
         self.df = df
 
-        # Transports (Dummy for now)
-        self.mqtt = DummyMQTTClient(client_id="simulator")
-        # self.kafka = DummyKafkaProducer()
+        # MQTT
+        self.mqtt = mqtt.Client(client_id="simulator", protocol=mqtt.MQTTv311)
+        self.mqtt.on_publish = self._on_mqtt_publish
 
+        # Kafka
         conf = {
-            "bootstrap.servers": "localhost:9094", 
-            "client.id": "simulator"
+            "bootstrap.servers": args.kafka_bootstrap, 
+            "client.id": "simulator",
+            "acks": "all",
+            "linger.ms": 5,
+            "batch.num.messages": 10000,
+            "message.timeout.ms": 10000
         }
         self.kafka = Producer(conf)
         
@@ -40,26 +43,20 @@ class Simulator:
 
         self.metrics = Metrics()
 
-        # Rate control / status
+        # Rate / status
         self.window_sec = float(args.window_sec)
         self.status_every = float(args.status_every)
 
-        # Internal bookkeeping
+        # Book-keeping
         self._kafka_sid_seq = 0
         self._last_send_time: Optional[float] = None
-
-        # Attach callbacks
-        self.mqtt.on_publish = self._on_mqtt_publish
 
     # --- Callbacks ---
 
     def _delivery_report(self, err, msg):
-        """
-        Kafka delivery callback: update ack counters and latency.
-        """
+        """Kafka delivery callback."""
         if err is None:
             self.metrics.acked_kafka += 1
-            # Match 'sid' header to inflight send timestamp
             try:
                 sid = extract_sid_from_headers(getattr(msg, "headers", lambda: None)())
             except Exception:
@@ -70,11 +67,13 @@ class Simulator:
                     self.metrics.kafka_latencies.append(time.perf_counter() - start_ts)
         else:
             self.metrics.lost_kafka += 1
+            try:
+                print(f"[kafka-error] topic={msg.topic()} key={msg.key()} reason={err}")
+            except Exception:
+                print(f"[kafka-error] reason={err}")    
 
     def _on_mqtt_publish(self, client, userdata, mid):
-        """
-        MQTT publish callback (simulated here): update ack counters and latency.
-        """
+        """MQTT on_publish: update ack counters and latency."""
         self.metrics.acked_mqtt += 1
         start_ts = self.inflight_mqtt.pop(mid, None)
         if start_ts is not None:
@@ -83,15 +82,14 @@ class Simulator:
     # --- Core run ---
 
     def run(self) -> None:
-        """
-        Execute the main send loop honoring QPS & duration; print status and summary.
-        """
+        """Run the send loop, enforce QPS/duration, print status and summary."""
         args = self.args
 
-        # MQTT connect (dummy)
+        # Connect MQTT
         self.mqtt.connect(args.mqtt_host, args.mqtt_port)
+        self.mqtt.loop_start()
 
-        # Record iterator: optionally loop
+        # Record iterator (optionally loop)
         records = list(iterate_records(self.df))
         if not records:
             raise ValueError("Input file contains no records")
@@ -118,29 +116,27 @@ class Simulator:
             try:
                 record = next(iterator)
             except StopIteration:
-                # No looping and we exhausted the sample -> stop.
                 break
 
-            # Inter-arrival measurement (for jitter)
+            # Inter-arrival (jitter)
             if self._last_send_time is not None:
                 self.metrics.inter_arrivals.append(now - self._last_send_time)
             self._last_send_time = now
 
             payload_str = json.dumps(record, separators=(",", ":"))
 
-            # --- MQTT ---
+            #  MQTT 
             if args.out in ("mqtt", "both"):
-                rc, mid = self.mqtt.publish(args.mqtt_topic, payload_str, qos=1)
-                self.inflight_mqtt[mid] = now
+                info = self.mqtt.publish(args.mqtt_topic, payload_str, qos=1, retain=False)
+                self.inflight_mqtt[info.mid] = now
                 self.metrics.sent_mqtt += 1
-                self.mqtt.poll()
 
-            # --- Kafka ---
+            #  Kafka 
             if args.out in ("kafka", "both"):
                 self._kafka_sid_seq += 1
                 sid = str(self._kafka_sid_seq)
                 self.inflight_kafka[sid] = now
-                hdrs = [("sid", sid.encode())]  # WHY: match delivery to send time.
+                hdrs = [("sid", sid.encode())] 
                 try:
                     self.kafka.produce(
                         args.kafka_topic,
@@ -150,7 +146,6 @@ class Simulator:
                         callback=self._delivery_report
                     )
                 except BufferError:
-                    # WHY: On a real producer buffer full, poll then retry keeping headers & sid.
                     self.kafka.poll(0.1)
                     self.kafka.produce(
                         args.kafka_topic,
@@ -182,7 +177,7 @@ class Simulator:
                 )
                 last_status_t = now
 
-            # Metronome: keep average QPS close to target
+            # Metronome to target QPS
             elapsed = now - start
             target_elapsed = sent_total * interval
             sleep_for = target_elapsed - elapsed
@@ -191,9 +186,12 @@ class Simulator:
 
         # Drain & close
         self.kafka.flush()
-        self.mqtt.disconnect()
+        try:
+            self.mqtt.loop_stop()
+        finally:
+            self.mqtt.disconnect()
 
-        # Final summary
+        # Summary
         runtime = time.perf_counter() - start
         qps_avg = sent_total / runtime if runtime > 0 else 0.0
 

@@ -14,58 +14,55 @@ def build_parser() -> argparse.ArgumentParser:
     """
     Build the CLI parser for the simulator.
     """
-    p = argparse.ArgumentParser(description="Replay telemetry at a fixed QPS to MQTT/Kafka (Dummy drivers)")
-    p.add_argument("--qps", type=positive_float, help="Messages per second to send (>0)")
-    p.add_argument("--duration", type=positive_float, help="Total run time in seconds (>0)")
-    p.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
-                   help="Where to publish messages (default: both)")
-    p.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
+    parser = argparse.ArgumentParser(description="Replay telemetry at a fixed QPS to MQTT/Kafka")
+    parser.add_argument("--qps", type=positive_float, help="Messages per second to send (>0)")
+    parser.add_argument("--duration", type=positive_float, help="Total run time in seconds (>0)")
+    parser.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
+                   help="Publish target (default: both)")
+    parser.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
 
-    p.add_argument("--mqtt-host", default="localhost", help="MQTT broker hostname (default: localhost)")
-    p.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
-    p.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic (default: telemetry)")
+    parser.add_argument("--mqtt-host", default="localhost", help="MQTT broker host (default: localhost)")
+    parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
+    parser.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic (default: telemetry)")
 
-    p.add_argument("--kafka-bootstrap", default="localhost:9092",
-                   help="Kafka bootstrap servers (default: localhost:9092)")
-    p.add_argument("--kafka-topic", default="telemetry",
-                   help="Kafka topic (default: telemetry)")
+    parser.add_argument("--kafka-bootstrap", default="localhost:9094",
+                   help="Kafka bootstrap servers (default: localhost:9094)")
+    parser.add_argument("--kafka-topic", default="dev.robot.telemetry.raw",
+                   help="Kafka topic (default: dev.robot.telemetry.raw)")
 
-    p.add_argument("--window-sec", type=positive_float, default=5.0,
+    parser.add_argument("--window-sec", type=positive_float, default=5.0,
                    help="Rolling window (seconds) for instantaneous QPS (default: 5)")
-    p.add_argument("--status-every", type=positive_float, default=1.0,
+    parser.add_argument("--status-every", type=positive_float, default=1.0,
                    help="Print status every N seconds (default: 1)")
 
-    p.add_argument("--loop", action="store_true",
+    parser.add_argument("--loop", action="store_true",
                    help="Loop over the sample data until duration elapses")
-    p.add_argument("--stability", action="store_true",
+    parser.add_argument("--stability", action="store_true",
                    help="Shortcut: run 60s at 1k msgs/s and report KPI PASS/FAIL")
-    p.add_argument("--perf", action="store_true",
-                   help="Shortcut: run 15m at 10k msgs/s, Kafka recommended; report KPI PASS/FAIL")
-    return p
+    parser.add_argument("--perf", action="store_true",
+                   help="Run 15m at 10k msgs/s (Kafka recommended); report KPI PASS/FAIL")
+    return parser
 
 
 def _apply_shortcuts(args: argparse.Namespace) -> None:
     """
-    Apply --stability/--perf shortcuts by overriding qps/duration/out/loop defaults.
+    Apply --stability/--perf presets.
     """
     if args.stability:
         args.qps = 1000.0
         args.duration = 60.0
-        # keep args.out as the user passed; default is 'both'
-        if not args.loop:
-            args.loop = True
+        args.loop = True
 
     if args.perf:
         args.qps = 10000.0
         args.duration = 15 * 60.0
-        if not args.loop:
-            args.loop = True
+        args.loop = True
 
 
 def _kpi_verdict(args: argparse.Namespace, metrics: Metrics) -> Optional[bool]:
     """
-    Return KPI PASS/FAIL if in test mode; None otherwise.
-    KPI: loss_rate <= 0.5% for all selected transports.
+    KPI verdict in profile modes: loss_rate <= 0.5% for all selected transports.
+    Returns True/False in profile mode, None otherwise.
     """
     if not (args.stability or args.perf):
         return None
@@ -83,9 +80,7 @@ def _kpi_verdict(args: argparse.Namespace, metrics: Metrics) -> Optional[bool]:
 
 
 def main() -> None:
-    """
-    Entry point: parse args, apply profiles, run simulator, print KPI verdict when relevant.
-    """
+    """Parse args, run simulator, print KPI when relevant."""
     parser = build_parser()
     args = parser.parse_args()
 
@@ -99,9 +94,6 @@ def main() -> None:
 
     _apply_shortcuts(args)
 
-    if args.out is None:
-        args.out = "kafka" if args.perf else "both"
-
     print(f"[config] qps={args.qps} duration={args.duration}s out={args.out} loop={bool(args.loop)}")
 
     df = load_data(Path(args.file))
@@ -111,8 +103,6 @@ def main() -> None:
     sim.run()
 
     verdict = _kpi_verdict(args, sim.metrics)
-
-    # Exit non-zero on KPI fail when in a profile mode (useful for CI).
     if verdict is False:
         sys.exit(1)
 

@@ -7,9 +7,7 @@ import pandas as pd
 
 
 def positive_float(x: str) -> float:
-    """
-    Convert CLI string -> positive float; raise argparse error if invalid.
-    """
+    """argparse type: positive float."""
     try:
         value = float(x)
     except ValueError:
@@ -20,9 +18,7 @@ def positive_float(x: str) -> float:
 
 
 def load_data(file_path: Path) -> pd.DataFrame:
-    """
-    Load CSV or Parquet file; fail fast on unsupported types.
-    """
+    """Load CSV or Parquet."""
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -40,18 +36,14 @@ def load_data(file_path: Path) -> pd.DataFrame:
 
 
 def iterate_records(df: pd.DataFrame) -> Iterator[Dict[str, Any]]:
-    """
-    Yield the dataframe rows as dicts. This separates I/O from the send loop.
-    """
+    """Yield the dataframe rows as dicts."""
     cols = list(df.columns)
     for row in df.itertuples(index=False, name=None):
         yield dict(zip(cols, row))
 
 
 def percentile(vals: List[float], p: float) -> Optional[float]:
-    """
-    Lightweight percentile (0..100) to avoid extra deps.
-    """
+    """Small helper for p-th percentile (0..100)."""
     if not vals:
         return None
     vals_sorted = sorted(vals)
@@ -66,16 +58,12 @@ def percentile(vals: List[float], p: float) -> Optional[float]:
 
 
 def fmt_latency(x: Optional[float]) -> str:
-    """
-    Pretty format latency seconds -> 'X.Yms' or 'n/a'.
-    """
+    """Format seconds -> 'X.Yms' or 'n/a'."""
     return f"{x*1000:.1f}ms" if x is not None else "n/a"
 
 
 def extract_sid_from_headers(headers: Optional[List[Tuple[str, bytes]]]) -> Optional[str]:
-    """
-    Extract 'sid' header (used to match Kafka delivery callback to send time).
-    """
+    """Extract 'sid' header from Kafka message headers."""
     if not headers:
         return None
     for k, v in headers:
