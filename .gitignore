@@ -1,0 +1,9 @@
+data/
+logs/
+tmp/
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+*.tar
+*.tgz
