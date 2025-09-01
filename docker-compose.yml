@@ -6,8 +6,11 @@ services:
       context: .
       dockerfile: runner/Dockerfile
     environment:
-      - RUNNER_MODE=mock         # change to "real" when wiring real Flink REST
-      # - FLINK_REST_URL=http://flink:8081
+      - RUNNER_MODE=real
+      - SQLITE_DB=/data/app.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/data:ro
     ports:
       - "50051:50051"
     restart: unless-stopped
