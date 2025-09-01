@@ -1,0 +1,37 @@
+﻿fullnameOverride: kafka
+
+# use KRaft mode (without ZooKeeper)
+kraft:
+  enabled: true
+
+# Run with a single controller and a single broker
+controller:
+  replicaCount: 1
+broker:
+  replicaCount: 1
+
+# Expose PLAINTEXT listener on port 9092
+service:
+  type: ClusterIP
+  ports:
+    client: 9092
+
+listeners:
+  client:
+    protocol: PLAINTEXT
+
+# Extra environment variables for Kafka configuration
+extraEnvVars:
+  # Disable automatic topic creation
+  - name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE
+    value: "false"
+  # Allow PLAINTEXT listener (used for dev / testing purposes) 
+  - name: ALLOW_PLAINTEXT_LISTENER
+    value: "yes"
+  # Configure internal Kafka topics with replication factor = 1
+  - name: KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR
+    value: "1"
+  - name: KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+    value: "1"
+  - name: KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR
+    value: "1"
