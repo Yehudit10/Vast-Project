@@ -138,22 +138,22 @@ pip install -r requirements.txt
 
 #### 1) Publish to both (MQTT + Kafka)
 ```bash
-python data_simulator.py --qps 100 --duration 30 --out both --file sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+python data_simulator.py --qps 100 --duration 30 --out both --file data/sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
 ```
 
 #### 2) MQTT only
 ```bash
-python data_simulator.py --qps 5 --duration 10 --out mqtt --file sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry
+python data_simulator.py --qps 5 --duration 10 --out mqtt --file data/sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry
 ```
 
 #### 3) Kafka only
 ```bash
-python data_simulator.py --qps 5 --duration 10 --out kafka --file sample.csv   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+python data_simulator.py --qps 5 --duration 10 --out kafka --file data/sample.csv   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
 ```
 
 #### 4) Stability profile (60s @ 1k msg/s)
 ```bash
-python data_simulator.py --stability --out kafka --file sample.csv   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+python data_simulator.py --stability --out kafka --file data/sample.csv   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
 ```
 
 #### 5) Performance profile (15m @ 10k msg/s)
@@ -162,7 +162,7 @@ python data_simulator.py --stability --out kafka --file sample.csv   --kafka-boo
 import pandas as pd; pd.read_csv("sample.csv").to_parquet("sample.parquet")
 ```
 ```bash
-python data_simulator.py --perf --out kafka --file sample.parquet   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+python data_simulator.py --perf --out kafka --file data/sample.parquet   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
 ```
 
 ### Example Output
@@ -170,9 +170,7 @@ python data_simulator.py --perf --out kafka --file sample.parquet   --kafka-boot
 After running a short test:
 
 ```bash
-python data_simulator.py --qps 5 --duration 5 --out both --file sample.csv \
-  --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry \
-  --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+python data_simulator.py --qps 5 --duration 5 --out both --file datasample.csv --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
 ```
 
 You may see a summary like:
