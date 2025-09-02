@@ -1,5 +1,122 @@
 # AgCloud-Sounds
 
+## Kafka Single – Kafka in Docker
+
+This project provides a simple Dockerfile to run Kafka (Bitnami image, single broker with topics and smoke test).
+
+### Run Instructions
+
+Run the project with the following commands:
+
+```bash
+docker build -t kafka-single:local .
+
+docker run -d --name kafka-single -p 29092:9094 -p 9092:9092 --env-file .\kafka-files\kafka.env.example kafka-single:local 
+
+docker logs --tail 200 kafka-single
+
+docker rm -f kafka-single
+```
+
+### Notes - kafka
+
+- The first command builds the image.
+
+- The second command runs the container.
+
+- The third command shows the logs – wait a few minutes before running it. If you don’t see ✔️ or ❌, run the command again.
+
+- The fourth command removes the container.
+If the container is running and you want to reset it, use this command.
+
+## AgCloud - Data Simulator
+
+This project provides a CLI tool that replays telemetry and sensor payloads from **CSV/Parquet** files at a fixed **QPS** to **MQTT** and/or **Kafka**.  
+It is used to validate throughput, stability, and reliability of the messaging stack.
+
+### Features
+
+- Publish messages to **MQTT**, **Kafka**, or both.
+- Input from **CSV** or **Parquet** (Parquet recommended for high QPS).
+- Metrics: sent / acked / lost, latency (p50/p95/p99), jitter.
+- Stability profile: 60s @ 1k msg/s.
+- Performance profile: 15m @ 10k msg/s.
+- KPI: message loss ≤ **0.5%**.
+
+### Install
+
+```bash
+python -m venv .venv && source .venv/bin/activate    # (Windows PowerShell: .venv\Scripts\Activate.ps1)
+pip install -r requirements.txt
+```
+
+### Quick Examples
+
+#### 1 Publish to both (MQTT + Kafka)
+
+```bash
+python data_simulator.py --qps 100 --duration 30 --out both --file sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+```
+
+#### 2 MQTT only
+
+```bash
+python data_simulator.py --qps 5 --duration 10 --out mqtt --file sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry
+```
+
+#### 3 Kafka only
+
+```bash
+python data_simulator.py --qps 5 --duration 10 --out kafka --file sample.csv   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+```
+
+#### 4 Stability profile (60s @ 1k msg/s)
+
+```bash
+python data_simulator.py --stability --out kafka --file sample.csv   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+```
+
+#### 5 Performance profile (15m @ 10k msg/s)
+
+> Parquet is recommended for faster reads:
+
+```python
+import pandas as pd; pd.read_csv("sample.csv").to_parquet("sample.parquet")
+```
+
+```bash
+python data_simulator.py --perf --out kafka --file sample.parquet   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+```
+
+### Example Output
+
+After running a short test:
+
+```bash
+python data_simulator.py --qps 5 --duration 5 --out both --file sample.csv \
+  --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry \
+  --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
+```
+
+You may see a summary like:
+
+```bash
+[summary]
+  total: sent=5 runtime=1.00s qps_avg≈5.00
+  jitter (std of inter-arrival): 0.000179s
+  kafka: sent=5 acked=5 lost=0 p50/p95/p99=n/a/n/a/n/a
+  mqtt : sent=5 acked=5 lost=0 p50/p95/p99=0.0ms/0.1ms/0.1ms
+  kafka loss: 0.000%
+  mqtt  loss: 0.000%
+```
+
+### Notes - data simulator
+
+- KPI target: **loss ≤ 0.5%** (PASS).
+- CSV/Parquet input is required (`--file`). Install `pyarrow` or `fastparquet` for Parquet.
+- Make sure your brokers are reachable (e.g., Mosquitto on 1883; Kafka advertised at 9094).
+
+<!--  
 ## AgCloud – Kafka on KinD
 
 This project demonstrates how to deploy Kafka on KinD using the Bitnami Helm chart, configure topics with 7-day retention, and verify the setup with a smoke test using kcat.
@@ -114,80 +231,4 @@ If you see smoke-test printed back, the setup works.
 - All topics have 7-day retention by default.
 
 - Kafka is exposed at localhost:29092 for producers/consumers outside the cluster.
-
-## AgCloud - Data Simulator
-
-This project provides a CLI tool that replays telemetry and sensor payloads from **CSV/Parquet** files at a fixed **QPS** to **MQTT** and/or **Kafka**.  
-It is used to validate throughput, stability, and reliability of the messaging stack.
-
-### Features
-- Publish messages to **MQTT**, **Kafka**, or both.
-- Input from **CSV** or **Parquet** (Parquet recommended for high QPS).
-- Metrics: sent / acked / lost, latency (p50/p95/p99), jitter.
-- Stability profile: 60s @ 1k msg/s.
-- Performance profile: 15m @ 10k msg/s.
-- KPI: message loss ≤ **0.5%**.
-
-### Install
-```bash
-python -m venv .venv && source .venv/bin/activate    # (Windows PowerShell: .venv\Scripts\Activate.ps1)
-pip install -r requirements.txt
-```
-
-### Quick Examples
-
-#### 1) Publish to both (MQTT + Kafka)
-```bash
-python data_simulator.py --qps 100 --duration 30 --out both --file sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
-```
-
-#### 2) MQTT only
-```bash
-python data_simulator.py --qps 5 --duration 10 --out mqtt --file sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry
-```
-
-#### 3) Kafka only
-```bash
-python data_simulator.py --qps 5 --duration 10 --out kafka --file sample.csv   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
-```
-
-#### 4) Stability profile (60s @ 1k msg/s)
-```bash
-python data_simulator.py --stability --out kafka --file sample.csv   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
-```
-
-#### 5) Performance profile (15m @ 10k msg/s)
-> Parquet is recommended for faster reads:
-```python
-import pandas as pd; pd.read_csv("sample.csv").to_parquet("sample.parquet")
-```
-```bash
-python data_simulator.py --perf --out kafka --file sample.parquet   --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
-```
-
-### Example Output
-
-After running a short test:
-
-```bash
-python data_simulator.py --qps 5 --duration 5 --out both --file sample.csv \
-  --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry \
-  --kafka-bootstrap localhost:9094 --kafka-topic dev.robot.telemetry.raw
-```
-
-You may see a summary like:
-```
-[summary]
-  total: sent=5 runtime=1.00s qps_avg≈5.00
-  jitter (std of inter-arrival): 0.000179s
-  kafka: sent=5 acked=5 lost=0 p50/p95/p99=n/a/n/a/n/a
-  mqtt : sent=5 acked=5 lost=0 p50/p95/p99=0.0ms/0.1ms/0.1ms
-  kafka loss: 0.000%
-  mqtt  loss: 0.000%
-```
-
-### Notes
-- KPI target: **loss ≤ 0.5%** (PASS).
-- CSV/Parquet input is required (`--file`). Install `pyarrow` or `fastparquet` for Parquet.
-- Make sure your brokers are reachable (e.g., Mosquitto on 1883; Kafka advertised at 9094).
-
+-->
