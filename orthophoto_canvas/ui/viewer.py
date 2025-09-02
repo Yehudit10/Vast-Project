@@ -32,8 +32,8 @@ class OrthophotoViewer(QGraphicsView):
     # ---------- Construction / scene bootstrapping ----------
     def __init__(self, tiles: Union[TileStore, str, Path]) -> None:
         """
-        tileset: object that exposes min_zoom, max_zoom, ranges(z), tile_path(z,x,y)
-        (see agcloud/io/tileset.py)
+        tileset: object that exposes min_zoom, max_zoom, z_ranges[z], tile_path(z,x,y)
+        (see agcloud/utils/tiles)
         """
         super().__init__()
         if isinstance(tiles, TileStore):
@@ -41,8 +41,7 @@ class OrthophotoViewer(QGraphicsView):
         else:
             self.ts = TileStore(Path(tiles))
 
-        # שלוף מאפיינים מוכנים מ-TileStore
-        self.existing_zooms = self.ts.existing_zooms
+        self.ts.existing_zooms = self.ts.existing_zooms
         self.min_zoom_fs    = self.ts.min_zoom
         self.max_zoom_fs    = self.ts.max_zoom
         self.z_ranges       = self.ts.z_ranges
@@ -64,7 +63,9 @@ class OrthophotoViewer(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setViewportUpdateMode(QGraphicsView.SmartViewportUpdate)
         self.setBackgroundBrush(QColor(220, 220, 220))
-
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)   # אופציונלי
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
         # State
         self.current_zoom = self.ts.min_zoom
         self.placeholder_color = Qt.lightGray
@@ -80,10 +81,7 @@ class OrthophotoViewer(QGraphicsView):
         # Scene rect anchored to base zoom (min z)
         self._init_scene_rect_from_min_zoom()
 
-        # Smart initial focus near dataset center at highest z, then snap scale
-        found = self._best_focus_tile()  # (z,x,y) close to center
-        self._smart_initial_focus(target_tile_px=INITIAL_TILE_PX, found=found, snap=False)
-        # self._snap_to_native_scale()
+        self._did_initial_zoom = False
 
         # First load
         self.update_tiles()
@@ -221,9 +219,19 @@ class OrthophotoViewer(QGraphicsView):
         self.update_timer.start(50)
 
     def showEvent(self, e):
-        """ברגע שהחלון מוצג, נתאים מיד את הזום כדי שיראו גדול."""
         super().showEvent(e)
+        if getattr(self, "_did_initial_fit", False):
+            return
+        self._did_initial_fit = True
         QTimer.singleShot(0, lambda: self.fit_to_data("width", 0.98))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if not getattr(self, "_did_initial_zoom", False):
+            self._did_initial_zoom = True
+            self.fit_to_data("width", 40.0)
+            # self.zoom_to_tile_px(768.0, at_z="max")
+        self._debounced_update()
 
     # ---------- LOD: choose z, load visible tiles ----------
     def _calc_zoom_level(self) -> int:
@@ -340,7 +348,7 @@ class OrthophotoViewer(QGraphicsView):
         while zz >= self.ts.min_zoom:
             p = self.ts.tile_path(zz, xx, yy)
             if p:
-                pm0 = QPixmap(p)
+                pm0 = QPixmap(str(p))
                 if not pm0.isNull():
                     pm = pm0
                     if zz < z:
@@ -444,15 +452,15 @@ class OrthophotoViewer(QGraphicsView):
         """Zoom so the dataset fills the viewport (width/height/all)."""
         z = self._calc_zoom_level()
         self.current_zoom_level = z
-        if z not in self.z_ranges:
+        if z not in self.ts.z_ranges:
             return
 
-        x_min_z, x_max_z, y_min_z, y_max_z = self.z_ranges[z]
+        x_min_z, x_max_z, y_min_z, y_max_z = self.ts.z_ranges[z]
 
-        eff = TILE_SIZE / float(1 << (z - self.min_zoom_fs))
+        eff = TILE_SIZE / float(1 << (z - self.ts.min_zoom))
 
-        base_x_min, _, base_y_min, _ = self.z_ranges[self.min_zoom_fs]
-        scale_factor = 1 << (z - self.min_zoom_fs)
+        base_x_min, _, base_y_min, _ = self.ts.z_ranges[self.ts.min_zoom]
+        scale_factor = 1 << (z - self.ts.min_zoom)
         x0 = base_x_min * scale_factor
         y0 = base_y_min * scale_factor
 
