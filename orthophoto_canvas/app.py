@@ -14,17 +14,17 @@ def _ensure_qt_platform_plugins():
     base = os.path.join(os.path.dirname(PyQt5.__file__), "Qt5", "plugins")
     plat = os.path.join(base, "platforms")
 
-    # אם יש שאריות סביבה מ-OSGeo/QGIS שמבלבלות, ננקה אותן
+    # if there are leftover OSGeo/QGIS environment variables, clean them up
     for var in ("QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH"):
         val = os.environ.get(var, "")
         if "OSGeo4W" in val or "QGIS" in val:
             os.environ.pop(var, None)
 
-    # נכפה נתיבים נכונים של ה-venv הנוכחי
+    # force the current venv's paths
     os.environ["QT_PLUGIN_PATH"] = base
     os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plat
 
-    # וגם נוסיף ל-library paths של Qt
+    # also add to Qt's library paths
     QCoreApplication.addLibraryPath(base)
     QCoreApplication.addLibraryPath(plat)
 # --- end block ---
