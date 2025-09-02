@@ -1,0 +1,22 @@
+image:
+  repository: bitnami/postgresql
+  tag: "16"
+
+auth:
+  existingSecret: pg-auth
+  username: "missions_user"
+  database: "missions_db"
+
+primary:
+  persistence:
+    enabled: true
+    size: 8Gi
+
+  extendedConfiguration: |
+    shared_preload_libraries = 'pg_stat_statements'
+    # removed: cron.database_name
+
+  service:
+    type: NodePort
+    nodePorts:
+      postgresql: 30032
