@@ -1,45 +1,39 @@
-# orthophoto_canvas/app.py
+from __future__ import annotations
 import sys
-from pathlib import Path
-import argparse
 from PyQt5.QtWidgets import QApplication
 from .ui.viewer import OrthophotoViewer
+from .ag_io.sensors_api import get_sensors
+import os, PyQt5
+from PyQt5 import QtCore 
 
-# --- add this block at the very top of app.py (before QApplication) ---
-def _ensure_qt_platform_plugins():
-    """Force Qt to use the platform plugins bundled with *this* venv’s PyQt5."""
-    import os, PyQt5
-    from PyQt5.QtCore import QCoreApplication
+def _patch_qt_plugin_paths():
+    qt_pkg_dir = os.path.dirname(PyQt5.__file__)
+    qt_plugins = os.path.join(qt_pkg_dir, "Qt5", "plugins")
+    qt_bin     = os.path.join(qt_pkg_dir, "Qt5", "bin")
 
-    base = os.path.join(os.path.dirname(PyQt5.__file__), "Qt5", "plugins")
-    plat = os.path.join(base, "platforms")
+    os.environ["PATH"] = qt_bin + os.pathsep + os.environ.get("PATH", "")
 
-    # if there are leftover OSGeo/QGIS environment variables, clean them up
-    for var in ("QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH"):
-        val = os.environ.get(var, "")
-        if "OSGeo4W" in val or "QGIS" in val:
-            os.environ.pop(var, None)
+    # clear/set plugin paths to avoid falling back on OSGeo4W
+    os.environ["QT_PLUGIN_PATH"] = qt_plugins
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(qt_plugins, "platforms")
 
-    # force the current venv's paths
-    os.environ["QT_PLUGIN_PATH"] = base
-    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plat
-
-    # also add to Qt's library paths
-    QCoreApplication.addLibraryPath(base)
-    QCoreApplication.addLibraryPath(plat)
-# --- end block ---
-
+    # explicitly set the library paths in case the env vars are not picked up
+    QtCore.QCoreApplication.setLibraryPaths([qt_plugins])
 
 def main():
-    parser = argparse.ArgumentParser(description="Orthophoto viewer")
-    default_tiles = Path(__file__).parent / "data" / "tiles"
-    parser.add_argument("--tiles", type=Path, default=default_tiles,
-                        help="Path to tiles root (XYZ/TMS)")
-    args = parser.parse_args()
-
-    _ensure_qt_platform_plugins()
+    _patch_qt_plugin_paths()
     app = QApplication(sys.argv)
-    viewer = OrthophotoViewer(str(args.tiles))
+
+    tiles_folder = r".\orthophoto_canvas\data\tiles"  # או via argparse אם יש לך
+    viewer = OrthophotoViewer(tiles_folder)
+
+    # Fetch sensors from the API and display them
+    try:
+        sensors = get_sensors()
+        viewer.set_sensors(sensors)
+    except Exception as e:
+        print(f"[SENSORS] failed to fetch: {e}")
+
     viewer.setWindowTitle("Orthophoto Viewer")
     viewer.resize(1200, 900)
     viewer.show()
