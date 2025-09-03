@@ -25,10 +25,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
     parser.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic (default: telemetry)")
 
-    parser.add_argument("--kafka-bootstrap", default="localhost:9094",
-                   help="Kafka bootstrap servers (default: localhost:9094)")
-    parser.add_argument("--kafka-topic", default="dev.robot.telemetry.raw",
-                   help="Kafka topic (default: dev.robot.telemetry.raw)")
+    parser.add_argument("--kafka-bootstrap", default="localhost:29092",
+                   help="Kafka bootstrap servers (default: localhost:29092)")
+    parser.add_argument("--kafka-topic", default="dev-robot-telemetry-raw",
+                   help="Kafka topic (default: dev-robot-telemetry-raw)")
 
     parser.add_argument("--window-sec", type=positive_float, default=5.0,
                    help="Rolling window (seconds) for instantaneous QPS (default: 5)")
