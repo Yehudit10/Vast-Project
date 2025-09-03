@@ -7,3 +7,4 @@ tmp/
 Thumbs.db
 *.tar
 *.tgz
+__pycache__/
