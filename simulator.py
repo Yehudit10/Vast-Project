@@ -33,7 +33,9 @@ class Simulator:
             "acks": "all",
             "linger.ms": 5,
             "batch.num.messages": 10000,
-            "message.timeout.ms": 10000
+            "message.timeout.ms": 10000,
+            "enable.idempotence": True,
+            "delivery.report.only.error": False
         }
         self.kafka = Producer(conf)
         
@@ -57,14 +59,21 @@ class Simulator:
         """Kafka delivery callback."""
         if err is None:
             self.metrics.acked_kafka += 1
+            sid = None
+            
             try:
-                sid = extract_sid_from_headers(getattr(msg, "headers", lambda: None)())
+                k = msg.key()
+                if isinstance(k, (bytes, bytearray)):
+                    sid = k.decode()
+                elif k is not None:
+                    sid = str(k)
             except Exception:
                 sid = None
-            if sid and sid in self.inflight_kafka:
-                start_ts = self.inflight_kafka.pop(sid, None)
-                if start_ts is not None:
-                    self.metrics.kafka_latencies.append(time.perf_counter() - start_ts)
+
+            start_ts = self.inflight_kafka.pop(sid, None) if sid else None
+            if start_ts is not None:
+                self.metrics.kafka_latencies.append(time.perf_counter() - start_ts)
+
         else:
             self.metrics.lost_kafka += 1
             try:
@@ -137,10 +146,11 @@ class Simulator:
                 sid = str(self._kafka_sid_seq)
                 self.inflight_kafka[sid] = now
                 hdrs = [("sid", sid.encode())] 
+                
                 try:
                     self.kafka.produce(
                         args.kafka_topic,
-                        key=str(record.get("device_id") or ""),
+                        key=sid,
                         value=payload_str.encode(),
                         headers=hdrs,
                         callback=self._delivery_report
@@ -149,7 +159,7 @@ class Simulator:
                     self.kafka.poll(0.1)
                     self.kafka.produce(
                         args.kafka_topic,
-                        key=str(record.get("device_id") or ""),
+                        key=sid,
                         value=payload_str.encode(),
                         headers=hdrs,
                         callback=self._delivery_report
