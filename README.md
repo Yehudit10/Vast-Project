@@ -165,6 +165,30 @@ import pandas as pd; pd.read_csv("sample.csv").to_parquet("sample.parquet")
 python data_simulator.py --perf --out kafka --file data/sample.parquet   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
 ```
 
+### Simulator CLI options
+
+- `--file <PATH>`  
+  **Required**. Path to input CSV file. Must exist under `data/` (e.g. `data/sample.csv`).
+
+- `--qps <FLOAT>`  
+  Optional. Messages per second to produce. Default: `1.0`.
+
+- `--duration <SEC>`  
+  Optional. How long to run (in seconds). Default: `10`.
+
+- `--out <kafka|mqtt|both>`  
+  Optional. Where to send the records. Default: `kafka`.
+
+- `--loop`  
+  Optional flag (no value). If set, replay file in a loop. Default: disabled.
+
+- `--bootstrap <BROKERS>`  
+  Optional. Kafka bootstrap servers. Default: `localhost:29092`.
+
+- `--topic <NAME>`  
+  Optional. Kafka topic name. Default: `dev-robot-telemetry-raw`.
+
+
 ### Example Output
 
 After running a short test:
@@ -187,5 +211,5 @@ You may see a summary like:
 ### Notes
 - KPI target: **loss ≤ 0.5%** (PASS).
 - CSV/Parquet input is required (`--file`). Install `pyarrow` or `fastparquet` for Parquet.
-- Make sure your brokers are reachable (e.g., Mosquitto on 1883; Kafka advertised at 9094).
+- Make sure your brokers are reachable (e.g., Mosquitto on 1883; Kafka advertised at 29092).
 
