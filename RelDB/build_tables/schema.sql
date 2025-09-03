@@ -131,7 +131,8 @@ CREATE INDEX IF NOT EXISTS ix_files_footprint_gist     ON files      USING GIST 
 CREATE INDEX IF NOT EXISTS ix_telemetry_ts_brin        ON telemetry  USING BRIN (ts);
 CREATE INDEX IF NOT EXISTS ix_anomalies_ts_brin        ON anomalies  USING BRIN (ts);
 
--- Lookup / filteringCREATE INDEX IF NOT EXISTS ix_telemetry_mission_ts     ON telemetry (mission_id, ts);
+-- Lookup / filtering
+CREATE INDEX IF NOT EXISTS ix_telemetry_mission_ts     ON telemetry (mission_id, ts);
 CREATE INDEX IF NOT EXISTS ix_anomalies_mission_ts     ON anomalies (mission_id, ts);
 CREATE INDEX IF NOT EXISTS ix_files_mission_created    ON files (mission_id, created_at);
 

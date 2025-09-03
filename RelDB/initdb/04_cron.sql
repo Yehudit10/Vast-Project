@@ -1,10 +1,9 @@
 -- 04_cron.sql
--- Scheduling automated tasks with pg_cron
--- Runs after 03_partitions.sql (so that all functions exist)
-
+-- Scheduling automatic tasks with pg_cron
+-- Runs after 03_partitions.sql (so that all functions already exist)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- 1) Every Sunday at 03:00 – create partitions for the upcoming week
+-- 1) Every Sunday at 03:00 – create partitions for the coming week
 SELECT cron.schedule(
   'partitions-next-week',
   '0 3 * * 0',
@@ -18,7 +17,7 @@ SELECT cron.schedule(
   $$SELECT admin.apply_yearly_retention();$$
 );
 
--- 3) Every 10 minutes – re-homing from the DEFAULT partition to the correct partitions
+-- 3) Every 10 minutes — re-homing from the default partition (DEFAULT) to the correct partitions
 SELECT cron.schedule(
   'rehoming-telemetry-default',
   '*/10 * * * *',
