@@ -15,9 +15,14 @@ Before we start you have to download TSL.
 docker build -t pg-postgis-minikube:latest .
 ```
 
+### Build Volume
+```bash
+docker volume create pgdata
+```
+
 ### Run Dockerfile
 ```bash
-docker run --privileged --cgroupns=host --name pg-mini -d pg-postgis-minikube:latest
+docker run --privileged --cgroupns=host --name pg-mini -v pgdata:/var/lib/postgresql/data -d pg-postgis-minikube:latest
 ```
 
 ### See the logs

@@ -71,8 +71,8 @@ set -euo pipefail
 : "${NAMESPACE:=db}"
 : "${RELEASE:=pg}"
 : "${BITNAMI_IMAGE:=docker.io/bitnami/postgresql:16}"
-: "${POSTGRES_ADMIN_PASSWORD:=PgAdmin!ChangeMe123}"
-: "${POSTGRES_PASSWORD:=Missions!ChangeMe123}"
+: "${POSTGRES_ADMIN_PASSWORD:=PgAdmin}"
+: "${POSTGRES_PASSWORD:=Pg123}"
 : "${VALUES_FILE:=/work/values.yaml}"
 : "${NETFREE_CERT_PATH:=/tmp/netfree-ca.crt}"
 : "${NETFREE_CERT_DIR_IN_NODE:=/usr/local/share/ca-certificates}"
@@ -102,12 +102,12 @@ start_dockerd(){
   if ! docker info >/dev/null 2>&1; then
     log "Starting Docker daemon (dind) in background..."
     mkdir -p /var/lib/docker
-    nohup dockerd --host=unix:///var/run/docker.sock --storage-driver=vfs >/tmp/dockerd.log 2>&1 &
+    nohup dockerd --host=unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 &
     for i in $(seq 1 180); do
       docker info >/dev/null 2>&1 && break
       sleep 1
       if [ "$i" -eq 180 ]; then
-        echo "Docker failed to start"; tail -n +1 /tmp/dockerd.log || true
+        echo "Docker failed to start"; 
         exit 1
       fi
     done
@@ -143,17 +143,21 @@ prepull_or_load(){
 
 helm_and_ns(){
   log "Add Helm repo + ensure namespace"
-  helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1 || true
+  helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1 || echo "Helm repo 'bitnami' already exists, skipping add"
   helm repo update
   kubectl get ns "${NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${NAMESPACE}"
 }
 
 create_secret(){
-  log "Create/refresh pg-auth secret"
-  kubectl -n "${NAMESPACE}" delete secret pg-auth >/dev/null 2>&1 || true
-  kubectl -n "${NAMESPACE}" create secret generic pg-auth \
-    --from-literal=postgres-password="${POSTGRES_ADMIN_PASSWORD}" \
-    --from-literal=password="${POSTGRES_PASSWORD}"
+  log "Ensure pg-auth secret exists"
+  if kubectl -n "${NAMESPACE}" get secret pg-auth >/dev/null 2>&1; then
+    echo "Secret pg-auth already exists, skipping creation"
+  else
+    kubectl -n "${NAMESPACE}" create secret generic pg-auth \
+      --from-literal=postgres-password="${POSTGRES_ADMIN_PASSWORD}" \
+      --from-literal=password="${POSTGRES_PASSWORD}"
+    echo "Secret pg-auth created"
+  fi
 }
 
 install_pg(){
@@ -163,24 +167,28 @@ install_pg(){
 
 wait_ready(){
   log "Wait for PostgreSQL pod Ready"
-  kubectl -n "${NAMESPACE}" wait \
+  if ! kubectl -n "${NAMESPACE}" wait \
     --for=condition=ready pod \
     -l app.kubernetes.io/instance="${RELEASE}",app.kubernetes.io/name=postgresql \
-    --timeout=15m || true
+    --timeout=15m; then
+    echo "⚠️  PostgreSQL pod did not become Ready within 15 minutes, will keep checking service endpoints..."
+  fi
 
   log "Wait for Service endpoints (${RELEASE}-postgresql)"
   for i in $(seq 1 180); do
-    if kubectl -n "${NAMESPACE}" get endpoints "${RELEASE}-postgresql" -o jsonpath='{.subsets[0].addresses[0].ip}' >/dev/null 2>&1; then
-      log "Service endpoints are ready"
+    if kubectl -n "${NAMESPACE}" get endpoints "${RELEASE}-postgresql" \
+         -o jsonpath='{.subsets[0].addresses[0].ip}' >/dev/null 2>&1; then
+      log "✅ Service endpoints are ready"
       return 0
     fi
     sleep 2
-    if [ "$i" -eq 180 ]; then
-      echo "Service endpoints not ready in time"
-      kubectl -n "${NAMESPACE}" get endpoints "${RELEASE}-postgresql" || true
-    fi
   done
+
+  echo "❌ Service endpoints not ready after 180 attempts (~6 minutes)"
+  kubectl -n "${NAMESPACE}" get endpoints "${RELEASE}-postgresql" || echo "No endpoints found"
+  exit 1
 }
+
 
 ensure_postgis(){
   log "Ensure PostGIS extension exists (with retry)"
@@ -258,12 +266,11 @@ ensure_postgis
 run_sqls_in_order
 
 log "Done. PostgreSQL + PostGIS are up."
-kubectl -n "${NAMESPACE}" get pods -o wide || true
-kubectl -n "${NAMESPACE}" get svc || true
 
 # Keep the container alive to view logs
 exec tail -f /dev/null
 BASH
-RUN chmod +x /work/entrypoint.sh
+
+RUN sed -i 's/\r$//' /work/entrypoint.sh && chmod +x /work/entrypoint.sh
 
 ENTRYPOINT ["/work/entrypoint.sh"]
