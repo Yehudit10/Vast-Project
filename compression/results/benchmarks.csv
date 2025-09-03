@@ -1,0 +1,11 @@
+file,codec,orig_bytes,encoded_bytes,compression_ratio_orig_over_encoded,encode_time_sec,encode_cpu_avg_percent
+animal-heavy-breathing-60909.mp3,flac,539040,2867603,0.188,0.178,0.0
+animal-heavy-breathing-60909.mp3,opus,539040,313972,1.717,0.426,108.6
+animals-duck.wav,flac,2585166,415298,6.225,0.178,0.0
+animals-duck.wav,opus,2585166,263724,9.803,0.518,87.7
+cat.wav,flac,532302,123469,4.311,0.175,0.0
+cat.wav,opus,532302,53814,9.892,0.177,0.0
+cats-fighting-73284.mp3,flac,348480,1493068,0.233,0.175,0.0
+cats-fighting-73284.mp3,opus,348480,207887,1.676,0.403,88.5
+crying-animal-84745.mp3,flac,74400,314441,0.237,0.17,0.0
+crying-animal-84745.mp3,opus,74400,41630,1.787,0.169,0.0
