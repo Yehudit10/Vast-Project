@@ -14,7 +14,7 @@ docker build -t agcloud-prometheus .
 ### Run Prometheus
 
 ```sh
-docker run -p 9090:9090 agcloud-prometheus
+docker run -p 9090:9090 --name prometheus agcloud-prometheus
 ```
 
 Prometheus will start with the configuration from `prometheus-docker/prometheus.yml` and expose the default port 9090.
