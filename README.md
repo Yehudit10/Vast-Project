@@ -24,7 +24,7 @@ docker rm -f kafka-single
 
 - The second command runs the container.
 
-- The third command shows the logs – wait a few minutes before running it. If you don’t see ✔️ or ❌, run the command again.
+- The third command shows the logs – wait a few minutes before running it. If you don’t see ✅ or ❌, run the command again.
 
 - The fourth command removes the container.
 If the container is running and you want to reset it, use this command.
