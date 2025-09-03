@@ -8,13 +8,13 @@ This project includes a custom Dockerfile for running Prometheus in a containeri
 
 ```sh
 cd prometheus-docker
-docker build -t agCloud .
+docker build -t agcloud-prometheus .
 ```
 
 ### Run Prometheus
 
 ```sh
-docker run -p 9090:9090 agCloud
+docker run -p 9090:9090 agcloud-prometheus
 ```
 
 Prometheus will start with the configuration from `prometheus-docker/prometheus.yml` and expose the default port 9090.
