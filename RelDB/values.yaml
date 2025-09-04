@@ -1,5 +1,5 @@
 image:
-  repository: bitnami/postgresql
+  repository: agcloud/postgresql-pgvector
   tag: "16"
 
 auth:
