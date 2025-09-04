@@ -1,0 +1,56 @@
+{
+    "id": null,
+    "title": "Postgres – WAL, Replication, BRIN",
+    "tags": ["postgres", "prometheus"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "5s",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "WAL Throughput (bytes/s)",
+        "targets": [
+          {
+            "expr": "rate(pg_wal_stats_wal_bytes[30s])",
+            "legendFormat": "WAL bytes/s"
+          }
+        ],
+        "datasource": "Prometheus"
+      },
+      {
+        "type": "graph",
+        "title": "Replication Lag (bytes)",
+        "targets": [
+          {
+            "expr": "pg_replication_lag_bytes_primary",
+            "legendFormat": "{{application_name}}"
+          }
+        ],
+        "datasource": "Prometheus"
+      },
+      {
+        "type": "graph",
+        "title": "Replication Lag (seconds)",
+        "targets": [
+          {
+            "expr": "pg_replication_replay_lag_seconds_standby",
+            "legendFormat": "standby lag"
+          }
+        ],
+        "datasource": "Prometheus"
+      },
+      {
+        "type": "graph",
+        "title": "BRIN Hit Ratio by Index",
+        "targets": [
+          {
+            "expr": "pg_brin_index_io_brin_hit_ratio",
+            "legendFormat": "{{schemaname}}.{{index_name}}"
+          }
+        ],
+        "datasource": "Prometheus"
+      }
+    ]
+  }
+  
