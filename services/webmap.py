@@ -1,40 +1,11 @@
-# from __future__ import annotations
-# import random, time, threading
-# from datetime import datetime, timezone
-# from flask import Flask, Response, send_from_directory, jsonify
 # from pathlib import Path
-# from prometheus_client import CollectorRegistry, Gauge, generate_latest, CONTENT_TYPE_LATEST
-# from webmap import webmap_bp
+# from flask import Blueprint, send_from_directory, Response
 
-# app = Flask(__name__)
-# app.register_blueprint(webmap_bp)  # routes: /map, /tiles, /api/sensors
-# # TILES_ROOT = Path(__file__).resolve().parents[1] / "orthophoto_canvas" / "data" / "tiles"
-# REG = CollectorRegistry()
+# webmap_bp = Blueprint("webmap", __name__)
 
-# SENSOR_STATUS = Gauge("sensor_status", "1=active, 0=inactive", ["sensor"], registry=REG)
-# SENSORS_ACTIVE_TOTAL = Gauge("sensors_active_total", "Active sensors total", registry=REG)
-# SENSOR_LAST_SEEN = Gauge("sensor_last_seen_timestamp_seconds", "Last seen (unix ts)", ["sensor"], registry=REG)
+# TILES_ROOT = Path(__file__).resolve().parents[1] / "orthophoto_canvas" / "data" / "tiles"
 
-# SENSORS = [f"sensor_{i:03d}" for i in range(1, 41)]  # 40 sensors demo
-
-# def _tick():
-#     while True:
-#         active_count = 0
-#         now = datetime.now(timezone.utc).timestamp()
-#         for s in SENSORS:
-#             val = 1 if random.random() < 0.8 else 0  # ~80% active
-#             SENSOR_STATUS.labels(sensor=s).set(val)
-#             if val == 1:
-#                 active_count += 1
-#                 SENSOR_LAST_SEEN.labels(sensor=s).set(now)
-#         SENSORS_ACTIVE_TOTAL.set(active_count)
-#         time.sleep(5)
-
-# @app.route("/metrics")
-# def metrics():
-#     return Response(generate_latest(REG), mimetype=CONTENT_TYPE_LATEST)
-
-# @app.get("/tiles/<int:z>/<int:x>/<path:y_png>")
+# @webmap_bp.get("/tiles/<int:z>/<int:x>/<path:y_png>")
 # def tiles(z: int, x: int, y_png: str):
 #     p = TILES_ROOT / str(z) / str(x) / y_png
 #     if p.is_file():
@@ -49,9 +20,10 @@
 #         pass
 #     return Response("Tile not found", status=404)
 
-# @app.get("/map")
+# @webmap_bp.get("/map")
 # def map_page():
-#     html = """<!doctype html>
+#     html = """
+# <!doctype html>
 # <html>
 # <head>
 #   <meta charset="utf-8"/>
@@ -87,93 +59,74 @@
 #     L.control.fullscreen().addTo(map);
 #     L.control.scale().addTo(map);
 
+#     // Local orthophoto tiles (from orthophoto_canvas/data/tiles)
 #     const ortho = L.tileLayer('/tiles/{z}/{x}/{y}.png', { maxZoom: 19, minZoom: 0 });
 #     ortho.addTo(map);
 
+#     // Optional base map
 #     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom: 19, attribution: '&copy; OpenStreetMap' });
 
+#     // Drawing/editing layer
 #     const drawn = new L.FeatureGroup().addTo(map);
 #     new L.Control.Draw({ edit: { featureGroup: drawn }, draw: { circle: false } }).addTo(map);
 #     map.on(L.Draw.Event.CREATED, e => drawn.addLayer(e.layer));
 
+#     // Layers control
 #     const baseLayers = { "Orthophoto": ortho, "OSM": osm };
 #     const overlays = { "Drawn": drawn };
 #     L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
 
+#     // Opacity slider
 #     document.getElementById('opacity').addEventListener('input', (ev) => {
 #       ortho.setOpacity(parseFloat(ev.target.value));
 #     });
 
+#     // Home button
 #     document.getElementById('home').addEventListener('click', () => {
 #       map.setView(HOME.center, HOME.zoom);
 #     });
 
+#     // Mouse coords
 #     map.on('mousemove', (e) => {
 #       document.getElementById('coords').textContent =
 #         `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
 #     });
+
+#     // Optional: markers from /api/sensors
+#     fetch('/api/sensors').then(r => r.json()).then(rows => {
+#       rows.forEach(s => {
+#         if (typeof s.lat === 'number' && typeof s.lon === 'number') {
+#           L.marker([s.lat, s.lon]).addTo(map).bindPopup(`<b>${s.id ?? 'sensor'}</b>`);
+#         }
+#       });
+#     }).catch(() => {});
 #   </script>
 # </body>
-# </html>"""
+# </html>
+# """
 #     return Response(html, mimetype="text/html")
 
-# # Optional, only if you want markers from an API:
-# @app.get("/api/sensors")
-# def api_sensors():
-#     return jsonify([
-#         {"id": "S-001", "lat": 31.778, "lon": 35.235},
-#         {"id": "S-002", "lat": 31.785, "lon": 35.220},
-#         {"id": "S-003", "lat": 31.760, "lon": 35.250},
-#     ])
 
-
-# if __name__ == "__main__":
-#     threading.Thread(target=_tick, daemon=True).start()
-#     app.run(host="0.0.0.0", port=8000)
-
-
+# services/webmap.py
 from __future__ import annotations
-import random, time, threading
-from datetime import datetime, timezone
-from flask import Flask, Response, send_from_directory, jsonify
 from pathlib import Path
-from prometheus_client import CollectorRegistry, Gauge, generate_latest, CONTENT_TYPE_LATEST
-# from webmap import webmap_bp
-from .webmap import webmap_bp  
+from flask import Blueprint, send_from_directory, Response, jsonify
 
-app = Flask(__name__)
-app.register_blueprint(webmap_bp)  # routes: /map, /tiles, /api/sensors
-# TILES_ROOT = Path(__file__).resolve().parents[1] / "orthophoto_canvas" / "data" / "tiles"
-REG = CollectorRegistry()
+# זהו אותו מודול שה־viewer משתמש בו להצגת ה־sensors האמיתיים
+from orthophoto_canvas.ag_io.sensors_api import get_sensors
 
-SENSOR_STATUS = Gauge("sensor_status", "1=active, 0=inactive", ["sensor"], registry=REG)
-SENSORS_ACTIVE_TOTAL = Gauge("sensors_active_total", "Active sensors total", registry=REG)
-SENSOR_LAST_SEEN = Gauge("sensor_last_seen_timestamp_seconds", "Last seen (unix ts)", ["sensor"], registry=REG)
+webmap_bp = Blueprint("webmap", __name__)
 
-SENSORS = [f"sensor_{i:03d}" for i in range(1, 41)]  # 40 sensors demo
+# מצביע ל- <project-root>/orthophoto_canvas/data/tiles
+TILES_ROOT = Path(__file__).resolve().parents[1] / "orthophoto_canvas" / "data" / "tiles"
 
-def _tick():
-    while True:
-        active_count = 0
-        now = datetime.now(timezone.utc).timestamp()
-        for s in SENSORS:
-            val = 1 if random.random() < 0.8 else 0  # ~80% active
-            SENSOR_STATUS.labels(sensor=s).set(val)
-            if val == 1:
-                active_count += 1
-                SENSOR_LAST_SEEN.labels(sensor=s).set(now)
-        SENSORS_ACTIVE_TOTAL.set(active_count)
-        time.sleep(5)
-
-@app.route("/metrics")
-def metrics():
-    return Response(generate_latest(REG), mimetype=CONTENT_TYPE_LATEST)
-
-@app.get("/tiles/<int:z>/<int:x>/<path:y_png>")
+@webmap_bp.get("/tiles/<int:z>/<int:x>/<path:y_png>")
 def tiles(z: int, x: int, y_png: str):
+    # XYZ
     p = TILES_ROOT / str(z) / str(x) / y_png
     if p.is_file():
         return send_from_directory(p.parent, p.name, mimetype="image/png")
+    # Fallback ל-TMS (היפוך Y)
     try:
         y = int(y_png.replace(".png", ""))
         y_tms = (1 << z) - 1 - y
@@ -184,9 +137,16 @@ def tiles(z: int, x: int, y_png: str):
         pass
     return Response("Tile not found", status=404)
 
-@app.get("/map")
+@webmap_bp.get("/api/sensors")
+def api_sensors():
+    # אותם נתונים כמו ב-viewer (לא דמו)
+    rows = get_sensors()
+    return jsonify(rows)
+
+@webmap_bp.get("/map")
 def map_page():
-    html = """<!doctype html>
+    html = """
+<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
@@ -195,8 +155,6 @@ def map_page():
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <style>
     html,body,#map { height: 100%; margin: 0; }
     .toolbar { position: absolute; top: 8px; left: 8px; z-index: 1000; background: #fff; padding: 6px 8px; border-radius: 6px; box-shadow: 0 1px 5px rgba(0,0,0,0.65); }
@@ -215,53 +173,90 @@ def map_page():
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script>
-    const HOME = { center: [31.77, 35.21], zoom: 12 };
-    const map = L.map('map', { zoomControl: true }).setView(HOME.center, HOME.zoom);
+    const map = L.map('map', { zoomControl: true });
     L.control.fullscreen().addTo(map);
     L.control.scale().addTo(map);
 
-    const ortho = L.tileLayer('/tiles/{z}/{x}/{y}.png', { maxZoom: 19, minZoom: 0 });
+    // שכבת אריחים מקומיים (Orthophoto)
+    const ortho = L.tileLayer('/tiles/{z}/{x}/{y}.png', { maxZoom: 19, minZoom: 0, updateWhenIdle: true });
     ortho.addTo(map);
 
+    // שכבת בסיס אופציונלית
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom: 19, attribution: '&copy; OpenStreetMap' });
 
+    // שכבת ציור
     const drawn = new L.FeatureGroup().addTo(map);
     new L.Control.Draw({ edit: { featureGroup: drawn }, draw: { circle: false } }).addTo(map);
-    map.on(L.Draw.Event.CREATED, e => drawn.addLayer(e.layer));
 
     const baseLayers = { "Orthophoto": ortho, "OSM": osm };
     const overlays = { "Drawn": drawn };
     L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
 
+    // שקיפות אורתופוטו
     document.getElementById('opacity').addEventListener('input', (ev) => {
       ortho.setOpacity(parseFloat(ev.target.value));
     });
 
-    document.getElementById('home').addEventListener('click', () => {
-      map.setView(HOME.center, HOME.zoom);
-    });
-
+    // קואורדינטות עכבר
     map.on('mousemove', (e) => {
       document.getElementById('coords').textContent =
         `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
     });
+
+    // טעינת sensors אמיתיים מהשרת (אותו מקור כמו ה-viewer)
+    fetch('/api/sensors').then(r => r.json()).then(rows => {
+      const markers = [];
+      rows.forEach(s => {
+        if (typeof s.lat !== 'number' || typeof s.lon !== 'number') return;
+
+        // צבע לפי סטטוס כמו ב-viewer (התאימי במידת הצורך)
+        const status = (s.status || '').toLowerCase();
+        const color =
+          status === 'ok' ? '#2ecc71' :
+          status === 'warning' ? '#f39c12' :
+          status === 'error' ? '#e74c3c' : '#3498db';
+
+        const m = L.circleMarker([s.lat, s.lon], {
+          radius: 6, weight: 2, color: '#ffffff', fillColor: color, fillOpacity: 0.95
+        }).addTo(map);
+
+        // Tooltip על hover (כמו ב-screenshot)
+        const name = s.name || s.label || s.sensor_id || 'sensor';
+        const battery = (s.battery != null) ? `${s.battery}` : 'n/a';
+        const html = `
+          <div style="font: 13px/1.2 sans-serif">
+            <b>${name}</b> <small>${s.sensor_id ?? ''}</small><br/>
+            <span style="color:#2ecc71">•</span> Battery: ${battery}<br/>
+            <span style="color:#555">•</span> Status: ${status || 'n/a'}<br/>
+          </div>
+        `;
+
+        m.bindTooltip(html, { direction: 'top', sticky: true, opacity: 0.95, className: 'sensor-tip' });
+        markers.push(m);
+      });
+
+      // התאמת תצוגה לכל החיישנים; אם אין—מרכז/זום ברירת מחדל
+      if (markers.length) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.2));
+      } else {
+        map.setView([31.77, 35.21], 12);
+      }
+    }).catch(() => {
+      map.setView([31.77, 35.21], 12); // fallback
+    });
+
+    // כפתור "Home" חוזר לתחום כל החיישנים
+    document.getElementById('home').addEventListener('click', () => {
+      fetch('/api/sensors').then(r => r.json()).then(rows => {
+        const pts = rows.filter(s => typeof s.lat === 'number' && typeof s.lon === 'number')
+                        .map(s => [s.lat, s.lon]);
+        if (pts.length) map.fitBounds(pts, { padding: [20,20] });
+      });
+    });
   </script>
 </body>
-</html>"""
+</html>
+"""
     return Response(html, mimetype="text/html")
-
-# Optional, only if you want markers from an API:
-@app.get("/api/sensors")
-def api_sensors():
-    return jsonify([
-        {"id": "S-001", "lat": 31.778, "lon": 35.235},
-        {"id": "S-002", "lat": 31.785, "lon": 35.220},
-        {"id": "S-003", "lat": 31.760, "lon": 35.250},
-    ])
-
-
-if __name__ == "__main__":
-    threading.Thread(target=_tick, daemon=True).start()
-    app.run(host="0.0.0.0", port=8000)
