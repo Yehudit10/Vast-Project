@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 
-DB_DSN = os.getenv("DB_DSN", "postgresql+psycopg://postgres:postgres@localhost:5432/postgres")
+DB_DSN = os.getenv("DB_DSN", "postgresql+psycopg://missions_user:pg123@localhost:5432/missions_db")
 engine = create_engine(DB_DSN, pool_pre_ping=True, pool_size=10, max_overflow=20)
 SessionLocal = sessionmaker(bind=engine)
 
