@@ -1,5 +1,5 @@
 from __future__ import annotations
-from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QHBoxLayout
+from PyQt5.QtWidgets import QFrame, QLabel, QPushButton, QHBoxLayout
 
 class ErrorBanner(QFrame):
     def __init__(self) -> None:

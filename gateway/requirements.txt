@@ -1,6 +1,13 @@
-fastapi==0.111.0
-uvicorn[standard]==0.30.0
+# fastapi==0.111.0
+# uvicorn[standard]==0.30.0
+# pydantic==2.7.4
+# grpcio==1.64.1
+# grpcio-tools==1.64.1
+# protobuf==5.27.1
+fastapi>=0.110
+uvicorn[standard]>=0.29
+prometheus_client>=0.20
 pydantic==2.7.4
-grpcio==1.64.1
-grpcio-tools==1.64.1
-protobuf==5.27.1
+grpcio>=1.56,<2
+grpcio-tools>=1.56,<2
+protobuf>=4.24,<5
