@@ -7,7 +7,7 @@ This project includes a custom Dockerfile for running Prometheus in a containeri
 ### Build the Prometheus Docker Image
 
 ```sh
-cd prometheus-docker
+cd prometheus
 docker build -t agcloud-prometheus .
 ```
 
