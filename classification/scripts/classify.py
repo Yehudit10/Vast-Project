@@ -1,5 +1,9 @@
-# Baseline classifier CLI: loads local file(s), runs PANNs inference, prints Top-K and coarse buckets.
-# If a trained head is provided, also prints 4-class probabilities from the head.
+# scripts/classify.py
+# Baseline classifier CLI: runs PANNs inference on windows and prints:
+# - File-level Top-K (AudioSet) using aggregated clipwise probabilities
+# - File-level coarse buckets (animal/vehicle/shotgun/other) averaged over windows
+# - Optional: file-level 4-class probabilities from a trained head (LogReg over embeddings)
+# - Optional: per-window previews
 
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ from core.model_io import (
     summarize_buckets,
 )
 
-# Keep a clear, explicit list for discovery speed and user expectations.
+# Explicit extension list keeps discovery predictable cross-platform
 SUPPORTED_EXTS = (".wav", ".flac", ".ogg", ".aiff", ".aif", ".au", ".mp3", ".m4a", ".aac", ".opus")
 
 
@@ -33,7 +37,7 @@ def discover_audio_files(root: pathlib.Path) -> List[pathlib.Path]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Baseline CNN14 classifier (print-only).")
+    parser = argparse.ArgumentParser(description="Baseline CNN14 classifier with windowing & aggregation.")
     parser.add_argument("--audio", required=True, help="Path to an audio file or a directory with audio files.")
     parser.add_argument(
         "--checkpoint",
@@ -52,9 +56,20 @@ def main() -> None:
     )
     parser.add_argument("--topk", type=int, default=10, help="How many top labels to print (default: %(default)s).")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu", help="Inference device (default: cpu).")
-    parser.add_argument("--head", default=None, help="Optional path to a trained 4-class head (joblib).")
-    args = parser.parse_args()
 
+    # Windowing & aggregation
+    parser.add_argument("--window-sec", type=float, default=2.0, help="Window length in seconds (default: 2.0).")
+    parser.add_argument("--hop-sec", type=float, default=0.5, help="Hop between windows in seconds (default: 0.5).")
+    parser.add_argument("--pad-last", action="store_true", help="Pad the last partial window to full size if needed.")
+    parser.add_argument("--agg", choices=["mean", "max"], default="mean",
+                        help="Aggregation over windows for file-level output (default: mean).")
+    parser.add_argument("--print-windows", action="store_true",
+                        help="Print a short per-window preview (top-3).")
+
+    # Optional trained head (LogReg over embeddings)
+    parser.add_argument("--head", default=None, help="Optional path to a trained 4-class head (joblib).")
+
+    args = parser.parse_args()
     root = pathlib.Path(args.audio)
 
     # Ensure checkpoint exists (or download)
@@ -93,48 +108,115 @@ def main() -> None:
         print(f"[info] Supported extensions: {', '.join(SUPPORTED_EXTS)}")
         sys.exit(0)
 
-    # Optional labels override (loaded directly inside run_inference if needed; here only for explicit CSV)
+    # Optional labels override (explicit CSV)
     override_labels: Optional[List[str]] = None
     if args.labels_csv:
         from core.model_io import load_labels_from_csv
         override_labels = load_labels_from_csv(args.labels_csv)
 
-    # Process
+    # Process files
     for f in files:
         try:
+            from core.model_io import segment_waveform, aggregate_matrix
+            import numpy as _np
+
             wav = load_audio(str(f), target_sr=SAMPLE_RATE)
-            probs, labels = run_inference(at, wav)
 
-            if override_labels and len(override_labels) == probs.size:
-                labels = override_labels
+            # Windowing
+            windows = segment_waveform(
+                wav,
+                sr=SAMPLE_RATE,
+                window_sec=float(args.window_sec),
+                hop_sec=float(args.hop_sec),
+                pad_last=bool(args.pad_last),
+            )
+            if not windows:
+                print(f"[warn] No windows produced for {f.name}")
+                continue
 
+            # Per-window predictions (AudioSet clipwise)
+            win_probs_list: List[_np.ndarray] = []
+            per_window_labels: Optional[List[str]] = None
+
+            # Optional head (4-class)
+            head_probs_list: List[_np.ndarray] = []
+
+            for (t0, t1, seg) in windows:
+                probs, labs = run_inference(at, seg)
+                if per_window_labels is None:
+                    per_window_labels = labs
+                    if override_labels and len(override_labels) == probs.size:
+                        per_window_labels = override_labels
+                win_probs_list.append(probs)
+
+                if head is not None:
+                    try:
+                        from core.model_io import run_embedding
+                        emb = run_embedding(at, seg).reshape(1, -1)
+                        hp = head.predict_proba(emb)[0]
+                        head_probs_list.append(hp)
+                    except Exception as e:
+                        print(f"[warn] head inference failed on window {t0:.2f}-{t1:.2f}: {e}")
+
+            if per_window_labels is None:
+                print(f"[error] No labels available for {f.name}")
+                continue
+
+            # Aggregate to file-level
+            probs_mat = _np.stack(win_probs_list, axis=0)               # (num_windows, C)
+            agg_clipwise = aggregate_matrix(probs_mat, mode=args.agg)   # (C,)
+
+            # File-level Top-K from aggregated clipwise
             topk = max(1, int(args.topk))
-            idx_sorted = probs.argsort()[::-1][:topk]
-            top_pairs = [(labels[i], float(probs[i])) for i in idx_sorted]
+            idx_sorted_file = agg_clipwise.argsort()[::-1][:topk]
+            top_pairs_file = [(per_window_labels[i], float(agg_clipwise[i])) for i in idx_sorted_file]
 
+            # Bucket averaging over windows (more stable than a single Top-K bucket)
+            from core.model_io import summarize_buckets as _summ
+            buckets_seq = []
+            for probs in win_probs_list:
+                idx_sorted = probs.argsort()[::-1][:topk]
+                top_pairs = [(per_window_labels[i], float(probs[i])) for i in idx_sorted]
+                buckets_seq.append(_summ(top_pairs))
+            bucket_keys = ("animal", "vehicle", "shotgun", "other")
+            buckets_mean = {k: float(_np.mean([b[k] for b in buckets_seq])) for k in bucket_keys}
+
+            # Print file-level results
             print(f"\n========== {f.name} ==========")
-            print("Top predictions:")
-            for i, (lab, p) in enumerate(top_pairs, 1):
+            print(f"Windows: {len(windows)}  (window={args.window_sec:.2f}s, hop={args.hop_sec:.2f}s, agg={args.agg})")
+
+            print("\nFile-level Top predictions (aggregated):")
+            for i, (lab, p) in enumerate(top_pairs_file, 1):
                 print(f" {i:2d}. {lab:40s} {p:7.4f}")
 
-            buckets = summarize_buckets(top_pairs)
-            print("\nCoarse buckets (normalized from top-k):")
-            for k in ("animal", "vehicle", "shotgun", "other"):
-                print(f"- {k:<8} {buckets[k]:7.4f}")
+            print("\nFile-level coarse buckets (mean over windows):")
+            for k in bucket_keys:
+                print(f"- {k:<8} {buckets_mean[k]:7.4f}")
 
-            # Head (optional): direct 4-class probabilities
-            if head is not None:
-                try:
-                    from core.model_io import run_embedding
-                    emb = run_embedding(at, wav).reshape(1, -1)
-                    head_probs = head.predict_proba(emb)[0]
+            # Optional: aggregated head (4-class)
+            if head is not None and len(head_probs_list) > 0:
+                H = _np.stack(head_probs_list, axis=0)           # (num_windows, 4)
+                agg_head = aggregate_matrix(H, mode=args.agg)    # (4,)
+                class_order = head_meta.get("class_order", ["animal", "vehicle", "shotgun", "other"])
+                print("\nFile-level Head (4-class) probabilities (aggregated):")
+                for cls, p in zip(class_order, agg_head):
+                    print(f"- {cls:<8} {float(p):7.4f}")
+
+            # Optional: per-window preview
+            if args.print_windows:
+                print("\nPer-window preview (AudioSet top-3):")
+                for (t0, t1, _seg), probs in zip(windows, win_probs_list):
+                    idx_sorted = probs.argsort()[::-1][:min(topk, 3)]
+                    short_pairs = [(per_window_labels[i], float(probs[i])) for i in idx_sorted]
+                    print(f"  [{t0:6.2f}s - {t1:6.2f}s]  " +
+                          " | ".join(f"{lab}={p:0.3f}" for lab, p in short_pairs))
+
+                if head is not None and len(head_probs_list) > 0:
                     class_order = head_meta.get("class_order", ["animal", "vehicle", "shotgun", "other"])
-
-                    print("\nHead (4-class) probabilities:")
-                    for cls, p in zip(class_order, head_probs):
-                        print(f"- {cls:<8} {float(p):7.4f}")
-                except Exception as e:
-                    print(f"[warn] head inference failed: {e}")
+                    print("\nPer-window Head (4-class) preview:")
+                    for (t0, t1, _seg), hp in zip(windows, head_probs_list):
+                        row = " ".join(f"{cls}={float(p):0.3f}" for cls, p in zip(class_order, hp))
+                        print(f"  [{t0:6.2f}s - {t1:6.2f}s]  {row}")
 
         except Exception as e:
             print(f"[error] Failed on {f}: {e}")
