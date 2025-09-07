@@ -1,9 +1,9 @@
 from __future__ import annotations
 import re
 from typing import Callable
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QAction
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout,
     QFormLayout, QStackedWidget, QCheckBox
 )
@@ -97,7 +97,7 @@ class SignupPage(QWidget):
                 raise ValueError("You must accept the Terms to continue.")
 
             self.auth.register(email=email, password=password, full_name=full_name)
-            from PyQt5.QtWidgets import QMessageBox  # local import to avoid circulars in stubs
+            from PyQt6.QtWidgets import QMessageBox  # local import to avoid circulars in stubs
             QMessageBox.information(self, "Account created", "Your account has been created. Please sign in.")
             self.on_go_login()
             self.on_signed_up()

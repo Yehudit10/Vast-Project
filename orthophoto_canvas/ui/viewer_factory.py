@@ -1,5 +1,5 @@
 # from typing import Optional
-# from PyQt5.QtWidgets import QWidget
+# from PyQt6.QtWidgets import QWidget
 # from .viewer import OrthophotoViewer
 
 # def create_orthophoto_viewer(tiles_path: str,
@@ -19,7 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
 
-from PyQt5.QtWidgets import QWidget
+from PyQt6.QtWidgets import QWidget
 
 from .viewer import OrthophotoViewer
 from orthophoto_canvas.ag_io.tileset import TileStore

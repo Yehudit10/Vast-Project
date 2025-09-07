@@ -1,6 +1,6 @@
-from PyQt5.QtCore import QPointF
-from PyQt5.QtGui import QPen, QBrush, QColor, QFont
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsSimpleTextItem
+from PyQt6.QtCore import QPointF
+from PyQt6.QtGui import QPen, QBrush, QColor, QFont
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsEllipseItem, QGraphicsSimpleTextItem
 
 def add_round_marker(scene: QGraphicsScene, pos: QPointF, radius: float = 4.0,
                      color: QColor = QColor(220, 30, 30)) -> QGraphicsEllipseItem:

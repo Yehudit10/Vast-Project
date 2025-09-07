@@ -1,6 +1,6 @@
 # Orthophoto Canvas (PyQt)
 
-A lightweight orthophoto viewer built with PyQt5 and `QGraphicsView`.
+A lightweight orthophoto viewer built with PyQt6 and `QGraphicsView`.
 It reads a standard tile pyramid (folders `z/x/y.png`) in XYZ or TMS layout, lazily loads only what’s visible, and snaps to “native” scales to keep imagery crisp (no blur).
 
 ## Features
@@ -18,7 +18,7 @@ It reads a standard tile pyramid (folders `z/x/y.png`) in XYZ or TMS layout, laz
 
 * Windows / macOS / Linux
 * Python 3.10–3.12
-* Packages: `PyQt5` (and optionally `Pillow` if you extend I/O)
+* Packages: `PyQt6` (and optionally `Pillow` if you extend I/O)
 
 Use a virtual environment for a clean install.
 
@@ -35,11 +35,11 @@ python -m venv .venv
 
 # install dependencies
 python -m pip install --upgrade pip
-pip install PyQt5
+pip install PyQt6
 ```
 
 > **Important:** Always run with the same Python interpreter as your venv.
-> If you see a “Qt platform plugin ‘windows’” error, it usually means you launched with a different Python than the one that has PyQt5 installed.
+> If you see a “Qt platform plugin ‘windows’” error, it usually means you launched with a different Python than the one that has PyQt6 installed.
 
 ---
 
@@ -117,7 +117,7 @@ If you want to open **larger/closer**, add a scale multiplier afterward (see bel
 In `ui/viewer.py`, after the initial fit you can add a scale bump:
 
 ```python
-from PyQt5.QtCore import QTimer
+from PyQt6.QtCore import QTimer
 
 # inside __init__ or showEvent, after indexing is ready:
 QTimer.singleShot(0, lambda: (self.fit_to_data("width", 0.98), self.scale(1.25, 1.25)))
@@ -175,8 +175,8 @@ orthophoto_canvas/
 * If still failing:
 
   ```powershell
-  pip uninstall -y PyQt5
-  pip install PyQt5
+  pip uninstall -y PyQt6
+  pip install PyQt6
   ```
 
 **Error**

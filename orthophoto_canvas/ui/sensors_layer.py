@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Optional, Tuple, Dict, Any, List, TYPE_CHECKING
 import math
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsItem,
     QGraphicsPathItem, QGraphicsTextItem, QToolTip
 )
-from PyQt5.QtGui import QBrush, QPen, QColor, QPainterPath, QLinearGradient, QFont
-from PyQt5.QtCore import Qt, QPointF
+from PyQt6.QtGui import QBrush, QPen, QColor, QPainterPath, QLinearGradient, QFont
+from PyQt6.QtCore import Qt, QPointF
 
 TILE_SIZE = 512
 MERCATOR_MAX_LAT = 85.05112878
@@ -38,7 +38,7 @@ class _HoverPopup:
     def __init__(self, scene):
         self._bg = QGraphicsPathItem()
         self._bg.setZValue(1_000_000_000)
-        self._bg.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self._bg.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
         
         self._radius = 10.0
         self._pad_w, self._pad_h = 18, 16
@@ -48,7 +48,7 @@ class _HoverPopup:
         self._text.setDefaultTextColor(QColor(24, 24, 24))
         self._text.setZValue(1_000_000_001)
         self._text.setPos(14, 12)
-        self._text.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self._text.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
         
         scene.addItem(self._bg)
         self._bg.setVisible(False)
@@ -128,7 +128,7 @@ class SensorLayer:
         r = float(spec.radius_px)
         dot = _SensorDot(self, spec, -r, -r, 2.0 * r, 2.0 * r)
         dot.setBrush(QBrush(spec.color))
-        dot.setPen(QPen(Qt.NoPen))
+        dot.setPen(QPen(Qt.PenStyle.NoPen))
         dot.setPos(QPointF(sx, sy))
         dot.setZValue(1_000_000)
 

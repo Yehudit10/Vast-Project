@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Callable
-from PyQt5.QtCore import Qt, QSettings
-from PyQt5.QtGui import QAction
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout,
     QFormLayout, QStackedWidget, QCheckBox, QSpacerItem, QSizePolicy
 )
