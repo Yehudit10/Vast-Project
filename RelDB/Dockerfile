@@ -2,14 +2,6 @@
 FROM postgis/postgis:16-3.4
 
 # ==== 1) Parameters ====
-# ENV POSTGRES_DB=missions_db \
-#     POSTGRES_USER=missions_user \
-#     POSTGRES_PASSWORD=pg123 \
-#     TZ=Asia/Jerusalem \
-#     BACKUP_DIR=/var/lib/postgresql/backups \
-#     PGHOST=127.0.0.1 \
-#     PGPORT=5432 \
-#     RETENTION=7
 
 # ==== 2) Install tools: pg_cron + Python + cron ====
 RUN apt-get update && apt-get install -y --no-install-recommends \
