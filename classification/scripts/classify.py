@@ -1,5 +1,5 @@
-# scripts/classify.py
-# Baseline classifier CLI (print-only): loads local file(s), runs PANNs inference, prints Top-K and coarse buckets.
+# Baseline classifier CLI: loads local file(s), runs PANNs inference, prints Top-K and coarse buckets.
+# If a trained head is provided, also prints 4-class probabilities from the head.
 
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ from core.model_io import (
     ensure_checkpoint,
     load_audio,
     run_inference,
-    load_labels_from_csv,
     summarize_buckets,
 )
 
@@ -53,6 +52,7 @@ def main() -> None:
     )
     parser.add_argument("--topk", type=int, default=10, help="How many top labels to print (default: %(default)s).")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu", help="Inference device (default: cpu).")
+    parser.add_argument("--head", default=None, help="Optional path to a trained 4-class head (joblib).")
     args = parser.parse_args()
 
     root = pathlib.Path(args.audio)
@@ -71,6 +71,21 @@ def main() -> None:
         print(f"[error] Failed to load model: {e}")
         sys.exit(2)
 
+    # Optional: load trained 4-class head
+    head = None
+    head_meta = {"class_order": ["animal", "vehicle", "shotgun", "other"]}
+    if args.head:
+        try:
+            import joblib, json
+            head = joblib.load(args.head)
+            meta_path = pathlib.Path(args.head).with_suffix(pathlib.Path(args.head).suffix + ".meta.json")
+            if meta_path.exists():
+                head_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            print(f"[info] loaded head: {args.head} (classes={head_meta['class_order']})")
+        except Exception as e:
+            print(f"[warn] failed to load head '{args.head}': {e}")
+            head = None
+
     # Discover files
     files = discover_audio_files(root)
     if not files:
@@ -78,9 +93,10 @@ def main() -> None:
         print(f"[info] Supported extensions: {', '.join(SUPPORTED_EXTS)}")
         sys.exit(0)
 
-    # Optional labels override
+    # Optional labels override (loaded directly inside run_inference if needed; here only for explicit CSV)
     override_labels: Optional[List[str]] = None
     if args.labels_csv:
+        from core.model_io import load_labels_from_csv
         override_labels = load_labels_from_csv(args.labels_csv)
 
     # Process
@@ -105,6 +121,20 @@ def main() -> None:
             print("\nCoarse buckets (normalized from top-k):")
             for k in ("animal", "vehicle", "shotgun", "other"):
                 print(f"- {k:<8} {buckets[k]:7.4f}")
+
+            # Head (optional): direct 4-class probabilities
+            if head is not None:
+                try:
+                    from core.model_io import run_embedding
+                    emb = run_embedding(at, wav).reshape(1, -1)
+                    head_probs = head.predict_proba(emb)[0]
+                    class_order = head_meta.get("class_order", ["animal", "vehicle", "shotgun", "other"])
+
+                    print("\nHead (4-class) probabilities:")
+                    for cls, p in zip(class_order, head_probs):
+                        print(f"- {cls:<8} {float(p):7.4f}")
+                except Exception as e:
+                    print(f"[warn] head inference failed: {e}")
 
         except Exception as e:
             print(f"[error] Failed on {f}: {e}")
