@@ -1,5 +1,5 @@
 # labels_map.py
-# Bucketing tags into 4 coarse groups using keyword matching.
+# Keyword-based bucketing of AudioSet labels into 4 coarse groups.
 
 ANIMAL_KEYWORDS = [
     "Animal", "Dog", "Cat", "Bird", "Insect", "Roar", "Meow", "Bark", "Chirp",

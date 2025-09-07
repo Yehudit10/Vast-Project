@@ -20,17 +20,13 @@ except Exception:  # pragma: no cover
 from panns_inference import AudioTagging
 from labels_map import bucket_of
 
-# Recommended PANNs sample rate
-SAMPLE_RATE = 32000
-# Minimal padding for very short inputs (~0.5s @ 32kHz)
-MIN_SAMPLES = 16000
-
-# Formats typically hard for libsndfile (handled via librosa/ffmpeg first)
-HARD_EXTS = {".mp3", ".opus", ".m4a", ".aac"}
+# ===== Constants =====
+SAMPLE_RATE = 32000      # Native sample rate for PANNs
+MIN_SAMPLES = 16000      # Minimal padding for very short inputs (~0.5s @ 32kHz)
+HARD_EXTS = {".mp3", ".opus", ".m4a", ".aac"}  # Formats often tricky for libsndfile
 
 
-# ---------- FFmpeg helpers ----------
-
+# ===== FFmpeg helpers =====
 def has_ffmpeg() -> bool:
     """Return True if ffmpeg is available in PATH."""
     return shutil.which("ffmpeg") is not None
@@ -39,7 +35,7 @@ def has_ffmpeg() -> bool:
 def decode_with_ffmpeg_to_float32_mono(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
     """
     Decode media to mono float32 at target_sr using ffmpeg (must be installed).
-    Produces raw float32 frames to stdout for zero-copy handoff.
+    Streams raw float32 frames to stdout and converts to NumPy without temp files.
     """
     cmd = [
         "ffmpeg", "-v", "error",
@@ -58,8 +54,7 @@ def decode_with_ffmpeg_to_float32_mono(path: str, target_sr: int = SAMPLE_RATE) 
     return y
 
 
-# ---------- Files / Checkpoint ----------
-
+# ===== Files / Checkpoint =====
 def ensure_checkpoint(checkpoint_path: str, checkpoint_url: Optional[str]) -> str:
     """
     Ensure the weight file exists locally. If not present and a URL is provided,
@@ -85,16 +80,17 @@ def ensure_checkpoint(checkpoint_path: str, checkpoint_url: Optional[str]) -> st
     return str(p)
 
 
-# ---------- Audio Loading ----------
-
+# ===== Audio Loading =====
 def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
     """
     Load an audio file, convert to mono, resample to target_sr, and return float32 in [-1, 1].
+
     Strategy:
-      - If extension is “hard” for libsndfile (e.g., .mp3/.opus/.m4a/.aac):
-          Try librosa.load first (audioread/ffmpeg). If it fails, try ffmpeg fallback.
-      - Else (easier formats like wav/flac/ogg/aiff/aif/au):
-          Try soundfile first. If it fails, try librosa.load, then ffmpeg fallback.
+      - For "hard" formats (mp3/opus/m4a/aac): try librosa first (audioread/ffmpeg). If it fails and ffmpeg
+        exists, decode via ffmpeg. Otherwise raise.
+      - For easier formats (wav/flac/ogg/aiff/aif/au): try soundfile first. If it fails, try librosa, then ffmpeg.
+
+    Always pads to at least MIN_SAMPLES to avoid failures on very short clips.
     """
     ext = pathlib.Path(path).suffix.lower()
 
@@ -104,6 +100,7 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
             y = np.concatenate([y, pad], axis=0)
         return y
 
+    # Hard formats: prefer librosa; ffmpeg fallback
     if ext in HARD_EXTS:
         try:
             y, _ = librosa.load(path, sr=target_sr, mono=True)
@@ -115,32 +112,34 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
                 return _pad_if_short(y)
             raise
 
+    # Easier formats: try soundfile first
     try:
         y, sr = sf.read(path, always_2d=False)
         if hasattr(y, "ndim") and y.ndim > 1:
-            y = np.mean(y, axis=1)
+            y = np.mean(y, axis=1)  # mono
         y = np.asarray(y, dtype=np.float32)
         if int(sr) != int(target_sr):
             y = librosa.resample(y, orig_sr=int(sr), target_sr=int(target_sr))
         return _pad_if_short(y)
     except Exception:
+        # librosa fallback
         try:
             y, _ = librosa.load(path, sr=target_sr, mono=True)
             y = np.asarray(y, dtype=np.float32)
             return _pad_if_short(y)
         except Exception:
+            # ffmpeg final fallback
             if has_ffmpeg():
                 y = decode_with_ffmpeg_to_float32_mono(path, target_sr=target_sr)
                 return _pad_if_short(y)
             raise
 
 
-# ---------- Labels ----------
-
+# ===== Labels =====
 def load_audioset_labels_from_pkg() -> Optional[List[str]]:
     """
-    Attempt to read AudioSet label names from panns_inference resources/class_labels_indices.csv.
-    Returns None if not available or on error.
+    Try to read AudioSet label names from panns_inference resources/class_labels_indices.csv.
+    Returns None if unavailable or on error.
     """
     try:
         import panns_inference, inspect, os, csv  # local import to keep top clean
@@ -172,8 +171,7 @@ def load_labels_from_csv(csv_path: str) -> Optional[List[str]]:
         return None
 
 
-# ---------- Inference ----------
-
+# ===== Inference =====
 def _to_numpy(x: Any) -> np.ndarray:
     """
     Convert torch.Tensor / lists to numpy.float32 safely.
@@ -199,7 +197,9 @@ def run_inference(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[s
     Run model inference robustly and return:
       - probs: 1D numpy array (num_classes,)
       - labels: list of class names
+    Handles both dict/tuple outputs from panns_inference across versions.
     """
+    # Try 1D first; if it fails, try (1, T)
     try:
         res = at.inference(wav)
     except Exception as e1:
@@ -235,8 +235,7 @@ def run_inference(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[s
     return clipwise, labels  # probs are sigmoid-like in [0,1]
 
 
-# ---------- Embeddings ----------
-
+# ===== Embeddings =====
 def run_embedding(at: AudioTagging, wav: np.ndarray) -> np.ndarray:
     """
     Extract a 1D embedding vector from the model.
@@ -265,8 +264,64 @@ def run_embedding(at: AudioTagging, wav: np.ndarray) -> np.ndarray:
     return emb
 
 
-# ---------- Bucketing / Summaries ----------
+# ===== Framing (windows) & Aggregation =====
+def segment_waveform(
+    wav: np.ndarray,
+    sr: int = SAMPLE_RATE,
+    window_sec: float = 2.0,
+    hop_sec: float = 0.5,
+    pad_last: bool = True,
+) -> List[Tuple[float, float, np.ndarray]]:
+    """
+    Split a waveform into fixed-size windows.
+    Returns a list of (t_start_sec, t_end_sec, segment_wav).
+    """
+    wav = np.asarray(wav, dtype=np.float32).reshape(-1)
+    win = max(1, int(round(window_sec * sr)))
+    hop = max(1, int(round(hop_sec * sr)))
+    n = wav.size
 
+    segments: List[Tuple[float, float, np.ndarray]] = []
+    if n == 0:
+        return segments
+
+    i = 0
+    while i + win <= n:
+        seg = wav[i: i + win]
+        t0 = i / sr
+        t1 = (i + win) / sr
+        segments.append((t0, t1, seg))
+        i += hop
+
+    # last partial window
+    if pad_last and (i < n):
+        tail = wav[i:]
+        pad = np.zeros(win - tail.size, dtype=np.float32)
+        seg = np.concatenate([tail, pad], axis=0)
+        t0 = i / sr
+        t1 = (i + win) / sr
+        segments.append((t0, t1, seg))
+    elif not segments and pad_last:
+        # very short file: pad to a single window
+        pad = np.zeros(win - n, dtype=np.float32)
+        seg = np.concatenate([wav, pad], axis=0)
+        segments.append((0.0, win / sr, seg))
+
+    return segments
+
+
+def aggregate_matrix(mat: np.ndarray, mode: str = "mean") -> np.ndarray:
+    """
+    Aggregate a (num_windows, num_classes) matrix into a single (num_classes,) vector.
+    mode: 'mean' or 'max'
+    """
+    assert mat.ndim == 2, "expected 2D matrix (num_windows, num_classes)"
+    if mode == "max":
+        return mat.max(axis=0)
+    return mat.mean(axis=0)
+
+
+# ===== Bucketing / Summaries =====
 def summarize_buckets(topk_labels: List[Tuple[str, float]]) -> Dict[str, float]:
     """
     Group probabilities into 4 coarse buckets by summing probabilities of labels falling into each bucket.
