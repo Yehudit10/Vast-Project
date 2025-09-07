@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal
 
 class SessionManager(QObject):
     """

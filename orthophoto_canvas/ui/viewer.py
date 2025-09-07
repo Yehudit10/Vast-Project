@@ -6,9 +6,9 @@
 # import math
 # from typing import Iterable, List, Optional, Tuple, Union
 
-# from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer
-# from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor
-# from PyQt5.QtWidgets import (
+# from PyQt6.QtCore import Qt, QRectF, QPointF, QTimer
+# from PyQt6.QtGui import QPixmap, QPainter, QPen, QColor
+# from PyQt6.QtWidgets import (
 #     QGraphicsView,
 #     QGraphicsScene,
 #     QGraphicsPixmapItem,
@@ -63,8 +63,8 @@
 #         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
 #         self.setViewportUpdateMode(QGraphicsView.SmartViewportUpdate)
 #         self.setBackgroundBrush(QColor(220, 220, 220))
-#         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)   # אופציונלי
-#         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+#         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)   # אופציונלי
+#         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
 #         # State
 #         self.current_zoom = self.ts.min_zoom
@@ -192,7 +192,7 @@
 
 #     def mouseReleaseEvent(self, event) -> None:
 #         super().mouseReleaseEvent(event)
-#         if event.button() in (Qt.LeftButton, Qt.MiddleButton):
+#         if event.button() in (Qt.MouseButton.LeftButton, Qt.MiddleButton):
 #             self._debounced_update()
 
 #     def keyPressEvent(self, event) -> None:
@@ -331,7 +331,7 @@
 #         item.setPos(sx, sy)
 #         s = eff_tile_scene / float(pm.width())
 #         item.setScale(s)
-#         item.setTransformationMode(Qt.FastTransformation)
+#         item.setTransformationMode(Qt.TransformationMode.FastTransformation)
 #         return item
 
 #     def _try_upgrade_tile_to_pixmap(self, key: Tuple[int, int, int], eff_tile_scene: float) -> None:
@@ -380,7 +380,7 @@
 #         """
 #         if not found:
 #             # fallback: fit entire base scene width
-#             self.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+#             self.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 #             return
 
 #         z, x, y = found
@@ -556,9 +556,9 @@ from ..ag_io.sensors_api import get_sensors
 import math
 from typing import Iterable, List, Optional, Tuple, Union
 
-from PyQt5.QtCore import Qt, QRectF, QPointF, QTimer
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QBrush
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt, QRectF, QPointF, QTimer
+from PyQt6.QtGui import QPixmap, QPainter, QPen, QColor, QBrush
+from PyQt6.QtWidgets import (
     QGraphicsView,
     QGraphicsScene,
     QGraphicsPixmapItem,
@@ -603,23 +603,26 @@ class OrthophotoViewer(QGraphicsView):
         self.setScene(self.scene)
 
         # Crisp rendering (no smoothing)
-        self.setRenderHint(QPainter.SmoothPixmapTransform, False)
-        self.setRenderHint(QPainter.Antialiasing, False)
-        self.setRenderHint(QPainter.TextAntialiasing, False)
+        # self.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        # self.setRenderHint(QPainter.Antialiasing, False)
+        # self.setRenderHint(QPainter.TextAntialiasing, False)
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
 
         # Interaction / performance
-        self.setCacheMode(QGraphicsView.CacheBackground)
-        self.setOptimizationFlag(QGraphicsView.DontSavePainterState, True)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setViewportUpdateMode(QGraphicsView.SmartViewportUpdate)
+        self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
+        self.setOptimizationFlag(QGraphicsView.OptimizationFlag.DontSavePainterState, True)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
         self.setBackgroundBrush(QColor(220, 220, 220))
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)   
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)   
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         # State
         self.current_zoom = self.ts.min_zoom
-        self.placeholder_color = Qt.lightGray
+        self.placeholder_color = Qt.GlobalColor.lightGray
         self.tile_items: dict[Tuple[int, int, int], QGraphicsPixmapItem | QGraphicsRectItem] = {}
 
         # Debounce loads after interaction
@@ -676,24 +679,24 @@ class OrthophotoViewer(QGraphicsView):
 
     def mouseReleaseEvent(self, event) -> None:
         super().mouseReleaseEvent(event)
-        if event.button() in (Qt.LeftButton, Qt.MiddleButton):
+        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._debounced_update()
 
     def keyPressEvent(self, event) -> None:
         k = event.key()
-        if k == Qt.Key_C:
+        if k == Qt.Key.Key_C:
             self._snap_to_native_scale()
             return
-        if k == Qt.Key_F:
+        if k == Qt.Key.Key_F:
             self._fit_data_width()
             return
-        if k in (Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5):
+        if k in (Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3, Qt.Key.Key_4, Qt.Key.Key_5):
             choices = {
-                Qt.Key_1: 192.0,
-                Qt.Key_2: 256.0,
-                Qt.Key_3: 320.0,
-                Qt.Key_4: 384.0,
-                Qt.Key_5: 512.0,
+                Qt.Key.Key_1: 192.0,
+                Qt.Key.Key_2: 256.0,
+                Qt.Key.Key_3: 320.0,
+                Qt.Key.Key_4: 384.0,
+                Qt.Key.Key_5: 512.0,
             }
             self._smart_initial_focus(target_tile_px=choices[k], found=self._best_focus_tile())
             return
@@ -790,7 +793,9 @@ class OrthophotoViewer(QGraphicsView):
 
         rect = QGraphicsRectItem(sx, sy, eff_tile_scene, eff_tile_scene)
         rect.setBrush(self.placeholder_color)
-        rect.setPen(QPen(Qt.NoPen))
+        # rect.setPen(QPen(rect.setPen(QPen(Qt.PenStyle.NoPen))))
+        rect.setPen(QPen(Qt.PenStyle.NoPen))
+
         return rect
 
     def _place_pixmap_item(self, pm: QPixmap, key: Tuple[int, int, int], eff_tile_scene: float):
@@ -812,7 +817,7 @@ class OrthophotoViewer(QGraphicsView):
         item.setPos(sx, sy)
         s = eff_tile_scene / float(pm.width())
         item.setScale(s)
-        item.setTransformationMode(Qt.FastTransformation)
+        item.setTransformationMode(Qt.TransformationMode.FastTransformation)
         return item
 
     def _try_upgrade_tile_to_pixmap(self, key: Tuple[int, int, int], eff_tile_scene: float) -> None:
@@ -861,7 +866,7 @@ class OrthophotoViewer(QGraphicsView):
         """
         if not found:
             # fallback: fit entire base scene width
-            self.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+            self.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
             return
 
         z, x, y = found

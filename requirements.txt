@@ -1,5 +1,6 @@
-PyQt5
-PyQt5-WebEngine
+PyQt6
+PyQt6-WebEngine
 flask
 prometheus-client
+requests
 argon2-cffi

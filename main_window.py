@@ -1,7 +1,7 @@
 from __future__ import annotations
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar, QAction
-from PyQt5.QtGui import QIcon
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar
+from PyQt6.QtGui import QAction, QIcon
 from home_view import HomeView
 from dashboard_api import DashboardApi
 
