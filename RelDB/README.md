@@ -89,7 +89,7 @@ docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-0
            docker restart db
 
 Run:
-```
+
 docker restart db
 
 docker exec -it db psql -U missions_user -d missions_db -c "SELECT pg_is_in_recovery();"
