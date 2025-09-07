@@ -1,5 +1,5 @@
 # core/model_io.py
-# Core I/O and inference utilities for baseline audio classification (print-only).
+# Core I/O and inference utilities for baseline audio classification.
 
 from __future__ import annotations
 
@@ -42,12 +42,12 @@ def decode_with_ffmpeg_to_float32_mono(path: str, target_sr: int = SAMPLE_RATE) 
     Produces raw float32 frames to stdout for zero-copy handoff.
     """
     cmd = [
-        "ffmpeg", "-v", "error",  # quiet unless errors
+        "ffmpeg", "-v", "error",
         "-i", path,
-        "-vn",          # no video
-        "-ac", "1",     # mono
-        "-ar", str(target_sr),  # resample
-        "-f", "f32le",  # raw float32 little-endian to stdout
+        "-vn",
+        "-ac", "1",
+        "-ar", str(target_sr),
+        "-f", "f32le",
         "pipe:1"
     ]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
@@ -104,7 +104,6 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
             y = np.concatenate([y, pad], axis=0)
         return y
 
-    # Hard formats first: prefer librosa
     if ext in HARD_EXTS:
         try:
             y, _ = librosa.load(path, sr=target_sr, mono=True)
@@ -114,9 +113,8 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
             if has_ffmpeg():
                 y = decode_with_ffmpeg_to_float32_mono(path, target_sr=target_sr)
                 return _pad_if_short(y)
-            raise  # no ffmpeg available
+            raise
 
-    # Easier formats: try soundfile first
     try:
         y, sr = sf.read(path, always_2d=False)
         if hasattr(y, "ndim") and y.ndim > 1:
@@ -126,17 +124,15 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
             y = librosa.resample(y, orig_sr=int(sr), target_sr=int(target_sr))
         return _pad_if_short(y)
     except Exception:
-        # Try librosa next
         try:
             y, _ = librosa.load(path, sr=target_sr, mono=True)
             y = np.asarray(y, dtype=np.float32)
             return _pad_if_short(y)
         except Exception:
-            # Fallback to ffmpeg
             if has_ffmpeg():
                 y = decode_with_ffmpeg_to_float32_mono(path, target_sr=target_sr)
                 return _pad_if_short(y)
-            raise  # re-raise original error if no ffmpeg
+            raise
 
 
 # ---------- Labels ----------
@@ -204,7 +200,6 @@ def run_inference(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[s
       - probs: 1D numpy array (num_classes,)
       - labels: list of class names
     """
-    # Try 1D waveform first, then (1, T) if needed
     try:
         res = at.inference(wav)
     except Exception as e1:
@@ -238,6 +233,36 @@ def run_inference(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[s
         clipwise = clipwise.reshape(-1)
 
     return clipwise, labels  # probs are sigmoid-like in [0,1]
+
+
+# ---------- Embeddings ----------
+
+def run_embedding(at: AudioTagging, wav: np.ndarray) -> np.ndarray:
+    """
+    Extract a 1D embedding vector from the model.
+    Supports both dict/tuple outputs. Returns np.ndarray shape (D,).
+    """
+    try:
+        res = at.inference(wav)
+    except Exception as e1:
+        try:
+            res = at.inference(wav[None, :])
+        except Exception as e2:  # pragma: no cover
+            raise RuntimeError(f"embedding inference failed (1D & 2D): {e1} | {e2}") from e2
+
+    emb = None
+    if isinstance(res, dict):
+        emb = res.get("embedding", None)
+    elif isinstance(res, tuple):
+        if len(res) >= 2:
+            emb = res[1]
+
+    if emb is None:
+        raise RuntimeError("No embedding returned by panns_inference (expected dict['embedding'] or tuple[1]).")
+
+    emb = _to_numpy(emb)
+    emb = emb.reshape(-1)
+    return emb
 
 
 # ---------- Bucketing / Summaries ----------

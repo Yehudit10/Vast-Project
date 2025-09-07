@@ -1,6 +1,5 @@
 # labels_map.py
 # Bucketing tags into 4 coarse groups using keyword matching.
-# You can refine/expand these lists over time.
 
 ANIMAL_KEYWORDS = [
     "Animal", "Dog", "Cat", "Bird", "Insect", "Roar", "Meow", "Bark", "Chirp",
@@ -22,7 +21,6 @@ SHOTGUN_KEYWORDS = [
 def bucket_of(label: str) -> str:
     """
     Return one of: {"animal", "vehicle", "shotgun", "other"} based on simple keyword checks.
-    This is a lightweight baseline and can be replaced with a precise mapping later.
     """
     l = label.lower()
     if any(k.lower() in l for k in SHOTGUN_KEYWORDS):
