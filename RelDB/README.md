@@ -67,7 +67,7 @@ We use the `recover.py` helper script to restore the database from base backups 
 
 - **Latest** → restore up to the latest available WAL:
   ```bash
-  docker exec -u postgres -it db python3 /usr/local/bin/recover.py latest
+docker exec -u postgres -it db python3 /usr/local/bin/recover.py latest
   ```
 
 - **Minutes ago** → restore to a point N minutes in the past:
@@ -77,7 +77,7 @@ docker exec -u postgres -it db python3 /usr/local/bin/recover.py minutes 2
 
 - **Exact time** → restore to a specific timestamp:
 ```
-docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-04 13:05:00+03"
+docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-07T11:15:00+03:00"
 ```
 
 # Restart the container
@@ -91,6 +91,10 @@ docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-0
 Run:
 ```
 docker restart db
+
+docker exec -it db psql -U missions_user -d missions_db -c "SELECT pg_is_in_recovery();"
+
+# wait for f
 
 docker exec -u postgres -it db python3 /usr/local/bin/backup.py
 

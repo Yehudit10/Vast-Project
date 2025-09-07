@@ -3,17 +3,17 @@ groups:
     interval: 30s
 
     rules:
-      # 1) קצב WAL גבוה מאוד (תנועה חריגה)
+      # 1) Very high WAL rate (abnormal traffic)
       - alert: HighWalThroughput
-        expr: pg:wal_bytes:rate_per_s > 5e6   # > ~5MB/s ל-5 דקות
+        expr: pg:wal_bytes:rate_per_s > 5e6   # > ~5MB/s for 5 minutes
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "High WAL throughput"
-          description: "WAL rate {{ $value | humanize }} B/s מעל הסף במשך 5 דקות"
+          description: "WAL rate {{ $value | humanize }} B/s above threshold for 5 minutes"
 
-      # 2) אין כמעט WAL (סיכון: מערכת 'קפאה' או אין תנועה)
+      # 2) Almost no WAL (risk: system 'frozen' or no traffic)
       - alert: LowWalThroughput
         expr: pg:wal_bytes:rate_per_s < 1000  # < 1KB/s
         for: 10m
@@ -21,9 +21,9 @@ groups:
           severity: info
         annotations:
           summary: "Very low WAL throughput"
-          description: "כמעט ואין כתיבות ל-WAL במשך 10 דקות"
+          description: "Almost no WAL writes for 10 minutes"
 
-      # 3) דיליי רפליקציה (אם יש רפליקות)
+      # 3) Replication delay (if replicas exist)
       - alert: ReplicationLagSecondsHigh
         expr: pg:replication_lag_seconds > 120
         for: 5m
@@ -31,7 +31,7 @@ groups:
           severity: critical
         annotations:
           summary: "Replication lag high (seconds)"
-          description: "Lag שניות גבוה מ-120 במשך 5 דקות"
+          description: "Replication lag higher than 120 seconds for 5 minutes"
 
       - alert: ReplicationLagBytesHigh
         expr: pg:replication_lag_bytes > 50e6  # > ~50MB
@@ -40,9 +40,9 @@ groups:
           severity: warning
         annotations:
           summary: "Replication lag high (bytes)"
-          description: "Lag בבייטים גבוה מ-50MB במשך 5 דקות"
+          description: "Replication lag greater than 50MB for 5 minutes"
 
-      # 4) יעילות BRIN נמוכה
+      # 4) Low BRIN efficiency
       - alert: BrinHitRatioLow
         expr: pg:brin_hit_ratio < 0.6
         for: 10m
@@ -50,9 +50,9 @@ groups:
           severity: warning
         annotations:
           summary: "BRIN hit ratio low"
-          description: "יחס פגיעות BRIN ירד מתחת ל-60% במשך 10 דקות"
+          description: "BRIN hit ratio dropped below 60% for 10 minutes"
 
-      # 5) ה-exporter נפל
+      # 5) Exporter down
       - alert: PostgresExporterDown
         expr: up{job="postgres_exporter"} == 0
         for: 2m
@@ -60,4 +60,4 @@ groups:
           severity: critical
         annotations:
           summary: "postgres_exporter down"
-          description: "ה-exporter אינו זמין במשך 2 דקות"
+          description: "Exporter not available for 2 minutes"
