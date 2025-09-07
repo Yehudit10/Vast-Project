@@ -8,10 +8,22 @@ services:
       POSTGRES_USER: missions_user
       POSTGRES_PASSWORD: pg123
       POSTGRES_DB: missions_db
+
+         # --- ENV for scripts ---
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/data
+      WAL_DIR: /var/lib/postgresql/wal_archive
+      BACKUP_DIR: /var/lib/postgresql/backups
+      RETENTION: 7
+      TZ: Asia/Jerusalem
+
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - wal_archive:/var/lib/postgresql/wal_archive
+      - backups:/var/lib/postgresql/backups
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "missions_user", "-d", "missions_db"]
       interval: 10s
@@ -70,3 +82,5 @@ networks:
 
 volumes:
   postgres_data:
+  wal_archive:
+  backups:
