@@ -1,24 +1,23 @@
 -- 04_cron.sql
--- תזמון משימות אוטומטיות עם pg_cron
--- רץ אחרי 03_partitions.sql (כך שכל הפונקציות קיימות)
-
+-- Scheduling automatic tasks with pg_cron
+-- Runs after 03_partitions.sql (so that all functions already exist)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- 1) כל יום ראשון 03:00 – יצירת מחיצות לשבוע הבא
+-- 1) Every Sunday at 03:00 – create partitions for the coming week
 SELECT cron.schedule(
   'partitions-next-week',
   '0 3 * * 0',
   $$SELECT admin.ensure_next_week_partitions();$$
 );
 
--- 2) כל 1 לחודש 03:10 – ריטנשן לשנה אחרונה
+-- 2) On the 1st of every month at 03:10 – retention for the last year
 SELECT cron.schedule(
   'partitions-monthly-retention',
   '10 3 1 * *',
   $$SELECT admin.apply_yearly_retention();$$
 );
 
--- 3) כל 10 דקות – רה-הומינג מהרירות (DEFAULT) למחיצות הנכונות
+-- 3) Every 10 minutes — re-homing from the default partition (DEFAULT) to the correct partitions
 SELECT cron.schedule(
   'rehoming-telemetry-default',
   '*/10 * * * *',
