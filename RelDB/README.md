@@ -47,7 +47,7 @@ Enjoy your graphs! 🎉
 
 
 # pitr
-1. run munual bakcup:
+1. option to run munual bakcup:
 ```
 docker exec -u postgres -it db python3 /usr/local/bin/backup.py
 ```
@@ -66,18 +66,18 @@ We use the `recover.py` helper script to restore the database from base backups 
 ### 3. Recovery modes
 
 - **Latest** → restore up to the latest available WAL:
-  ```bash
-docker exec -u postgres -it db python3 /usr/local/bin/recover.py latest
-  ```
+```bash
+  docker exec -u postgres -it db python3 /usr/local/bin/recover.py latest
+```
 
 - **Minutes ago** → restore to a point N minutes in the past:
-```
-docker exec -u postgres -it db python3 /usr/local/bin/recover.py minutes 2
+```bash
+  docker exec -u postgres -it db python3 /usr/local/bin/recover.py minutes 2
 ```
 
 - **Exact time** → restore to a specific timestamp:
-```
-docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-07T11:15:00+03:00"
+```bash
+  docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-07T11:15:00+03:00"
 ```
 
 # Restart the container
@@ -89,13 +89,17 @@ docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-0
            docker restart db
 
 Run:
-
+```bash
 docker restart db
+```
 
+check not in recovery:
+```bash
 docker exec -it db psql -U missions_user -d missions_db -c "SELECT pg_is_in_recovery();"
+```
 
-# wait for f
-
+wait for f, and run:
+```bash
 docker exec -u postgres -it db python3 /usr/local/bin/backup.py
 
 ```
