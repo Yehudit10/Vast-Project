@@ -11,5 +11,5 @@ class Sensor:
     value: Optional[float] = None
     label: Optional[str] = None
 
-# Optional: screen / scene points for Qt, if תבחר להשתמש
+# Optional: screen / scene points for Qt,
 PointF = Tuple[float, float]
