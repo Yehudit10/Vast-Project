@@ -1,223 +1,3 @@
-# # # # from __future__ import annotations
-
-# # # # # # --- Qt/QtWebEngine bootstrap (must come before any PyQt imports) ---
-# # # # # import os
-# # # # # from pathlib import Path
-# # # # # import PyQt6
-
-# # # # # qt_root = Path(PyQt6.__file__).with_name('Qt5')
-# # # # # qt_plugins = qt_root / 'plugins'
-# # # # # qt_bin = qt_root / 'bin'
-# # # # # qt_res = qt_root / 'resources'
-# # # # # qt_trans = qt_root / 'translations'
-
-# # # # # os.environ.setdefault('QT_PLUGIN_PATH', str(qt_plugins))
-# # # # # os.environ.setdefault('QT_QPA_PLATFORM_PLUGIN_PATH', str(qt_plugins / 'platforms'))
-# # # # # os.environ.setdefault('QTWEBENGINEPROCESS_PATH', str(qt_bin / 'QtWebEngineProcess.exe'))
-# # # # # os.environ.setdefault('QTWEBENGINE_RESOURCES_PATH', str(qt_res))
-# # # # # os.environ.setdefault('QTWEBENGINE_TRANSLATIONS_PATH', str(qt_trans))
-# # # # # os.environ.setdefault('QTWEBENGINE_DICTIONARIES_PATH', str(qt_res / 'qtwebengine_dictionaries'))
-# # # # # # --------------------------------------------------------------------
-
-# # # # import os
-# # # # from pathlib import Path
-# # # # import PyQt6  # keep this import here (before any QtWebEngine import)
-
-# # # # qt_root = Path(PyQt6.__file__).with_name('Qt5')
-# # # # qt_plugins = qt_root / 'plugins'
-# # # # qt_bin = qt_root / 'bin'
-# # # # qt_res = qt_root / 'resources'
-# # # # qt_trans = qt_root / 'translations'
-
-# # # # # Core plugin paths
-# # # # os.environ.setdefault('QT_PLUGIN_PATH', str(qt_plugins))
-# # # # os.environ.setdefault('QT_QPA_PLATFORM_PLUGIN_PATH', str(qt_plugins / 'platforms'))
-
-# # # # # WebEngine process + resources
-# # # # os.environ.setdefault('QTWEBENGINEPROCESS_PATH', str(qt_bin / 'QtWebEngineProcess.exe'))
-# # # # os.environ.setdefault('QTWEBENGINE_RESOURCES_PATH', str(qt_res))
-
-# # # # # Locales: new builds often ship under resources/qtwebengine_locales
-# # # # locales_res = qt_res / 'qtwebengine_locales'
-# # # # locales_trans = qt_trans / 'qtwebengine_locales'
-# # # # if locales_res.exists():
-# # # #     os.environ.setdefault('QTWEBENGINE_LOCALES_PATH', str(locales_res))
-# # # # elif locales_trans.exists():
-# # # #     os.environ.setdefault('QTWEBENGINE_LOCALES_PATH', str(locales_trans))
-# # # # # (older env names some builds expect)
-# # # # os.environ.setdefault('QTWEBENGINE_TRANSLATIONS_PATH', str(qt_trans))
-# # # # os.environ.setdefault('QTWEBENGINE_DICTIONARIES_PATH', str(qt_res / 'qtwebengine_dictionaries'))
-
-# # # # # # Optional: ensure QtWebEngine initializes early
-# # # # # from PyQt6.QtWebEngineCore import QtWebEngine
-# # # # # QtWebEngine.initialize()
-# # # # from PyQt6 import QtWebEngine
-# # # # QtWebEngine.QtWebEngine.initialize()
-
-# # # # import sys, traceback
-# # # # qt_plugins = Path(PyQt6.__file__).with_name('Qt5') / 'plugins'
-# # # # os.environ.setdefault('QT_PLUGIN_PATH', str(qt_plugins))
-# # # # os.environ.setdefault('QT_QPA_PLATFORM_PLUGIN_PATH', str(qt_plugins / 'platforms'))
-# # # # from PyQt6.QtWidgets import QApplication
-# # # # from main_window import MainWindow
-# # # # from dashboard_api import DashboardApi
-# # # # # from session_manager import SessionManager  # temporarily disabled
-# # # # # Ensure WebEngine is loaded on PyQt6 (initializes resources)
-# # # # from PyQt6 import QtWebEngineWidgets  # noqa: F401
-
-# # # # def excepthook(exctype, value, tb):
-# # # #     print("\n=== Uncaught exception ===")
-# # # #     traceback.print_exception(exctype, value, tb)
-# # # #     print("==========================\n")
-# # # #     sys.__excepthook__(exctype, value, tb)
-
-# # # # sys.excepthook = excepthook
-
-# # # # def main() -> int:
-# # # #     print("[main] starting QApplication")
-# # # #     app = QApplication(sys.argv)
-
-# # # #     # print("[main] logging in demo session")
-# # # #     # SessionManager().login(user="demo@vast.local", role="Operator")  # skip for now
-
-# # # #     print("[main] creating MainWindow")
-# # # #     api = DashboardApi()
-# # # #     win = MainWindow(api)
-# # # #     win.show()
-# # # #     print("[main] window shown, entering event loop")
-# # # #     rc = app.exec()
-# # # #     print(f"[main] event loop exited with code {rc}")
-# # # #     return rc
-
-# # # # if __name__ == "__main__":
-# # # #     sys.exit(main())
-
-
-# # # from __future__ import annotations
-
-# # # # --- Qt/QtWebEngine bootstrap: set paths BEFORE any other PyQt imports ---
-# # # import os
-# # # import sys
-# # # from pathlib import Path
-
-# # # # 1) Import PyQt6 first, but nothing from QtWebEngine yet
-# # # import PyQt6
-
-# # # def _set_env_once(key: str, value: str) -> None:
-# # #     if not os.environ.get(key):
-# # #         os.environ[key] = value
-
-# # # qt_root = Path(PyQt6.__file__).with_name("Qt5")
-# # # qt_plugins = qt_root / "plugins"
-# # # qt_bin = qt_root / "bin"
-# # # qt_res = qt_root / "resources"
-# # # qt_trans = qt_root / "translations"
-
-# # # # On Windows: ensure DLL lookup includes Qt bin
-# # # if sys.platform.startswith("win") and qt_bin.exists():
-# # #     try:
-# # #         os.add_dll_directory(str(qt_bin))  # Python 3.8+
-# # #     except Exception:
-# # #         pass
-
-# # # # Sometimes wheels place ICU/resources in slightly different subfolders.
-# # # # Find icudtl*.dat dynamically and point resources to its parent.
-# # # icu_candidate = None
-# # # if qt_res.exists():
-# # #     matches = list(qt_res.glob("icudtl*.dat"))
-# # #     if not matches:
-# # #         # Try a broader search just in case
-# # #         matches = list(qt_root.rglob("icudtl*.dat"))
-# # #     if matches:
-# # #         icu_candidate = matches[0]
-# # #         _set_env_once("QTWEBENGINE_RESOURCES_PATH", str(icu_candidate.parent))
-
-# # # # If not found above, still set a reasonable default
-# # # if not os.environ.get("QTWEBENGINE_RESOURCES_PATH") and qt_res.exists():
-# # #     _set_env_once("QTWEBENGINE_RESOURCES_PATH", str(qt_res))
-
-# # # # WebEngine process path
-# # # we_proc = qt_bin / "QtWebEngineProcess.exe"
-# # # if we_proc.exists():
-# # #     _set_env_once("QTWEBENGINEPROCESS_PATH", str(we_proc))
-
-# # # # Locales: prefer resources/qtwebengine_locales, then translations/qtwebengine_locales
-# # # res_locales = qt_res / "qtwebengine_locales"
-# # # trans_locales = qt_trans / "qtwebengine_locales"
-# # # if res_locales.exists():
-# # #     _set_env_once("QTWEBENGINE_LOCALES_PATH", str(res_locales))
-# # # elif trans_locales.exists():
-# # #     _set_env_once("QTWEBENGINE_LOCALES_PATH", str(trans_locales))
-
-# # # # Plugin paths: platforms, etc.
-# # # if qt_plugins.exists():
-# # #     _set_env_once("QT_PLUGIN_PATH", str(qt_plugins))
-# # #     _set_env_once("QT_QPA_PLATFORM_PLUGIN_PATH", str(qt_plugins / "platforms"))
-
-# # # # Optional: flags; sometimes help in restricted environments
-# # # os.environ.setdefault("QTWEBENGINE_DISABLE_GPU", "1")
-# # # os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu --disable-software-rasterizer")
-
-# # # # Importing QtWebEngine early (PyQt6 style)
-# # # from PyQt6 import QtWebEngine
-# # # # In PyQt6 the initialize() lives under QtWebEngine.QtWebEngine
-# # # try:
-# # #     QtWebEngine.QtWebEngine.initialize()  # no-op if already initialized
-# # # except Exception:
-# # #     pass
-
-# # # # Also import widgets module to ensure resources are registered
-# # # from PyQt6 import QtWebEngineWidgets  # noqa: F401
-# # # # --------------------------------------------------------------------------
-
-# # # import traceback
-# # # from PyQt6.QtWidgets import QApplication
-# # # from main_window import MainWindow
-# # # from dashboard_api import DashboardApi
-# # # # from session_manager import SessionManager  # optional
-
-# # # def excepthook(exctype, value, tb):
-# # #     print("\n=== Uncaught exception ===")
-# # #     traceback.print_exception(exctype, value, tb)
-# # #     print("==========================\n")
-# # #     sys.__excepthook__(exctype, value, tb)
-
-# # # sys.excepthook = excepthook
-
-# # # def _debug_print_paths():
-# # #     print("[Qt debug]")
-# # #     print("  qt_root:", qt_root)
-# # #     print("  plugins:", qt_plugins)
-# # #     print("  bin:", qt_bin)
-# # #     print("  resources:", qt_res)
-# # #     print("  translations:", qt_trans)
-# # #     print("  QTWEBENGINEPROCESS_PATH:", os.environ.get("QTWEBENGINEPROCESS_PATH"))
-# # #     print("  QTWEBENGINE_RESOURCES_PATH:", os.environ.get("QTWEBENGINE_RESOURCES_PATH"))
-# # #     print("  QTWEBENGINE_LOCALES_PATH:", os.environ.get("QTWEBENGINE_LOCALES_PATH"))
-# # #     print("  QT_QPA_PLATFORM_PLUGIN_PATH:", os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH"))
-# # #     print("  icudtl.dat exists?:", (Path(os.environ.get("QTWEBENGINE_RESOURCES_PATH", "")) / "icudtl.dat").exists()
-# # #           or bool(list((Path(os.environ.get("QTWEBENGINE_RESOURCES_PATH", ""))).glob("icudtl*.dat"))))
-
-# # # def main() -> int:
-# # #     print("[main] starting QApplication")
-# # #     _debug_print_paths()
-# # #     app = QApplication(sys.argv)
-
-# # #     # SessionManager().login(user="demo@vast.local", role="Operator")  # optional
-
-# # #     print("[main] creating MainWindow")
-# # #     api = DashboardApi()
-# # #     win = MainWindow(api)
-# # #     win.show()
-# # #     print("[main] window shown, entering event loop")
-# # #     rc = app.exec()
-# # #     print(f"[main] event loop exited with code {rc}")
-# # #     return rc
-
-# # # if __name__ == "__main__":
-# # #     sys.exit(main())
-
-
 # # from __future__ import annotations
 # # import os, sys
 # # from pathlib import Path
@@ -489,9 +269,12 @@ print("  icudtl.dat exists?:", (resources / "icudtl.dat").exists())
 
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # ensures WebEngine is available
 from PyQt6.QtWidgets import QApplication
-
-from main_window import MainWindow
+from PyQt6.QtWidgets import QStackedWidget
+from auth_ui.service import AuthService
+from auth_ui.login_page import LoginPage
+from auth_ui.signup_page import SignupPage
 from dashboard_api import DashboardApi
+from main_window import MainWindow
 
 
 def excepthook(exctype, value, tb):
@@ -503,15 +286,96 @@ def excepthook(exctype, value, tb):
 
 sys.excepthook = excepthook
 
+class AuthShell(QStackedWidget):
+    """Holds Login and Signup pages and switches between them."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.auth = AuthService()
+
+        # placeholders for pages (will be created below)
+        self.login_page = None
+        self.signup_page = None
+
+        # build pages
+        self._build_pages()
+
+    def _build_pages(self):
+        # callbacks
+        def go_signup():
+            self.setCurrentWidget(self.signup_page)
+
+        def go_login():
+            self.setCurrentWidget(self.login_page)
+
+        def on_signed_up():
+            # after successful signup, move back to login
+            self.setCurrentWidget(self.login_page)
+
+        def on_login_success(user):
+            # bubble up to whoever created the shell
+            # we’ll set this attribute from main()
+            if hasattr(self, "on_login_success") and callable(self.on_login_success):
+                self.on_login_success(user)
+
+        # create pages
+        self.login_page = LoginPage(on_login=on_login_success,
+                                    on_go_signup=go_signup,
+                                    auth=self.auth)
+        self.signup_page = SignupPage(on_signed_up=on_signed_up,
+                                      on_go_login=go_login,
+                                      auth=self.auth)
+
+        # add to stack
+        self.addWidget(self.login_page)
+        self.addWidget(self.signup_page)
+        self.setCurrentWidget(self.login_page)
+
+    def reset(self):
+        """Optional: clear fields on logout if you want."""
+        # for example:
+        # self.login_page.email.clear()
+        # self.login_page.password.clear()
+        self.setCurrentWidget(self.login_page)
+
 
 def main() -> int:
     print("[main] starting QApplication")
     app = QApplication(sys.argv)
 
-    print("[main] creating MainWindow")
-    api = DashboardApi()
-    win = MainWindow(api)
-    win.show()
+    # 1) show auth shell first
+    shell = AuthShell()
+    shell.setWindowTitle("Sign in")
+    shell.show()
+
+    # 2) when login succeeds -> open MainWindow
+    def open_main(user):
+        api = DashboardApi()  # pass user if needed
+        win = MainWindow(api)
+
+        # connect logout back to login
+        win.logoutRequested.connect(lambda: on_logout(win))
+
+        # connect logout back to login
+        # try:
+        #     win.logoutRequested.connect(lambda: on_logout(win))
+        # except Exception:
+        #     # if signal not defined yet, we'll add it in main_window.py below
+        #     pass
+        win.show()
+        shell.hide()
+
+    # print("[main] creating MainWindow")
+    # api = DashboardApi()
+    # win = MainWindow(api)
+    # win.show()
+
+    def on_logout(win):
+        win.close()
+        shell.reset()
+        shell.show()
+
+    # wire callback
+    shell.on_login_success = open_main
 
     print("[main] window shown, entering event loop")
     rc = app.exec()

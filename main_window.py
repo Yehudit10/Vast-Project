@@ -1,11 +1,13 @@
 from __future__ import annotations
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar
 from PyQt6.QtGui import QAction, QIcon
 from home_view import HomeView
 from dashboard_api import DashboardApi
 
 class MainWindow(QMainWindow):
+    logoutRequested = pyqtSignal()
+
     def __init__(self, api: DashboardApi, parent=None):
         super().__init__(parent)
         print("[MainWindow] init start", flush=True)
@@ -86,4 +88,6 @@ class MainWindow(QMainWindow):
 
     def _logout(self) -> None:
         self.statusBar().showMessage("Logged out (demo)")
+        self.logoutRequested.emit()
+
 

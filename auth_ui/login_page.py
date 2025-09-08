@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Callable
-from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtCore import Qt, QSettings, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout,
@@ -11,6 +11,7 @@ from .widgets import ErrorBanner
 
 
 class LoginPage(QWidget):
+    logged_in = pyqtSignal(str, str)  # username, password (or token)
     def __init__(self, on_login: Callable, on_go_signup: Callable, auth: AuthService, parent=None) -> None:
         super().__init__(parent)
         self.auth = auth
