@@ -136,21 +136,21 @@ BEGIN
 END;
 $func$;
 
--- -- =========================
--- -- pg_cron scheduling (optional but recommended)
--- -- =========================
--- CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- =========================
+-- pg_cron scheduling (optional but recommended)
+-- =========================
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- -- Every Sunday 03:00 – create next week's partitions (+ next 7 days)
--- SELECT cron.schedule(
---   'partitions-next-week',
---   '0 3 * * 0',
---   $$SELECT admin.ensure_next_week_partitions();$$
--- );
+-- Every Sunday 03:00 – create next week's partitions (+ next 7 days)
+SELECT cron.schedule(
+  'partitions-next-week',
+  '0 3 * * 0',
+  $$SELECT admin.ensure_next_week_partitions();$$
+);
 
--- -- 1st of every month 03:10 – retention (keep 1 year)
--- SELECT cron.schedule(
---   'partitions-monthly-retention',
---   '10 3 1 * *',
---   $$SELECT admin.apply_yearly_retention();$$
--- );
+-- 1st of every month 03:10 – retention (keep 1 year)
+SELECT cron.schedule(
+  'partitions-monthly-retention',
+  '10 3 1 * *',
+  $$SELECT admin.apply_yearly_retention();$$
+);

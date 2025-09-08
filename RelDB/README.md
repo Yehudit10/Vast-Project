@@ -1,139 +1,105 @@
-# PostgreSQL External Database Setup Guide
+# 🚀 Quick Start – PostgreSQL + Monitoring Stack
 
-This guide explains how to **build**, **deploy**, and **connect** to a PostgreSQL database externally (outside the Kubernetes cluster).  
-It also includes **test commands** to verify that the database was built correctly.
+This project sets up PostgreSQL (via Bitnami Helm on Minikube-in-Docker) together with Prometheus, Grafana, Alertmanager, and postgres_exporter.
+
+## 1. Run Everything
+
+```bash
+docker compose up -d --build
+```
+
+
+
+
+## 2. Open the UIs
+
+- Prometheus → [http://localhost:9090](http://localhost:9090)
+- Grafana → [http://localhost:3000](http://localhost:3000) (login: `admin` / `admin`)
+
+-- In Grafana you have to enter into dashboard and press new, and then import and choose the json file in this folder.(there is simple and multi you can choos)
+
+That’s it — dashboards will already be provisioned and connected.
 
 ---
 
-# only to netfree
-Before we start you have to download TSL.
+##  Verify in Prometheus / Grafana
 
-## 1. Build & Deploy
-
-### Build Docker Image (if custom)
-```bash
-docker build -t pg-postgis-minikube:latest .
+In Prometheus UI run:
+```
+rate(pg_wal_stats_wal_bytes[5m])
 ```
 
-### Run Dockerfile
-```bash
-docker run --privileged --cgroupns=host --name pg-mini -d pg-postgis-minikube:latest
-```
-
-### See the logs
-```bash
-docker logs -f pg-mini
-```
-
-Where `values.yaml` should define:
-```yaml
-primary:
-  service:
-    type: NodePort
-    nodePorts:
-      postgresql: 30032
-```
+In Grafana dashboard, check WAL throughput / BRIN / replication lag panels.
 
 ---
 
-## 2. Connect from Outside
+## Notes
 
-### Get Minikube IP
+- Default credentials:
+  - postgres / `PgAdmin!ChangeMe123`
+  - missions_user / `Missions!ChangeMe123`
+- Configuration files:
+  - `prometheus.yml`, `prometheus-recording.rules.yml`, `postgres-alerts.yml`
+  - `grafana-datasource.yml`, `grafana-dashboards.yml`, `grafana-dashboard.json`
+- All SQL init scripts under `/work/initdb` are automatically applied in order.
+
+Enjoy your graphs! 🎉
+
+
+# pitr
+1. option to run munual bakcup:
+```
+docker exec -u postgres -it db python3 /usr/local/bin/backup.py
+```
+
+2. check database:
+```
+docker exec db psql -U missions_user -d missions_db -c "SELECT COUNT(*) AS row_count FROM anomalies;"
+
+docker exec db psql -U missions_user -d missions_db -c "DELETE FROM anomalies WHERE anomaly_id = 123;"
+```
+
+## 🔄 Recovery (PITR – Point in Time Recovery)
+
+We use the `recover.py` helper script to restore the database from base backups and WAL archives.
+
+### 3. Recovery modes
+
+- **Latest** → restore up to the latest available WAL:
 ```bash
-minikube ip
+  docker exec -u postgres -it db python3 /usr/local/bin/recover.py latest
 ```
-Example: `192.168.49.2`
 
-### Connect with psql
+- **Minutes ago** → restore to a point N minutes in the past:
 ```bash
-psql -h 192.168.49.2 -p 30032 -U missions_user -d missions_db
+  docker exec -u postgres -it db python3 /usr/local/bin/recover.py minutes 2
 ```
 
-> Password is stored in the Kubernetes secret:
+- **Exact time** → restore to a specific timestamp:
 ```bash
-kubectl -n db get secret pg-auth -o jsonpath="{.data.password}" | base64 -d
+  docker exec -u postgres -it db python3 /usr/local/bin/recover.py time "2025-09-07T11:15:00+03:00"
 ```
 
-### Connect with Python (psycopg2)
-```python
-import psycopg2
+# Restart the container
 
-conn = psycopg2.connect(
-    host="192.168.49.2",
-    port=30032,
-    dbname="missions_db",
-    user="missions_user",
-    password="your_password"
-)
+- After preparing the recovery files, the script will print:
 
-cur = conn.cursor()
-cur.execute("SELECT COUNT(*) FROM regions;")
-print(cur.fetchone())
-cur.close()
-conn.close()
+[RECOVERY] Recovery setup complete ✅
+[RECOVERY] Please restart the container to apply recovery:
+           docker restart db
+
+Run:
+```bash
+docker restart db
 ```
 
----
-
-## 3. Verification Tests
-
-After deploying, run this to come in psql:
-
-```sql
-kubectl -n db run pg-client --rm -it --restart=Never \
->   --image=docker.io/bitnami/postgresql:16 \
->   --env="PGPASSWORD=Missions!ChangeMe123" -- \
->   psql -h pg-postgresql -p 5432 -U missions_user -d missions_db
+check not in recovery:
+```bash
+docker exec -it db psql -U missions_user -d missions_db -c "SELECT pg_is_in_recovery();"
 ```
 
+wait for f, and run:
+```bash
+docker exec -u postgres -it db python3 /usr/local/bin/backup.py
 
- run these to confirm DB is working:
-
-### 1. Check tables exist
-```sql
-\dt
 ```
-
-### 2. Test query on regions
-```sql
-SELECT * FROM regions LIMIT 5;
-```
-
-### 3. Insert test row
-```sql
-INSERT INTO missions (id, name) VALUES (999, 'Test Mission');
-```
-
-### 4. Verify row exists
-```sql
-SELECT * FROM missions WHERE id=999;
-```
-
-### 5. Cleanup
-```sql
-DELETE FROM missions WHERE id=999;
-```
-
----
-
-## 4. Troubleshooting
-
-- If you see `Connection refused`: check NodePort mapping with
-  ```bash
-  kubectl -n db get svc pg-postgresql
-  ```
-
-- If password fails: make sure to decode the secret again.
-
-- If schema is empty: ensure your initdb scripts ran correctly.
-
----
-
-## ✅ Summary
-
-- **Build** with `docker build` (if needed).  
-- **Deploy** with `helm upgrade`.  
-- **Connect** via `minikube ip` + NodePort.  
-- **Verify** using SELECT, INSERT, and DELETE test queries.
-
----
