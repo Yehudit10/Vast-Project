@@ -1,3 +1,6 @@
+# RelDB
+
+- Read the README file befor start use
 # AgCloud
 
 ## Prometheus Docker Setup
@@ -7,7 +10,7 @@ This project includes a custom Dockerfile for running Prometheus in a containeri
 ### Build the Prometheus Docker Image
 
 ```sh
-cd prometheus-docker
+cd prometheus
 docker build -t agcloud-prometheus .
 ```
 
