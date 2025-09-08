@@ -632,7 +632,7 @@ class OrthophotoViewer(QGraphicsView):
         self.sensor_layer = SensorLayer(self)
 
         dataset_bbox_latlon(self, z=self.max_zoom_fs)
-        add_sensors_by_gps_bulk(self.sensor_layer, get_sensors(), z=self.max_zoom_fs, default_radius_px=0.01)
+        add_sensors_by_gps_bulk(self.sensor_layer, get_sensors(), z=self.max_zoom_fs, default_radius_px=0.2)
 
         # Scene rect anchored to base zoom (min z)
         self._init_scene_rect_from_min_zoom()
