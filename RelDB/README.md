@@ -33,6 +33,54 @@ In Grafana dashboard, check WAL throughput / BRIN / replication lag panels.
 
 ---
 
+## 🔎 PostgreSQL with pgvector
+
+The PostgreSQL image used in this project is extended from `bitnami/postgresql:16` and includes the [`pgvector`](https://github.com/pgvector/pgvector) extension.
+
+### Build the image
+From inside the `RelDB` directory:
+```bash
+docker build -t agcloud/postgresql-pgvector:16 -f pgvector.Dockerfile .
+```
+
+### Run the container
+```bash
+docker run --name agcloud-db \
+  -e POSTGRESQL_POSTGRES_PASSWORD=SuperSecret123 \
+  -e POSTGRESQL_USERNAME=agcloud \
+  -e POSTGRESQL_PASSWORD=agcloud \
+  -e POSTGRESQL_DATABASE=agcloud \
+  -p 5432:5432 \
+  -v pgdata:/bitnami/postgresql \
+  -d agcloud/postgresql-pgvector:16
+```
+
+### Default credentials
+- Superuser: `postgres` / `SuperSecret123`
+- User: `agcloud` / `agcloud`
+
+### Verify pgvector
+Check installed extensions:
+```bash
+docker exec -it agcloud-db psql -U postgres -d agcloud -c "\dx"
+```
+
+If `vector` is not listed (e.g., on an existing volume), enable it manually:
+```bash
+docker exec -it agcloud-db psql -U postgres -d agcloud -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+### Example usage
+```sql
+CREATE TABLE items (id serial PRIMARY KEY, embedding vector(3));
+INSERT INTO items (embedding) VALUES ('[1,2,3]'), ('[2,0,0]');
+SELECT id, embedding
+FROM items
+ORDER BY embedding <=> '[1,2,3]'
+LIMIT 1;
+```
+
+
 ## Notes
 
 - Default credentials:
