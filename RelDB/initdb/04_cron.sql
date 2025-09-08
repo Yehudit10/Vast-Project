@@ -1,7 +1,3 @@
--- 04_cron.sql
--- Scheduling automatic tasks with pg_cron
--- Runs after 03_partitions.sql (so that all functions already exist)
-
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- 1) Every Sunday at 03:00 – create partitions for the coming week
