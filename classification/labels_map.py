@@ -1,4 +1,3 @@
-# labels_map.py
 # Keyword-based bucketing of AudioSet labels into 4 coarse groups.
 
 ANIMAL_KEYWORDS = [
