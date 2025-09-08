@@ -4,7 +4,7 @@ import os, json, uuid, logging, sqlite3
 from concurrent import futures
 from typing import Dict, Any, List
 import grpc
-import query_pb2, query_pb2_grpc
+from proto.generated import query_pb2, query_pb2_grpc
 
 # === Config ===
 RUNNER_MODE = os.getenv("RUNNER_MODE", "real")  # "mock" or "real"
