@@ -1,10 +1,22 @@
 # runner_server.py
+"""
+gRPC runner that executes a JSON DSL plan on SQLite (or returns mock data).
+
+RPC
+- QueryRunner.RunQuery({ json: str }) -> SensorList
+
+Env
+- RUNNER_MODE: 'real' | 'mock'
+- SQLITE_DB : path to SQLite file
+- PORT      : gRPC port (default 50051)
+- LOG_LEVEL : logging level
+"""
 
 import os, json, uuid, logging, sqlite3
 from concurrent import futures
 from typing import Dict, Any, List
 import grpc
-from proto.generated import query_pb2, query_pb2_grpc
+from vast.proto.generated import query_pb2, query_pb2_grpc
 
 # === Config ===
 RUNNER_MODE = os.getenv("RUNNER_MODE", "real")  # "mock" or "real"
@@ -17,11 +29,13 @@ log = logging.getLogger("runner")
 
 # === Import the DSL compiler (strict JSON IR → SQL) ===
 # Assumes you added the multi-file package from earlier under 'dsl/' on PYTHONPATH.
-from dsl import SQLBuilder, SQLiteDialect
+from vast.dsl import SQLBuilder, SQLiteDialect
 
 # ---------------- gRPC Service ---------------- #
 
 class QueryRunnerImpl(query_pb2_grpc.QueryRunnerServicer):
+    """Validates JSON; mock mode returns fixtures, real mode compiles plan→SQL and executes."""
+
     def RunQuery(self, request, context):
         md = dict(context.invocation_metadata())
         request_id = md.get("x-request-id", str(uuid.uuid4()))
@@ -50,7 +64,7 @@ class QueryRunnerImpl(query_pb2_grpc.QueryRunnerServicer):
     ]
             return _pack_sensors(sensors)
 
-        # --- REAL: compile plan → SQL (SQLite) and execute ---
+        # compile plan → SQL (SQLite) and execute ---
         try:
             sql, params = SQLBuilder(SQLiteDialect()).compile(plan)
         except Exception as e:
@@ -114,6 +128,7 @@ def _rows_to_sensors(rows: List[sqlite3.Row]) -> query_pb2.SensorList:
 
 
 def _first_key(colmap: Dict[str, str], candidates) -> str | None:
+    """Return original column name matching any candidate (case-insensitive)."""
     for c in candidates:
         if c in colmap:
             return colmap[c]
@@ -138,6 +153,7 @@ def _pack_sensors(sensors_list):
 
 
 def serve(port: int = PORT):
+    """Start the gRPC server and block."""
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
     query_pb2_grpc.add_QueryRunnerServicer_to_server(QueryRunnerImpl(), server)
     server.add_insecure_port(f"[::]:{port}")

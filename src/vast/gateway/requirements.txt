@@ -4,4 +4,4 @@ prometheus_client>=0.20
 pydantic==2.7.4
 grpcio>=1.56,<2
 grpcio-tools>=1.56,<2
-protobuf>=4.24,<5
+protobuf>=5.26,<6
