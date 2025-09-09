@@ -1,0 +1,27 @@
+import psycopg2
+from psycopg2.extras import execute_values
+from pathlib import Path
+
+def dsn(pg):
+    return f"host={pg['host']} port={pg['port']} dbname={pg['db']} user={pg['user']} password={pg['password']}"
+
+def ensure_schema(con, schema_sql_path: Path):
+    with con, con.cursor() as cur:
+        cur.execute(Path(schema_sql_path).read_text(encoding="utf-8"))
+
+def insert_detection(cur, fruit_type, captured_at, source_path, feat, ripeness, flags):
+    cur.execute(
+        "INSERT INTO images (fruit_type, captured_at, source_path) VALUES (%s,%s,%s) RETURNING image_id",
+        (fruit_type, captured_at, source_path)
+    )
+    image_id = cur.fetchone()[0]
+    cur.execute(
+        """INSERT INTO detections
+           (image_id, mean_h, mean_s, mean_v, laplacian_var, brown_ratio, ripeness, quality_flags)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (image_id, feat.mean_h, feat.mean_s, feat.mean_v, feat.lap_var, feat.brown_ratio, ripeness, flags)
+    )
+
+def run_weekly_upsert(con, upsert_sql_path: Path):
+    with con, con.cursor() as cur:
+        cur.execute(Path(upsert_sql_path).read_text(encoding="utf-8"))
