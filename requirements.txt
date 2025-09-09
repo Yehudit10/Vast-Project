@@ -1,5 +1,12 @@
-PyQt6
-PyQt6-WebEngine
+# PyQt6
+# PyQt6-WebEngine
+# flask
+# prometheus-client
+# requests
+# argon2-cffi
+
+PyQt6==6.9.1
+PyQt6-WebEngine==6.9.0
 flask
 prometheus-client
 requests

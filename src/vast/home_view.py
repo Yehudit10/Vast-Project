@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QSizePoli
 
 # Map viewer (PyQt6 version)
 from orthophoto_canvas.ui.viewer_factory import create_orthophoto_viewer
-from orthophoto_canvas.ui.sensors_layer import SensorLayer, add_sensors_by_gps_bulk
+from vast.orthophoto_canvas.ui.sensors_layer import SensorLayer, add_sensors_by_gps_bulk
 from orthophoto_canvas.ag_io import sensors_api
 
 class HomeView(QWidget):
@@ -45,7 +45,7 @@ class HomeView(QWidget):
             grid.addWidget(view, r, c)
 
         # --- Map viewer (bottom row; spans two columns) ---
-        tiles_root = "./orthophoto_canvas/data/tiles"
+        tiles_root = "./src/vast/orthophoto_canvas/data/tiles"
         self.viewer = create_orthophoto_viewer(tiles_root, forced_scheme=None, parent=self)
         grid.addWidget(self.viewer, 1, 0, 1, 2)
 

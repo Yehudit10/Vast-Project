@@ -7,7 +7,7 @@ from typing import Optional, Union
 from PyQt6.QtWidgets import QWidget
 
 from .viewer import OrthophotoViewer
-from orthophoto_canvas.ag_io.tileset import TileStore
+from vast.orthophoto_canvas.ag_io.tileset import TileStore
 
 
 def create_orthophoto_viewer(
