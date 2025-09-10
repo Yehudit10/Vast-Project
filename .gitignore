@@ -38,8 +38,8 @@ dist/
 *.egg-info/
 
 # Project specific
-mqtt/outbox/
-mqtt/data/real_images/
+mqtt_images/outbox/
+mqtt_images/data/real_images/
 storage/minio-storage/data/
 storage/combined_minio_setup/config/
 storage/monitoring/grafana-data/
