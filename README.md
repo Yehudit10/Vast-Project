@@ -174,7 +174,7 @@ A tiled orthophoto viewer built with QGraphicsView/QGraphicsScene. It loads only
 ```powershell
 .\.venv\Scripts\Activate.ps1
 $env:GATEWAY_URL = "http://127.0.0.1:9001"
-python .\srcast\main.py
+python .\src\vast\main.py
 ```
 
 **macOS/Linux (bash):**
