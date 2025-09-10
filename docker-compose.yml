@@ -3,7 +3,7 @@ services:
     image: eclipse-mosquitto:2
     restart: unless-stopped
     volumes:
-      - ./mqtt/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mqtt_images/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
       - "1883:1883"
 
@@ -72,7 +72,7 @@ services:
   # ===== Ingestor (מדבר עם ה-HOT) =====
   mqtt_ingest:
     build:
-      context: ./mqtt/mqtt_ingest
+      context: ./mqtt_images/mqtt_ingest
     env_file:
      - ./storage/combined_minio_setup/.env   # <<< מוסיף את הקובץ
     
@@ -94,7 +94,7 @@ services:
       - OUTBOX_DIR=/app/outbox
       - INGEST_WORKERS=8
     volumes:
-      - ./mqtt/outbox:/app/outbox
+      - ./mqtt_images/outbox:/app/outbox
     depends_on:
       mosquitto:
         condition: service_started
@@ -109,7 +109,7 @@ services:
 
   mqtt_publisher:
     build:
-      context: ./mqtt/mqtt_publisher
+      context: ./mqtt_images/mqtt_publisher
     environment:
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
@@ -121,7 +121,7 @@ services:
       - MQTT_QOS=2
       - PUBLISH_DELAY_MS=10
     volumes:
-      - ./mqtt/data/real_images:/images:ro
+      - ./mqtt_images/data/real_images:/images:ro
     depends_on:
       - mosquitto
     restart: "no"
