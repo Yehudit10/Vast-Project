@@ -1,4 +1,4 @@
-from .heuristics import Features
+from heuristics import Features
 
 # bitmask:
 LOW_LIGHT      = 1     # mean_v < low_light_v

@@ -13,7 +13,6 @@ PG = {
 SAMPLES_DIR = os.getenv("SAMPLES_DIR", "./samples")
 FRUIT_TYPE  = os.getenv("FRUIT_TYPE", "apple")
 
-# ספי ברירת מחדל: ניתן לשנות בהמשך לפי זן/דאטה אמיתי
 THRESHOLDS = {
     "overripe_brown_ratio": 0.25,
     "overripe_min_v": 70,       # אם נמוך מזה -> overripe

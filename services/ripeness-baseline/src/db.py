@@ -1,13 +1,13 @@
-import psycopg2
-from psycopg2.extras import execute_values
+import psycopg
 from pathlib import Path
 
 def dsn(pg):
     return f"host={pg['host']} port={pg['port']} dbname={pg['db']} user={pg['user']} password={pg['password']}"
 
 def ensure_schema(con, schema_sql_path: Path):
-    with con, con.cursor() as cur:
-        cur.execute(Path(schema_sql_path).read_text(encoding="utf-8"))
+    sql = Path(schema_sql_path).read_text(encoding="utf-8")
+    with con.cursor() as cur:
+        cur.execute(sql)
 
 def insert_detection(cur, fruit_type, captured_at, source_path, feat, ripeness, flags):
     cur.execute(
@@ -23,5 +23,6 @@ def insert_detection(cur, fruit_type, captured_at, source_path, feat, ripeness, 
     )
 
 def run_weekly_upsert(con, upsert_sql_path: Path):
-    with con, con.cursor() as cur:
-        cur.execute(Path(upsert_sql_path).read_text(encoding="utf-8"))
+    sql = Path(upsert_sql_path).read_text(encoding="utf-8")
+    with con.cursor() as cur:
+        cur.execute(sql)
