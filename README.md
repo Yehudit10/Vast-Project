@@ -1,5 +1,118 @@
 # AgCloud-Sounds
 
+## AgCloud – MQTT → Kafka Bridge
+
+This project sets up a Docker Compose environment with:
+
+- Mosquitto (MQTT broker)
+
+- Kafka (Bitnami KRaft, single broker, no replication)
+
+- Kafka Connect with an MQTT Source Connector
+
+- A PowerShell script (agcloud_bench.ps1) for automated testing, publishing, and latency benchmarks
+
+### How to Run
+
+**Note:** At the end of this document you will also find a **one-liner command** that runs the entire setup (services + live subscribers + interactive send) in a single step.
+
+#### Setup
+
+go to project root
+
+```powershell
+cd <project-root>
+```
+
+exp.
+
+```powershell
+cd C:\Users\user1\Desktop\AgCloud\AgCloud
+```
+
+Start the environment (Mosquitto + Kafka + Connect):
+
+```powershell
+.\agcloud_bench.ps1 up
+```
+
+This builds and runs all required containers.
+
+#### MQTT ↔ Kafka Connector
+
+Two connector configs are included:
+
+- mqtt-fast.json – maps mqtt/latency → raw.mqtt.fast
+
+- mqtt-source.json – maps mqtt/# → raw.mqtt.in
+
+Apply connector config:
+
+```powershell
+docker compose exec -T connect curl -s -X PUT -H "Content-Type: application/json" --data "@mqtt-fast.json" http://localhost:8083/connectors/mqtt-fast/config
+```
+
+Restart connector:
+
+```powershell
+docker compose exec -T connect curl -s -X POST http://localhost:8083/connectors/mqtt-fast/restart
+```
+
+Check status:
+
+```powershell
+docker compose exec -T connect curl -s http://localhost:8083/connectors/mqtt-fast/status
+```
+
+#### Bench Script
+
+##### Live subscribers
+
+Opens two windows – one with MQTT mosquitto_sub, one with Kafka tail:
+
+```powershell
+.\agcloud_bench.ps1 live
+```
+
+##### Send messages interactively
+
+Allows typing JSON to publish:
+
+```powershell
+.\agcloud_bench.ps1 send
+```
+
+Example:
+
+```powershell
+{"user":"user1","action":"test"}
+```
+
+##### Latency benchmark
+
+Publish 1000 messages and measure:
+
+```powershell
+.\agcloud_bench.ps1 bench -Count 1000
+```
+
+#### Quick test with kcat
+
+Consume from Kafka directly:
+
+```powershell
+docker run -it --rm --network agcloud_mesh edenhill/kcat:1.7.1 `
+  -b kafka:9092 -C -t raw.mqtt.fast -o end -q -f "%s\n"
+```
+
+#### One-liner command
+
+For a full run (start environment, open live windows, enter interactive send):
+
+```powershell
+powershell -NoExit -Command "Set-ExecutionPolicy -Scope Process Bypass; .\agcloud_bench.ps1 up; .\agcloud_bench.ps1 live; .\agcloud_bench.ps1 send"
+```
+
 ## Kafka Single – Kafka in Docker
 
 This project provides a simple Dockerfile to run Kafka (Bitnami image, single broker with topics and smoke test).
@@ -136,3 +249,10 @@ You may see a summary like:
 - KPI target: **loss ≤ 0.5%** (PASS).
 - CSV/Parquet input is required (`--file`). Install `pyarrow` or `fastparquet` for Parquet.
 - Make sure your brokers are reachable (e.g., Mosquitto on 1883; Kafka advertised at 9094).
+
+## MQTT→Kafka Soak (Docker Compose)
+
+- Trigger: Actions → "Soak Test (MQTT to Kafka Bridge)" → Run workflow.
+- Load: 150s @ 1000 msg/s to MQTT topic `soak/test`, consumed from Kafka topic `dev-robot-telemetry-raw`.
+- Results: Check "MQTT to Kafka Soak Test Results" and download artifacts (logs, junit.xml, bridge.json).
+- Pass/Fail: Job fails if loss_pct > 1.0%.
