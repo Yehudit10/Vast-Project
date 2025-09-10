@@ -1,183 +1,125 @@
-# core/model_io.py
-# Core I/O and inference utilities for baseline audio classification.
-
 from __future__ import annotations
 
 import pathlib
 import shutil
 import subprocess
-from typing import List, Optional, Dict, Tuple, Any
+from typing import Any, List, Optional, Tuple, Literal
 
 import numpy as np
 import soundfile as sf
 import librosa
+import logging
 
 try:
-    import torch  # optional
-except Exception:  # pragma: no cover
+    import torch
+except Exception:
     torch = None  # type: ignore
 
 from panns_inference import AudioTagging
-from labels_map import bucket_of
 
-# ===== Constants =====
-SAMPLE_RATE = 32000      # Native sample rate for PANNs
-MIN_SAMPLES = 16000      # Minimal padding for very short inputs (~0.5s @ 32kHz)
-HARD_EXTS = {".mp3", ".opus", ".m4a", ".aac"}  # Formats often tricky for libsndfile
+LOGGER = logging.getLogger(__name__)
+
+SAMPLE_RATE = 32000
+MIN_SAMPLES = 16000
+HARD_EXTS = {".mp3", ".opus", ".m4a", ".aac", ".wma"}
+SUPPORTED_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"}
 
 
-# ===== FFmpeg helpers =====
 def has_ffmpeg() -> bool:
-    """Return True if ffmpeg is available in PATH."""
     return shutil.which("ffmpeg") is not None
 
 
 def decode_with_ffmpeg_to_float32_mono(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
-    """
-    Decode media to mono float32 at target_sr using ffmpeg (must be installed).
-    Streams raw float32 frames to stdout and converts to NumPy without temp files.
-    """
-    cmd = [
-        "ffmpeg", "-v", "error",
-        "-i", path,
-        "-vn",
-        "-ac", "1",
-        "-ar", str(target_sr),
-        "-f", "f32le",
-        "pipe:1"
-    ]
+    cmd = ["ffmpeg", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", str(target_sr), "-f", "f32le", "pipe:1"]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     y = np.frombuffer(proc.stdout, dtype=np.float32)
     if y.size < MIN_SAMPLES:
-        pad = np.zeros(MIN_SAMPLES - y.size, dtype=np.float32)
-        y = np.concatenate([y, pad], axis=0)
+        y = np.concatenate([y, np.zeros(MIN_SAMPLES - y.size, dtype=np.float32)], axis=0)
     return y
 
 
-# ===== Files / Checkpoint =====
 def ensure_checkpoint(checkpoint_path: str, checkpoint_url: Optional[str]) -> str:
-    """
-    Ensure the weight file exists locally. If not present and a URL is provided,
-    download it using urllib (no external tools).
-    Returns the local filesystem path to the checkpoint.
-    """
     import urllib.request
-
     p = pathlib.Path(checkpoint_path)
     p.parent.mkdir(parents=True, exist_ok=True)
-
     if p.exists():
         return str(p)
-
     if not checkpoint_url:
-        raise FileNotFoundError(
-            f"No checkpoint found at: {p}. Provide --checkpoint or --checkpoint-url."
-        )
-
-    print(f"[info] Downloading checkpoint:\n  URL: {checkpoint_url}\n  -> {p}")
-    urllib.request.urlretrieve(checkpoint_url, p)  # nosec - controlled via CLI
-    print("[info] Download complete.")
+        raise FileNotFoundError(f"No checkpoint at {p}. Provide --checkpoint or --checkpoint-url.")
+    urllib.request.urlretrieve(checkpoint_url, p)  # nosec
+    LOGGER.info("downloaded checkpoint to %s", p)
     return str(p)
 
 
-# ===== Audio Loading =====
 def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
-    """
-    Load an audio file, convert to mono, resample to target_sr, and return float32 in [-1, 1].
-
-    Strategy:
-      - For "hard" formats (mp3/opus/m4a/aac): try librosa first (audioread/ffmpeg). If it fails and ffmpeg
-        exists, decode via ffmpeg. Otherwise raise.
-      - For easier formats (wav/flac/ogg/aiff/aif/au): try soundfile first. If it fails, try librosa, then ffmpeg.
-
-    Always pads to at least MIN_SAMPLES to avoid failures on very short clips.
-    """
     ext = pathlib.Path(path).suffix.lower()
 
-    def _pad_if_short(y: np.ndarray) -> np.ndarray:
+    def _pad(y: np.ndarray) -> np.ndarray:
         if y.size < MIN_SAMPLES:
-            pad = np.zeros(MIN_SAMPLES - y.size, dtype=np.float32)
-            y = np.concatenate([y, pad], axis=0)
+            y = np.concatenate([y, np.zeros(MIN_SAMPLES - y.size, dtype=np.float32)])
         return y
 
-    # Hard formats: prefer librosa; ffmpeg fallback
     if ext in HARD_EXTS:
         try:
             y, _ = librosa.load(path, sr=target_sr, mono=True)
-            y = np.asarray(y, dtype=np.float32)
-            return _pad_if_short(y)
+            return _pad(np.asarray(y, dtype=np.float32))
         except Exception:
             if has_ffmpeg():
-                y = decode_with_ffmpeg_to_float32_mono(path, target_sr=target_sr)
-                return _pad_if_short(y)
+                LOGGER.warning("librosa failed; using ffmpeg fallback for %s", path)
+                return _pad(decode_with_ffmpeg_to_float32_mono(path, target_sr))
+            LOGGER.exception("failed to load compressed audio: %s", path)
             raise
 
-    # Easier formats: try soundfile first
     try:
         y, sr = sf.read(path, always_2d=False)
         if hasattr(y, "ndim") and y.ndim > 1:
-            y = np.mean(y, axis=1)  # mono
+            y = np.mean(y, axis=1)
         y = np.asarray(y, dtype=np.float32)
         if int(sr) != int(target_sr):
             y = librosa.resample(y, orig_sr=int(sr), target_sr=int(target_sr))
-        return _pad_if_short(y)
+        return _pad(y)
     except Exception:
-        # librosa fallback
         try:
             y, _ = librosa.load(path, sr=target_sr, mono=True)
-            y = np.asarray(y, dtype=np.float32)
-            return _pad_if_short(y)
+            return _pad(np.asarray(y, dtype=np.float32))
         except Exception:
-            # ffmpeg final fallback
             if has_ffmpeg():
-                y = decode_with_ffmpeg_to_float32_mono(path, target_sr=target_sr)
-                return _pad_if_short(y)
+                LOGGER.warning("soundfile/librosa failed; using ffmpeg fallback for %s", path)
+                return _pad(decode_with_ffmpeg_to_float32_mono(path, target_sr))
+            LOGGER.exception("failed to load audio: %s", path)
             raise
 
 
-# ===== Labels =====
 def load_audioset_labels_from_pkg() -> Optional[List[str]]:
-    """
-    Try to read AudioSet label names from panns_inference resources/class_labels_indices.csv.
-    Returns None if unavailable or on error.
-    """
     try:
-        import panns_inference, inspect, os, csv  # local import to keep top clean
+        import panns_inference, inspect, os, csv
         pkg_dir = os.path.dirname(inspect.getfile(panns_inference))
         csv_path = os.path.join(pkg_dir, "resources", "class_labels_indices.csv")
         with open(csv_path, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         if rows and "index" in rows[0]:
             rows.sort(key=lambda r: int(r["index"]))
-        names = [(r.get("display_name") or r.get("name") or "").strip() for r in rows]
-        return names or None
+        return [(r.get("display_name") or r.get("name") or "").strip() for r in rows] or None
     except Exception:
+        LOGGER.debug("failed to load labels from pkg", exc_info=True)
         return None
 
 
 def load_labels_from_csv(csv_path: str) -> Optional[List[str]]:
-    """
-    Read an external CSV identical to class_labels_indices.csv and return a list of names ordered by 'index'.
-    """
     try:
         import csv
         with open(csv_path, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
         if rows and "index" in rows[0]:
             rows.sort(key=lambda r: int(r["index"]))
-        names = [(r.get("display_name") or r.get("name") or "").strip() for r in rows]
-        return names or None
+        return [(r.get("display_name") or r.get("name") or "").strip() for r in rows] or None
     except Exception:
+        LOGGER.debug("failed to load labels csv: %s", csv_path, exc_info=True)
         return None
 
 
-# ===== Inference =====
 def _to_numpy(x: Any) -> np.ndarray:
-    """
-    Convert torch.Tensor / lists to numpy.float32 safely.
-    Accepts shapes: (C,), (1, C), (C, 1); returns 1D (C,).
-    """
-    if torch is not None and isinstance(x, torch.Tensor):  # type: ignore
+    if (torch is not None) and hasattr(torch, "Tensor") and isinstance(x, torch.Tensor):  # type: ignore
         x = x.detach().cpu().numpy()
     arr = np.asarray(x, dtype=np.float32)
     if arr.ndim == 2:
@@ -193,78 +135,62 @@ def _to_numpy(x: Any) -> np.ndarray:
 
 
 def run_inference(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[str]]:
-    """
-    Run model inference robustly and return:
-      - probs: 1D numpy array (num_classes,)
-      - labels: list of class names
-    Handles both dict/tuple outputs from panns_inference across versions.
-    """
-    # Try 1D first; if it fails, try (1, T)
     try:
         res = at.inference(wav)
-    except Exception as e1:
-        try:
-            res = at.inference(wav[None, :])
-        except Exception as e2:  # pragma: no cover
-            raise RuntimeError(f"inference failed (1D & 2D): {e1} | {e2}") from e2
+    except Exception:
+        res = at.inference(wav[None, :])
 
     clipwise: Optional[np.ndarray] = None
     labels: Optional[List[str]] = None
 
     if isinstance(res, dict):
         clipwise = _to_numpy(res.get("clipwise_output"))
-        labels = res.get("labels")
+        raw_labels = res.get("labels")
+        if isinstance(raw_labels, (list, tuple)):
+            labels = [str(x) for x in raw_labels]
     elif isinstance(res, tuple):
         if len(res) >= 1:
             clipwise = _to_numpy(res[0])
         if len(res) >= 3 and isinstance(res[2], (list, tuple)):
-            labels = list(res[2])
+            labels = [str(x) for x in res[2]]
 
     if clipwise is None:
         clipwise = _to_numpy(res)
 
+    clipwise = clipwise.reshape(-1).astype(np.float32, copy=False)
+    if np.isnan(clipwise).any() or np.isinf(clipwise).any():
+        clipwise = np.nan_to_num(clipwise, nan=0.0, posinf=1.0, neginf=0.0)
+
     if labels is None and hasattr(at, "labels"):
-        labels = at.labels  # type: ignore
+        try:
+            labels = [str(x) for x in list(at.labels)]  # type: ignore[attr-defined]
+        except Exception:
+            labels = None
 
     if labels is None:
         labels = load_audioset_labels_from_pkg() or [f"class_{i}" for i in range(clipwise.size)]
+    if len(labels) != clipwise.size:
+        labels = [f"class_{i}" for i in range(clipwise.size)]
 
-    if clipwise.ndim != 1:
-        clipwise = clipwise.reshape(-1)
-
-    return clipwise, labels  # probs are sigmoid-like in [0,1]
+    return clipwise, labels
 
 
-# ===== Embeddings =====
 def run_embedding(at: AudioTagging, wav: np.ndarray) -> np.ndarray:
-    """
-    Extract a 1D embedding vector from the model.
-    Supports both dict/tuple outputs. Returns np.ndarray shape (D,).
-    """
     try:
         res = at.inference(wav)
-    except Exception as e1:
-        try:
-            res = at.inference(wav[None, :])
-        except Exception as e2:  # pragma: no cover
-            raise RuntimeError(f"embedding inference failed (1D & 2D): {e1} | {e2}") from e2
+    except Exception:
+        res = at.inference(wav[None, :])
 
     emb = None
     if isinstance(res, dict):
         emb = res.get("embedding", None)
-    elif isinstance(res, tuple):
-        if len(res) >= 2:
-            emb = res[1]
-
+    elif isinstance(res, tuple) and len(res) >= 2:
+        emb = res[1]
     if emb is None:
-        raise RuntimeError("No embedding returned by panns_inference (expected dict['embedding'] or tuple[1]).")
-
-    emb = _to_numpy(emb)
-    emb = emb.reshape(-1)
-    return emb
+        raise RuntimeError("No embedding returned by panns_inference.")
+    return _to_numpy(emb).reshape(-1)
 
 
-# ===== Framing (windows) & Aggregation =====
 def segment_waveform(
     wav: np.ndarray,
     sr: int = SAMPLE_RATE,
@@ -272,10 +198,6 @@ def segment_waveform(
     hop_sec: float = 0.5,
     pad_last: bool = True,
 ) -> List[Tuple[float, float, np.ndarray]]:
-    """
-    Split a waveform into fixed-size windows.
-    Returns a list of (t_start_sec, t_end_sec, segment_wav).
-    """
     wav = np.asarray(wav, dtype=np.float32).reshape(-1)
     win = max(1, int(round(window_sec * sr)))
     hop = max(1, int(round(hop_sec * sr)))
@@ -293,7 +215,6 @@ def segment_waveform(
         segments.append((t0, t1, seg))
         i += hop
 
-    # last partial window
     if pad_last and (i < n):
         tail = wav[i:]
         pad = np.zeros(win - tail.size, dtype=np.float32)
@@ -302,7 +223,6 @@ def segment_waveform(
         t1 = (i + win) / sr
         segments.append((t0, t1, seg))
     elif not segments and pad_last:
-        # very short file: pad to a single window
         pad = np.zeros(win - n, dtype=np.float32)
         seg = np.concatenate([wav, pad], axis=0)
         segments.append((0.0, win / sr, seg))
@@ -310,30 +230,72 @@ def segment_waveform(
     return segments
 
 
-def aggregate_matrix(mat: np.ndarray, mode: str = "mean") -> np.ndarray:
-    """
-    Aggregate a (num_windows, num_classes) matrix into a single (num_classes,) vector.
-    mode: 'mean' or 'max'
-    """
-    assert mat.ndim == 2, "expected 2D matrix (num_windows, num_classes)"
-    if mode == "max":
-        return mat.max(axis=0)
-    return mat.mean(axis=0)
+def run_inference_with_embedding(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[str], Optional[np.ndarray]]:
+    try:
+        res = at.inference(wav)
+    except Exception:
+        res = at.inference(wav[None, :])
+
+    clipwise = None
+    labels: Optional[List[str]] = None
+    embedding = None
+
+    if isinstance(res, dict):
+        clipwise = _to_numpy(res.get("clipwise_output"))
+        embedding = res.get("embedding", None)
+        raw_labels = res.get("labels")
+        if isinstance(raw_labels, (list, tuple)):
+            labels = [str(x) for x in raw_labels]
+    elif isinstance(res, tuple):
+        if len(res) >= 1:
+            clipwise = _to_numpy(res[0])
+        if len(res) >= 2:
+            embedding = res[1]
+        if len(res) >= 3 and isinstance(res[2], (list, tuple)):
+            labels = [str(x) for x in res[2]]
+
+    if clipwise is None:
+        clipwise = _to_numpy(res)
+
+    clipwise = clipwise.reshape(-1).astype(np.float32, copy=False)
+    if np.isnan(clipwise).any() or np.isinf(clipwise).any():
+        clipwise = np.nan_to_num(clipwise, nan=0.0, posinf=1.0, neginf=0.0)
+
+    if labels is None and hasattr(at, "labels"):
+        try:
+            labels = [str(x) for x in list(at.labels)]  # type: ignore[attr-defined]
+        except Exception:
+            labels = None
+    if labels is None:
+        labels = load_audioset_labels_from_pkg() or [f"class_{i}" for i in range(clipwise.size)]
+    if len(labels) != clipwise.size:
+        labels = [f"class_{i}" for i in range(clipwise.size)]
+
+    emb_out: Optional[np.ndarray] = None
+    if embedding is not None:
+        try:
+            emb_out = _to_numpy(embedding).reshape(-1).astype(np.float32, copy=False)
+            if np.isnan(emb_out).any() or np.isinf(emb_out).any():
+                emb_out = np.nan_to_num(emb_out, nan=0.0, posinf=0.0, neginf=0.0)
+        except Exception:
+            emb_out = None
+
+    return clipwise, labels, emb_out
 
 
-# ===== Bucketing / Summaries =====
-def summarize_buckets(topk_labels: List[Tuple[str, float]]) -> Dict[str, float]:
-    """
-    Group probabilities into 4 coarse buckets by summing probabilities of labels falling into each bucket.
-    Normalizes the dictionary to sum to 1.0.
-    """
-    sums: Dict[str, float] = {"animal": 0.0, "vehicle": 0.0, "shotgun": 0.0, "other": 0.0}
-    for label, prob in topk_labels:
-        b = bucket_of(label)
-        sums[b] += float(prob)
+def aggregate_matrix(mat: np.ndarray, mode: Literal["mean", "max"] = "mean") -> np.ndarray:
+    if not isinstance(mat, np.ndarray):
+        raise TypeError("mat must be a numpy.ndarray")
+    if mat.ndim != 2:
+        raise ValueError("expected shape (num_windows, num_classes)")
+    if mat.shape[0] == 0:
+        raise ValueError("cannot aggregate an empty window matrix (num_windows == 0)")
+    if mat.shape[1] == 0:
+        raise ValueError("expected num_classes > 0")
+    if mode not in ("mean", "max"):
+        raise ValueError("mode must be 'mean' or 'max'")
 
-    total = sum(sums.values())
-    if total > 0:
-        for k in sums:
-            sums[k] /= total
-    return sums
+    out = mat.max(axis=0) if mode == "max" else mat.mean(axis=0)
+    if np.isnan(out).any():
+        out = np.nan_to_num(out, nan=0.0)
+    return out.astype(np.float32, copy=False)
