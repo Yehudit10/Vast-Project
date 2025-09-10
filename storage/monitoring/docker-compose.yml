@@ -1,8 +1,7 @@
-# הערה: אפשר למחוק את ה-version בראש (היא לא נדרשת ב-compose v2)
 services:
   minio:
     build:
-      context: ../storage/minio-bootstrap   # <<< הנתיב לתיקייה שבה ה-Dockerfile שלך
+      context: ../storage/minio-bootstrap
       dockerfile: Dockerfile
     container_name: minio
     environment:

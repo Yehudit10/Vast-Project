@@ -197,7 +197,7 @@ def write_db(meta: dict) -> bool:
 
     if not DB_API_BASE:
         print("[DB][WARN] DB_API_BASE not set; skipping DB write.", flush=True)
-        return False  # אותו דבר כמו קודם
+        return False
 
     base = DB_API_BASE.rstrip("/")
     try:

@@ -58,12 +58,11 @@ jobs:
           echo ">> Compose services:"
           docker compose -f docker-compose.yml ps
 
-      # הרצת כל הטסטים; אם יש לך הפרדה, אפשר להרחיב ליעדים נוספים
       - name: Run tests (pytest)
         run: |
           pytest -q
 
-      # הצגת לוגים אם יש כשל – מאוד עוזר לדיבוג
+      # Show docker compose logs on failure – very useful for debugging
       - name: Show docker compose logs on failure
         if: failure()
         run: docker compose -f docker-compose.yml logs --no-color
