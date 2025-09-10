@@ -122,6 +122,7 @@ docker compose ps
 ### Terminal A – Runner (gRPC)
 ```bash
 .\.venv\Scripts\Activate.ps1
+# Change the path according to the current location of the project
 $env:SQLITE_DB = "/C:/Users/sara/Documents/login-and-gui/data/app.db"
 python -m vast.runner.runner_server
 ```
