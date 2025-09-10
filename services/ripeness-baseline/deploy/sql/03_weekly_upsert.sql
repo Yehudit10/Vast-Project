@@ -1,8 +1,8 @@
 WITH base AS (
   SELECT
     i.fruit_type,
-    EXTRACT(ISOYEAR FROM i.captured_at)::INT as iso_year,
-    EXTRACT(ISOWEEK FROM i.captured_at)::INT as iso_week,
+    to_char(i.captured_at, 'IYYY')::INT AS iso_year,  -- ISO year
+    to_char(i.captured_at, 'IW')::INT   AS iso_week,  -- ISO week number (01-53)
     COUNT(*) AS cnt_total,
     SUM((d.ripeness='Unripe')::INT)    AS cnt_unripe,
     SUM((d.ripeness='Ripe')::INT)      AS cnt_ripe,
@@ -11,6 +11,7 @@ WITH base AS (
     AVG(d.brown_ratio)::REAL           AS mean_brown
   FROM images i
   JOIN detections d USING(image_id)
+  -- לא חייבים לסנן בזמן ריצה, אבל השארתי חלון 21 יום כדי לא לגרד היסטוריה עצומה בכל הרצה
   WHERE i.captured_at >= NOW() - INTERVAL '21 days'
   GROUP BY 1,2,3
 )

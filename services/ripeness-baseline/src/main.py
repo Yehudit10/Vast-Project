@@ -7,20 +7,21 @@ from heuristics import compute_features, classify_ripeness
 from quality import quality_flags
 from db import dsn, ensure_schema, insert_detection, run_weekly_upsert
 
-import psycopg2
+import psycopg
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_SQL = ROOT/"deploy/sql/01_schema.sql"
+VIEW_SQL   = ROOT/"deploy/sql/02_rollup_view.sql"
 ROLLUP_SQL = ROOT/"deploy/sql/03_weekly_upsert.sql"
 
 def process_all():
-    con = psycopg2.connect(dsn(PG))
+    con = psycopg.connect(dsn(PG))
     ensure_schema(con, SCHEMA_SQL)
-
-    with con:
-        with con.cursor() as cur:
-            for ext in ("*.jpg","*.jpeg","*.png"):
+    ensure_schema(con, VIEW_SQL)
+    
+    with con.cursor() as cur:
+            for ext in ("*.jpg","*.jpeg","*.png","*.webp"):
                 for path in glob.glob(os.path.join(SAMPLES_DIR, ext)):
                     img = cv.imread(path)
                     if img is None:
@@ -31,8 +32,13 @@ def process_all():
                     flags = quality_flags(feat, THRESHOLDS, mark_outlier=False)
                     insert_detection(cur, FRUIT_TYPE, datetime.datetime.now(), path, feat, ripeness, flags)
 
+
+    con.commit()
+
     # לאחר הכנסת נתונים – הפקת Rollup שבועי
     run_weekly_upsert(con, ROLLUP_SQL)
+    con.commit()
+
     con.close()
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
 import cv2 as cv
-from typing import Tuple
 
 @dataclass
 class Features:
@@ -18,7 +17,6 @@ def _laplacian_variance(gray: np.ndarray, mask: np.ndarray) -> float:
     return float(np.var(lap[m])) if np.any(m) else 0.0
 
 def _brown_ratio(h: np.ndarray, v: np.ndarray, mask: np.ndarray) -> float:
-    # "חום" גס: Hue בין 10-30 או כהה מאוד (V<50)
     m = mask.astype(bool)
     brown_hue = ((h >= 10) & (h <= 30)) & m
     dark = (v < 50) & m
