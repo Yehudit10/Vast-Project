@@ -10,14 +10,14 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
-# Python deps
-COPY runner/requirements.txt /app/runner/requirements.txt
-RUN pip install --no-cache-dir -r /app/runner/requirements.txt
+# Python deps from repo root
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Code + proto
-COPY runner /app/runner
-COPY dsl    /app/dsl
-COPY proto  /app/proto
+# Copy source under /app/vast/*
+COPY src/vast/runner /app/vast/runner
+COPY src/vast/dsl    /app/vast/dsl
+COPY src/vast/proto  /app/vast/proto
 
 # Generate stubs
 RUN python -m grpc_tools.protoc -I./proto \

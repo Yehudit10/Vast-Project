@@ -11,12 +11,12 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Python deps
-COPY gateway/requirements.txt /app/gateway/requirements.txt
-RUN pip install --no-cache-dir -r /app/gateway/requirements.txt
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# App code + proto
-COPY gateway /app/gateway
-COPY proto   /app/proto
+# Copy source under /app/vast/*
+COPY src/vast/gateway /app/vast/gateway
+COPY src/vast/proto   /app/vast/proto
 
 # Generate stubs
 RUN python -m grpc_tools.protoc -I./proto \
