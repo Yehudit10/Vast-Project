@@ -1,0 +1,164 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mqtt/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - "1883:1883"
+
+  # ===== MinIO: hot + cold + bootstrap =====
+  minio-hot:
+    env_file:
+      - ./storage/combined_minio_setup/.env
+    build:
+      context: ./storage/minio-storage
+    environment:
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+    ports:
+      - "9001:9000"   # HOT S3 (host:9001 -> container:9000)
+      - "9002:9001"   # HOT Console (host:9002 -> container:9001)
+    networks: [minionet]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready"]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+    volumes:
+      - minio-hot-data:/data
+
+  minio-cold:
+    env_file:
+      - ./storage/combined_minio_setup/.env
+    build:
+      context: ./storage/minio-storage
+    environment:
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+    ports:
+      - "9101:9000"   # COLD S3
+      - "9102:9001"   # COLD Console
+    networks: [minionet]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready"]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+    volumes:
+      - minio-cold-data:/data
+
+  mc-bootstrap:
+    env_file:
+      - ./storage/combined_minio_setup/.env
+    build:
+      context: ./storage/Lifecycle_rules/minio-bootstrap
+    volumes:
+      - ./storage/combined_minio_setup/config:/config:ro
+      - ./data/config:/config
+
+    depends_on:
+      minio-hot:
+        condition: service_healthy
+      minio-cold:
+        condition: service_healthy
+    command: ["/bin/bash","-lc","/entrypoint/init.sh; tail -f /dev/null"]
+    environment:
+      MC_ALIAS_HOT: hot
+      MC_ALIAS_COLD: cold
+      HOT_ENDPOINT:  http://minio-hot:9000
+      COLD_ENDPOINT: http://minio-cold:9000
+    networks: [minionet]
+    restart: unless-stopped
+
+  # ===== Ingestor (מדבר עם ה-HOT) =====
+  mqtt_ingest:
+    build:
+      context: ./mqtt/mqtt_ingest
+    env_file:
+     - ./storage/combined_minio_setup/.env   # <<< מוסיף את הקובץ
+    
+    environment:
+      - MINIO_ENDPOINT=http://minio-hot:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - S3_BUCKET=imagery
+      - MULTIPART_THRESHOLD_BYTES=5242880
+      - PART_SIZE_BYTES=5242880
+      - MULTIPART_MAX_CONCURRENCY=32
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_TOPIC=MQTT/imagery/#
+      - MQTT_PUB_TOPIC=imagery/ingested
+      - DUMMY_DB=0
+      - DB_API_BASE=http://host.docker.internal:8080
+      - DB_API_TOKEN=dev-token
+      - OUTBOX_DIR=/app/outbox
+      - INGEST_WORKERS=8
+    volumes:
+      - ./mqtt/outbox:/app/outbox
+    depends_on:
+      mosquitto:
+        condition: service_started
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+    networks:
+      - default
+      - minionet
+    restart: unless-stopped
+
+  mqtt_publisher:
+    build:
+      context: ./mqtt/mqtt_publisher
+    environment:
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_TOPIC_BASE=MQTT/imagery
+      - IMAGES_DIR=/images
+      - CAMERA_ID=camera-01
+      - LIMIT=0
+      - SHUFFLE=1
+      - MQTT_QOS=2
+      - PUBLISH_DELAY_MS=10
+    volumes:
+      - ./mqtt/data/real_images:/images:ro
+    depends_on:
+      - mosquitto
+    restart: "no"
+
+  # ===== Monitoring (הועבר ל-storage/monitoring) =====
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitoring-prometheus
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./storage/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks: [minionet]
+    depends_on:
+      - minio-hot
+      - minio-cold
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+    networks: [minionet]
+    volumes:
+      - ./storage/monitoring/provisioning:/etc/grafana/provisioning:ro
+      - ./storage/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/minio-dashboard.json:ro
+
+networks:
+  minionet:
+    driver: bridge
+
+volumes:
+  minio-hot-data: {}
+  minio-cold-data: {}
