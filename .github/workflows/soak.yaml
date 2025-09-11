@@ -37,7 +37,7 @@ jobs:
 
       - name: Copy kafka env file
         run: |
-          cp kafka/kafka.env.example ./kafka.env
+          cp kafka/kafka.env.example ./kafka.env.example
 
       - name: Create docker-compose.yml & configs
         run: |
