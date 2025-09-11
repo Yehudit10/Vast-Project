@@ -1,0 +1,23 @@
+# VCS / editors
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.venv/
+venv/
+
+# OS cruft
+.DS_Store
+
+# Misc
+*.log
+dist/
+build/
+
