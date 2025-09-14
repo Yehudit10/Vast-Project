@@ -1,0 +1,29 @@
+{
+    "connector.class": "io.confluent.connect.mqtt.MqttSourceConnector",
+    "tasks.max": "1",
+  
+    "mqtt.server.uri": "tcp://mosquitto:1883",
+    "mqtt.topics": "mqtt/#",
+    "mqtt.qos": "0",
+    "clean.session": "true",
+  
+    "kafka.topic": "dev-robot-alerts",
+  
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter.schemas.enable": "false",
+  
+    "value.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
+    "value.converter.schemas.enable": "false",
+  
+    "errors.tolerance": "all",
+    "errors.log.enable": "true",
+
+    "topic.creation.enable": "false",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "1",
+  
+    "confluent.topic.bootstrap.servers": "kafka:9092",
+    "confluent.topic.replication.factor": "1",
+    "producer.override.bootstrap.servers": "kafka:9092"
+  }
+  
