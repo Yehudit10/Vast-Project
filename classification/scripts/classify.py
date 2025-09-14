@@ -1,5 +1,3 @@
-# scripts/classify.py
-
 from __future__ import annotations
 
 import argparse
@@ -11,10 +9,10 @@ import time
 import uuid
 from typing import List, Optional
 
+import logging
 import numpy as np
 from dotenv import load_dotenv, find_dotenv
 from panns_inference import AudioTagging
-import logging
 
 from core.model_io import (
     SAMPLE_RATE,
@@ -29,6 +27,14 @@ from core.model_io import (
 )
 
 LOGGER = logging.getLogger("audio_cls.classify")
+DEFAULT_CKPT = str(pathlib.Path.home() / "panns_data" / "Cnn14_mAP=0.431.pth")
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    v = os.getenv(name)
+    if v is None:
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on")
 
 
 def discover_audio_files(root: pathlib.Path) -> List[pathlib.Path]:
@@ -38,13 +44,6 @@ def discover_audio_files(root: pathlib.Path) -> List[pathlib.Path]:
     for ext in SUPPORTED_EXTS:
         files.extend(root.rglob(f"*{ext}"))
     return sorted(files)
-
-
-def env_bool(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return v.strip().lower() in ("1", "true", "yes", "on")
 
 
 def _setup_logging(debug: bool | None, level: str | None, log_file: str | None) -> None:
@@ -67,41 +66,59 @@ def _setup_logging(debug: bool | None, level: str | None, log_file: str | None) 
     )
 
 
+def softmax_1d(x: np.ndarray) -> np.ndarray:
+    x = np.asarray(x, dtype=np.float32).reshape(-1)
+    if x.size == 0:
+        return x
+    x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+    m = float(np.max(x))
+    y = np.exp(x - m)
+    s = float(np.sum(y))
+    if not np.isfinite(s) or s <= 0.0:
+        return np.full_like(x, 1.0 / x.size)
+    return y / s
+
+
 def main() -> None:
     dotenv_path = find_dotenv(usecwd=True)
     load_dotenv(dotenv_path=dotenv_path, override=True)
 
     ap = argparse.ArgumentParser(description="CNN14 baseline classifier (windows + aggregation).")
     ap.add_argument("--audio", required=True, help="Path to an audio file or a directory.")
-    ap.add_argument("--checkpoint", default=os.getenv("CHECKPOINT", str(pathlib.Path.home() / "panns_data" / "Cnn14_mAP=0.431.pth")))
+
+    # environment-driven defaults (to keep CLI short across machines)
+    ap.add_argument("--checkpoint", default=os.getenv("CHECKPOINT", DEFAULT_CKPT))
     ap.add_argument("--checkpoint-url", default=os.getenv("CHECKPOINT_URL"))
     ap.add_argument("--device", choices=["cpu", "cuda"], default=os.getenv("DEVICE", "cpu"))
     ap.add_argument("--labels-csv", default=os.getenv("LABELS_CSV"))
-    ap.add_argument("--window-sec", type=float, default=float(os.getenv("WINDOW_SEC", 2.0)))
-    ap.add_argument("--hop-sec", type=float, default=float(os.getenv("HOP_SEC", 0.5)))
-    pad_default = env_bool("PAD_LAST", False)
-    ap.add_argument("--pad-last", dest="pad_last", action="store_true", default=pad_default)
-    ap.add_argument("--no-pad-last", dest="pad_last", action="store_false")
-    ap.add_argument("--agg", choices=["mean", "max"], default=os.getenv("AGG", "mean"))
-    ap.add_argument("--topk", type=int, default=int(os.getenv("TOPK", 10)))
-    ap.add_argument("--print-windows", action="store_true", default=env_bool("PRINT_WINDOWS", False))
     ap.add_argument("--head", default=os.getenv("HEAD"))
+
+    # algorithmic defaults (fixed in code)
+    ap.add_argument("--window-sec", type=float, default=2.0)
+    ap.add_argument("--hop-sec", type=float, default=0.5)
+    ap.add_argument("--pad-last", dest="pad_last", action="store_true", default=False)
+    ap.add_argument("--no-pad-last", dest="pad_last", action="store_false")
+    ap.add_argument("--agg", choices=["mean", "max"], default="mean")
+    ap.add_argument("--topk", type=int, default=10)
+    ap.add_argument("--print-windows", action="store_true", default=env_bool("PRINT_WINDOWS", False))
+
+    # DB options
     ap.add_argument("--write-db", action="store_true", default=env_bool("WRITE_DB", False))
     ap.add_argument("--db-url", default=os.getenv("DB_URL"))
     ap.add_argument("--db-schema", default=os.getenv("DB_SCHEMA", "audio_cls"))
+
+    # logging
     ap.add_argument("--debug", action="store_true", default=env_bool("DEBUG", False))
     ap.add_argument("--log-level", default=os.getenv("LOG_LEVEL"))
     ap.add_argument("--log-file", default=os.getenv("LOG_FILE"))
-    args = ap.parse_args()
 
+    args = ap.parse_args()
     _setup_logging(args.debug, args.log_level, args.log_file)
 
     if args.window_sec <= 0:
-        LOGGER.error("--window-sec must be > 0")
-        sys.exit(2)
+        LOGGER.error("--window-sec must be > 0"); sys.exit(2)
     if args.hop_sec <= 0:
-        LOGGER.error("--hop-sec must be > 0")
-        sys.exit(2)
+        LOGGER.error("--hop-sec must be > 0"); sys.exit(2)
     if args.hop_sec > args.window_sec:
         LOGGER.warning("hop-sec > window-sec; sliding will skip windows. Consider lowering --hop-sec.")
 
@@ -126,8 +143,7 @@ def main() -> None:
     try:
         ckpt = ensure_checkpoint(args.checkpoint, args.checkpoint_url)
     except Exception as e:
-        LOGGER.exception("checkpoint error: %s", e)
-        sys.exit(1)
+        LOGGER.exception("checkpoint error: %s", e); sys.exit(1)
 
     try:
         if args.device == "cuda":
@@ -141,8 +157,7 @@ def main() -> None:
                 args.device = "cpu"
         at = AudioTagging(checkpoint_path=ckpt, device=args.device)
     except Exception as e:
-        LOGGER.exception("failed to load model: %s", e)
-        sys.exit(2)
+        LOGGER.exception("failed to load model: %s", e); sys.exit(2)
 
     head = None
     head_classes = ["animal", "vehicle", "shotgun", "other"]
@@ -176,14 +191,15 @@ def main() -> None:
 
     conn = None
     run_id = str(uuid.uuid4())
+
     try:
         if args.write_db:
             if not args.db_url:
-                LOGGER.error("--write-db requires --db-url or env DB_URL")
-                sys.exit(3)
+                LOGGER.error("--write-db requires --db-url or env DB_URL"); sys.exit(3)
             from core import db_io_pg
             LOGGER.debug("DB_URL used by app: %r (schema=%s)", args.db_url, args.db_schema)
             conn = db_io_pg.open_db(args.db_url, schema=args.db_schema)
+            from os import getenv
             db_io_pg.upsert_run(conn, dict(
                 run_id=run_id,
                 model_name="CNN14 (PANNs)",
@@ -196,12 +212,11 @@ def main() -> None:
                 agg=args.agg,
                 topk=int(args.topk),
                 device=args.device,
-                code_version=os.getenv("GIT_COMMIT", ""),
+                code_version=getenv("GIT_COMMIT", ""),
                 notes=""
             ))
 
         t_all_start = time.perf_counter()
-        k_win = min(max(1, int(args.topk)), 5)
         topk_file = max(1, int(args.topk))
 
         for f in files:
@@ -240,7 +255,6 @@ def main() -> None:
                                 LOGGER.warning("labels_csv length mismatch (got %d, expected %d); using model labels",
                                                len(override_labels) if override_labels else -1, int(probs.size))
                             per_window_labels = labs
-
                     per_window_probs.append(probs)
 
                     hp: Optional[np.ndarray] = None
@@ -262,6 +276,8 @@ def main() -> None:
 
                 P = np.stack(per_window_probs, axis=0)
                 agg_clipwise = aggregate_matrix(P, mode=args.agg)
+                if args.agg == "max":
+                    agg_clipwise = softmax_1d(agg_clipwise)
 
                 idx_sorted = agg_clipwise.argsort()[::-1][:topk_file]
                 top_pairs_file = [(per_window_labels[i], float(agg_clipwise[i])) for i in idx_sorted]
@@ -277,6 +293,8 @@ def main() -> None:
                     valid_hps = [hp for hp in per_window_head if hp is not None]
                     H = np.stack(valid_hps, axis=0)
                     agg_head = aggregate_matrix(H, mode=args.agg)
+                    if args.agg == "max":
+                        agg_head = softmax_1d(agg_head)
                     print("\nFile-level Head (4-class) probabilities (aggregated):")
                     for cls, p in zip(head_classes, agg_head):
                         print(f"- {cls:<8} {float(p):7.4f}")
