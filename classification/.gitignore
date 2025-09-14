@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Audio/model artifacts
+models/
+data/
+data_train/
+*.pth
+*.pt
+*.onnx
+*.wav
+*.flac
+
+# OS / tooling
+.DS_Store
+Thumbs.db
