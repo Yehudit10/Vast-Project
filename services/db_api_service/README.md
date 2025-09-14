@@ -36,7 +36,7 @@ DRY_RUN_SPOOL – directory for spooled JSON (default: /tmp/api_spool).
 
 bash
 Copy code
-docker build -t db-api:latest ./db_api
+docker build -t db-api:latest ./services/db_api_service
 
 
 
@@ -86,7 +86,7 @@ for interacting with a PostgreSQL `files` table (with PostGIS geometry and JSONB
 
 ### Build Docker image
 ```bash
-docker build -t db-api:latest ./db_api
+docker build -t db-api:latest ./services/db_api_service
 ```
 
 ### Run container with PostgreSQL connection
