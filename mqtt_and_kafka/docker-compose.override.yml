@@ -1,5 +1,5 @@
 services:
-  connect-1:
+  connect:
     volumes:
       - ./connect/plugins:/usr/share/confluent-hub-components:ro
     environment:
