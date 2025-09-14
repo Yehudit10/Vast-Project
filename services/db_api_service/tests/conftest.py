@@ -5,10 +5,10 @@ import re
 import importlib
 import pytest
 
-# --- put db_api/ on sys.path ---
-DB_API_DIR = pathlib.Path(__file__).resolve().parents[1]
-if str(DB_API_DIR) not in sys.path:
-    sys.path.insert(0, str(DB_API_DIR))
+# --- put services/db_api_service/ on sys.path ---
+services/db_api_service_DIR = pathlib.Path(__file__).resolve().parents[1]
+if str(services/db_api_service_DIR) not in sys.path:
+    sys.path.insert(0, str(services/db_api_service_DIR))
 
 # --- stub dotenv ---
 dotenv_stub = types.ModuleType("dotenv")
