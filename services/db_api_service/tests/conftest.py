@@ -6,9 +6,10 @@ import importlib
 import pytest
 
 # --- put services/db_api_service/ on sys.path ---
-services/db_api_service_DIR = pathlib.Path(__file__).resolve().parents[1]
-if str(services/db_api_service_DIR) not in sys.path:
-    sys.path.insert(0, str(services/db_api_service_DIR))
+REPO = pathlib.Path(__file__).resolve().parents[2]
+SERVICE_DIR = REPO / "services" / "db_api_service"
+if str(SERVICE_DIR) not in sys.path:
+    sys.path.insert(0, str(SERVICE_DIR))
 
 # --- stub dotenv ---
 dotenv_stub = types.ModuleType("dotenv")
@@ -157,7 +158,6 @@ def _list_files(bucket=None, device_id=None, limit=50):
     return []
 
 def _upsert_file(data=None, **kwargs):
-    # router שולח dict יחיד: payload.model_dump(...)
     return {"status": "ok"}
 
 def _update_file(bucket, object_key, payload=None, **kwargs):
