@@ -292,10 +292,17 @@ def aggregate_matrix(mat: np.ndarray, mode: Literal["mean", "max"] = "mean") -> 
         raise ValueError("cannot aggregate an empty window matrix (num_windows == 0)")
     if mat.shape[1] == 0:
         raise ValueError("expected num_classes > 0")
-    if mode not in ("mean", "max"):
-        raise ValueError("mode must be 'mean' or 'max'")
+    if mode == "mean":
+        # Ignore NaNs when computing per-class means
+        v = np.nanmean(mat.astype(np.float32, copy=False), axis=0)
+    elif mode == "max":
+        # Ignore NaNs when computing per-class max
+        v = np.nanmax(mat.astype(np.float32, copy=False), axis=0)
+    else:
+        raise ValueError(f"Unsupported aggregation mode: {mode}")
 
-    out = mat.max(axis=0) if mode == "max" else mat.mean(axis=0)
-    if np.isnan(out).any():
-        out = np.nan_to_num(out, nan=0.0)
-    return out.astype(np.float32, copy=False)
+    # Ensure finite float32 output; all-NaN columns become 0.0
+    v = np.nan_to_num(v, nan=0.0, posinf=np.finfo(np.float32).max, neginf=np.finfo(np.float32).min)
+    return v.astype(np.float32, copy=False)
+
+
