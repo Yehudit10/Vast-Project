@@ -364,3 +364,115 @@ def test_aggregate_matrix_validation_errors():
         model_io.aggregate_matrix(np.zeros((2, 0), dtype=np.float32), mode="mean")
     with pytest.raises(ValueError):
         model_io.aggregate_matrix(np.zeros((2, 2), dtype=np.float32), mode="median")  # unsupported
+
+def test_ensure_checkpoint_returns_existing(tmp_path: Path):
+    """
+    If checkpoint path already exists, ensure_checkpoint returns it as string.
+    """
+    ckpt = tmp_path / "ckpt.bin"
+    ckpt.write_bytes(b"ok")
+    out = model_io.ensure_checkpoint(str(ckpt), checkpoint_url=None)
+    assert out == str(ckpt)
+
+
+def test_ensure_checkpoint_downloads_when_missing(monkeypatch, tmp_path: Path):
+    """
+    When checkpoint doesn't exist and a URL is provided, ensure_checkpoint should
+    call urllib.request.urlretrieve and return the target path.
+    """
+    ckpt = tmp_path / "downloaded.bin"
+
+    import urllib.request as ur
+
+    def fake_urlretrieve(url, filename):
+        Path(filename).write_bytes(b"downloaded")
+        return (str(filename), None)
+
+    monkeypatch.setattr(ur, "urlretrieve", fake_urlretrieve)
+    out = model_io.ensure_checkpoint(str(ckpt), checkpoint_url="http://example.com/ckpt.bin")
+    assert out == str(ckpt)
+    assert ckpt.exists() and ckpt.read_bytes() == b"downloaded"
+
+
+def test_segment_waveform_without_pad_last_yields_full_windows_only():
+    """
+    segment_waveform should emit only full-length windows when pad_last=False.
+    For a 0.75s clip with window=0.5 hop=0.5 at 32kHz, we expect 1 window (not 2).
+    """
+    sr = model_io.SAMPLE_RATE
+    y = np.zeros(int(0.75 * sr), dtype=np.float32)
+    windows = model_io.segment_waveform(y, sr, window_sec=0.5, hop_sec=0.5, pad_last=False)
+    assert isinstance(windows, list)
+    assert len(windows) == 1
+    (start, end, seg0) = windows[0]
+    assert pytest.approx(start, abs=1e-6) == 0.0
+    assert pytest.approx(end,   abs=1e-6) == 0.5
+    assert seg0.shape[0] == int(0.5 * sr)
+
+
+def test_segment_waveform_with_pad_last_adds_final_padded_window():
+    """
+    With pad_last=True, the trailing partial window should be padded to full length,
+    producing 2 windows for the same 0.75s clip.
+    """
+    sr = model_io.SAMPLE_RATE
+    y = np.zeros(int(0.75 * sr), dtype=np.float32)
+    windows = model_io.segment_waveform(y, sr, window_sec=0.5, hop_sec=0.5, pad_last=True)
+    assert len(windows) == 2
+    (s0, e0, seg0) = windows[0]
+    (s1, e1, seg1) = windows[1]
+    assert pytest.approx(s0) == 0.0 and pytest.approx(e0) == 0.5
+    assert pytest.approx(s1) == 0.5 and pytest.approx(e1) == 1.0
+    assert seg0.shape[0] == int(0.5 * sr)
+    assert seg1.shape[0] == int(0.5 * sr)
+
+def test_decode_with_ffmpeg_handles_failure(monkeypatch):
+    """
+    When ffmpeg fails (raises CalledProcessError), the function should raise and not return garbage.
+    """
+    class Err(Exception): pass
+
+    def fake_run(*a, **k):
+        import subprocess
+        raise subprocess.CalledProcessError(returncode=1, cmd="ffmpeg -i x")
+
+    monkeypatch.setattr(model_io.subprocess, "run", fake_run)
+    with pytest.raises(Exception):
+        model_io.decode_with_ffmpeg_to_float32_mono("bad.mp3", target_sr=model_io.SAMPLE_RATE)
+
+def test_load_audio_compressed_logs_and_raises_when_librosa_fails(monkeypatch, tmp_path: Path, caplog):
+    """
+    Current behavior: for compressed files (e.g., .mp3), if librosa.load fails,
+    load_audio logs an error and raises (no ffmpeg fallback in this branch).
+    This test covers that branch: error log + exception.
+    """
+    p = tmp_path / "x.mp3"
+    p.write_bytes(b"data")
+
+    def fake_librosa_load(*a, **k):
+        raise RuntimeError("librosa failed")
+
+    monkeypatch.setattr(model_io.librosa, "load", fake_librosa_load, raising=True)
+
+    with caplog.at_level(model_io.logging.ERROR):
+        with pytest.raises(Exception):
+            model_io.load_audio(str(p), target_sr=model_io.SAMPLE_RATE)
+
+    assert any("failed to load compressed audio" in m for m in caplog.messages)
+
+def test_ensure_checkpoint_raises_when_missing_and_no_url(tmp_path: Path):
+    """
+    If checkpoint path does not exist and no URL provided, ensure_checkpoint must raise.
+    """
+    ckpt = tmp_path / "nope.bin"
+    with pytest.raises(FileNotFoundError):
+        model_io.ensure_checkpoint(str(ckpt), checkpoint_url=None)
+
+
+def test_aggregate_matrix_invalid_mode_raises():
+    """
+    aggregate_matrix should raise on unknown mode string to enforce API correctness.
+    """
+    M = np.ones((3, 4), dtype=np.float32)
+    with pytest.raises(Exception):
+        model_io.aggregate_matrix(M, mode="median")  # unsupported mode
