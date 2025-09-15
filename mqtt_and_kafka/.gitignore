@@ -4,6 +4,7 @@
 *.srl
 *.crt
 
+# Runtime junk
 data/
 logs/
 tmp/
