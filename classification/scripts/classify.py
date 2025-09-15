@@ -350,5 +350,5 @@ def main() -> None:
                 LOGGER.exception("failed to finalize DB run: %s", e)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

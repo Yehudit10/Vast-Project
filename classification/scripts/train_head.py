@@ -161,5 +161,5 @@ def main() -> None:
     print(f"[info] saved meta: {meta_path}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
