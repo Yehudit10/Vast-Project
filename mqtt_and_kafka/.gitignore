@@ -15,5 +15,10 @@ Thumbs.db
 *.tar
 *.zip
 *.tgz
-*.jar
 __pycache__/
+
+# Ignore all .jar files
+*.jar
+
+# Allow .jar files under lib/ directory
+!connect/plugins/confluentinc-kafka-connect-mqtt-1.7.6/lib/*.jar
