@@ -129,11 +129,13 @@ python -m vast.runner.runner_server
 
 ### Terminal B – Gateway (FastAPI)
 ```bash
+.\.venv\Scripts\Activate.ps1
 python -m uvicorn vast.gateway.app:create_app --factory --host 127.0.0.1 --port 9001
 ```
 
 ### Terminal C – Demo metrics exporter (optional)
 ```bash
+.\.venv\Scripts\Activate.ps1
 python -m vast.services.sensors_metrics_app
 ```
 
