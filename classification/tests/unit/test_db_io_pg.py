@@ -243,3 +243,61 @@ def test_upsert_file_aggregate_uses_json_wrapper(psycopg2_fake, conn, cur):
     elif isinstance(last_params, dict):
         found_json = any(isinstance(v, FakeJson) for v in last_params.values())
     assert found_json, "audioset_topk_json should be wrapped in Json() for DB"
+
+# ----------------------- EXTRA COVERAGE: db_io_pg -----------------------
+
+def test_open_db_rejects_invalid_schema_name():
+    """
+    open_db must validate schema name using regex. Illegal names should raise ValueError.
+    """
+    with pytest.raises(ValueError):
+        db_io_pg.open_db(db_url="postgresql://u:p@h:5432/db", schema="not-valid!")
+
+
+def test__jsonify_topk_handles_json_string_and_non_json():
+    """
+    _jsonify_topk should parse JSON strings to objects; non-JSON strings should be wrapped
+    in {"raw": <value>} to keep data without failing.
+    """
+    js = '[{"label":"shotgun","p":0.7}]'
+    out1 = db_io_pg._jsonify_topk(js)
+    assert hasattr(out1, "adapted") or hasattr(out1, "dumps")
+
+    s = "not-json"
+    out2 = db_io_pg._jsonify_topk(s)
+    payload = getattr(out2, "adapted", None) or getattr(out2, "dumps", None)
+    if isinstance(payload, dict):
+        assert payload.get("raw") == "not-json"
+
+def test_upsert_run_rollback_on_exception(monkeypatch, conn):
+    """
+    Force cursor.execute to fail to cover rollback path inside upsert_run.
+    """
+    class BadCur:
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def execute(self, *a, **k): raise RuntimeError("bad")
+        def fetchone(self): return None
+    conn.cursor = lambda: BadCur()
+    with pytest.raises(RuntimeError):
+        db_io_pg.upsert_run(conn, {"run_id": "r1"})
+    assert conn.rollbacks >= 1
+
+def test_open_db_rollback_on_exception(monkeypatch, conn, cur):
+    """
+    Force an exception during schema setup to cover rollback + logging branch.
+    Also patch psycopg2.connect to use our fake connection (no real network).
+    """
+    # make the cursor fail on execute
+    def bad_execute(sql, params=None):
+        raise RuntimeError("boom")
+    cur.execute = bad_execute
+
+    # ensure open_db uses our fake connection instead of real psycopg2
+    monkeypatch.setattr(db_io_pg.psycopg2, "connect", lambda url: conn, raising=True)
+
+    with pytest.raises(RuntimeError):
+        db_io_pg.open_db("postgresql://u:p@h:5432/db", schema="audio_cls")
+
+    # verify rollback path executed
+    assert conn.rollbacks >= 1
