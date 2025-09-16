@@ -1,4 +1,4 @@
-# Fruit Ripeness Baseline System
+# 🍏 Fruit Ripeness Baseline System
 
 ## Overview
 
@@ -48,34 +48,53 @@ docker build --no-cache -t ripeness-baseline:local -f deploy/Dockerfile .
 
 Connect the container to the same Docker network as the database (`reldb_airnet`):
 
-```bash
-docker run --rm --network reldb_airnet \
-  -e PGHOST=db -e PGPORT=5432 \
-  -e PGDATABASE=missions_db \
-  -e PGUSER=missions_user \
-  -e PGPASSWORD="Missions!ChangeMe123" \
+```powershell
+docker run --rm --network reldb_airnet `
+  -e PYTHONUNBUFFERED=1 `
+  -e PGHOST=db -e PGPORT=5432 -e PGDATABASE=missions_db -e PGUSER=missions_user -e PGPASSWORD="Missions!ChangeMe123" `
+  -e SAMPLES_DIR="/work/samples" -e FRUIT_TYPE="apple" -e GREEN_LEAF_FLAG_THR=0.10 `
+  -v "$(Resolve-Path .\samples):/work/samples:ro" `
   ripeness-baseline:local
 ```
 
-If successful, you should see:
+At the end, you will see:
 ```
 Done. Inserted detections and updated weekly_rollups.
 ```
 
-### 4. Verify Results in PostgreSQL
+---
 
-Check the weekly rollups table:
+## Useful Commands (PowerShell)
 
-```bash
-docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db \
-  psql -U missions_user -d missions_db -c "SELECT * FROM weekly_rollups ORDER BY iso_year, iso_week;"
+### View Results Per Image (Full History)
+
+```powershell
+docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
+  psql -U missions_user -d missions_db -c `
+"SELECT d.detection_id,
+        i.source_path,
+        d.ripeness,
+        d.quality_flags,
+        to_char(d.created_at,'YYYY-MM-DD HH24:MI:SS') AS created_at
+   FROM detections d
+   JOIN images i USING (image_id)
+  ORDER BY d.created_at DESC;"
 ```
 
-Or use the convenient view:
+### View Weekly Summaries (View Table)
 
-```bash
-docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db \
-  psql -U missions_user -d missions_db -c "SELECT * FROM v_weekly_ripeness ORDER BY iso_year, iso_week;"
+```powershell
+docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
+  psql -U missions_user -d missions_db -c `
+"SELECT * FROM v_weekly_ripeness ORDER BY iso_year, iso_week;"
+```
+
+### Reset Results Before Rerun (Optional)
+
+```powershell
+docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
+  psql -U missions_user -d missions_db -c `
+"TRUNCATE images, detections RESTART IDENTITY CASCADE;"
 ```
 
 ---
@@ -99,12 +118,16 @@ docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db \
 ## Notes
 
 - Add your images under `samples/` before running the container.
+- You can change the fruit type (`FRUIT_TYPE`) or green leaf flag threshold (`GREEN_LEAF_FLAG_THR`) as needed.
 - Weekly rollups aggregate detections by `(fruit_type, iso_year, iso_week)`.
-- Quality flags (e.g., green-leaf detection, low-confidence) are automatically set during processing.
+- Each result includes quality flags (bitmask) and ripeness classification.
+- Weekly summaries are updated automatically at the end of each run.
 
 ---
 
 ## Additional Info
 
 - Thresholds and heuristics can be adjusted in `src/heuristics.py` for different fruit types or conditions.
-- For advanced deployment, see `deploy/k8s-cronjob.yaml` for Kubernetes
+- For advanced deployment, see `deploy/k8s-cronjob.yaml` for Kubernetes.
+
+Good

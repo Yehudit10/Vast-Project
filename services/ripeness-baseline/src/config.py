@@ -14,12 +14,13 @@ SAMPLES_DIR = os.getenv("SAMPLES_DIR", "./samples")
 FRUIT_TYPE  = os.getenv("FRUIT_TYPE", "apple")
 
 THRESHOLDS = {
-    "overripe_brown_ratio": 0.25,
-    "overripe_min_v": 70,       # אם נמוך מזה -> overripe
+    "overripe_brown_ratio": 0.30,
+    "overripe_min_v": 70,       
     "unripe_h_min": 40,
     "unripe_h_max": 90,
     "low_light_v": 60,
     "blurry_lap_var": 80.0,
     "small_mask_cov": 0.20,
-    "near_brown_delta": 0.03
+    "near_brown_delta": 0.03,
+    "green_leaf_ratio_thr": float(os.getenv("GREEN_LEAF_FLAG_THR", "0.10"))
 }
