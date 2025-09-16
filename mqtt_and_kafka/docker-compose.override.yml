@@ -1,6 +1,0 @@
-services:
-  connect:
-    volumes:
-      - ./connect/plugins:/usr/share/confluent-hub-components:ro
-    environment:
-      CONNECT_PLUGIN_PATH: /usr/share/confluent-hub-components,/usr/share/java
