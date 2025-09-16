@@ -7,7 +7,13 @@ def dsn(pg):
 def ensure_schema(con, schema_sql_path: Path):
     sql = Path(schema_sql_path).read_text(encoding="utf-8")
     with con.cursor() as cur:
-        cur.execute(sql)
+        cur.execute("SET lock_timeout = '2s'; SET statement_timeout = '8s';")
+        try:
+            cur.execute(sql)
+        except psycopg.errors.LockNotAvailable as e:
+            print(f"[warn] lock timeout while applying {schema_sql_path}; skipping", flush=True)
+        except Exception as e:
+            print(f"[warn] failed to apply {schema_sql_path}: {e}", flush=True)
 
 def insert_detection(cur, fruit_type, captured_at, source_path, feat, ripeness, flags):
     cur.execute(
@@ -26,3 +32,14 @@ def run_weekly_upsert(con, upsert_sql_path: Path):
     sql = Path(upsert_sql_path).read_text(encoding="utf-8")
     with con.cursor() as cur:
         cur.execute(sql)
+
+def apply_sql_autocommit(dsn: str, sql_path):
+    sql = Path(sql_path).read_text(encoding="utf-8")
+    # חיבור קצר עם autocommit – לא מלכלך את הטרנזקציה של ההכנסות
+    with psycopg.connect(dsn, autocommit=True) as cn:
+        with cn.cursor() as cur:
+            cur.execute("SET lock_timeout='2s'; SET statement_timeout='8s';")
+            try:
+                cur.execute(sql)
+            except Exception as e:
+                print(f"[warn] failed to apply {sql_path}: {e}", flush=True)
