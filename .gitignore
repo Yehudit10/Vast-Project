@@ -1,2 +1,6 @@
 data/rover_samples/**
 !data/rover_samples/.gitkeep
+
+# Ignore data payloads
+/data/
+

@@ -1,11 +1,13 @@
-import os
+import os, time
 import psycopg2
 from .schema import ImageMeta
 
-DSN = os.getenv(
-    "PG_DSN",
-    "dbname=missions_db user=missions_user host=db password=Missions!ChangeMe123"
-)
+# DSN = os.getenv(
+#     "PG_DSN",
+#     "dbname=missions_db user=missions_user host=db password=Missions!ChangeMe123"
+# )
+DSN = os.getenv("PG_DSN", "dbname=missions_db user=missions_user host=db password=pg123")
+
 
 SQL_UPSERT = """
 INSERT INTO rover.images (
@@ -72,7 +74,21 @@ def _row(meta: ImageMeta) -> dict:
         "trace_id": meta.trace_id,
     }
 
+def _connect_with_retry(max_tries=30, delay_sec=2):
+    last_err = None
+    for i in range(1, max_tries + 1):
+        try:
+            return psycopg2.connect(DSN)
+        except Exception as e:
+            last_err = e
+            print(f"[db] connect attempt {i}/{max_tries} failed: {e}")
+            time.sleep(delay_sec)
+    raise last_err
+
 def upsert(meta: ImageMeta) -> None:
-    with psycopg2.connect(DSN) as conn:
+    with _connect_with_retry() as conn:
+    # with psycopg2.connect(DSN) as conn:
         with conn.cursor() as cur:
             cur.execute(SQL_UPSERT, _row(meta))
+            conn.commit()
+
