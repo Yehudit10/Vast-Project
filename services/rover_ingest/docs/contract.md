@@ -5,6 +5,8 @@ The image file itself is stored in **MinIO/S3** (not sent in the message). The m
 the metadata required to **validate** and **index** the image in RelDB (Postgres).
 
 ## Required fields
+s3_key: object key inside the bucket (bucket name is set via env; do NOT prefix with the bucket name)
+
 ```json
 {
   "schema_ver": 1,
@@ -14,7 +16,7 @@ the metadata required to **validate** and **index** the image in RelDB (Postgres
   "gps": { "lat": 31.7767, "lon": 35.2345, "gps_accuracy_m": 2.4 },
   "heading_deg": 247.3,
   "alt_m": 1.6,
-  "s3_key": "rover-images/rover-07/2025/09/10/20250910T101500Z-abc123.jpg",
+  "s3_key": "rover-07/2025/09/10/20250910T101500Z-abc123.jpg",
   "meta_src": "manifest"
 }
 ```
@@ -78,8 +80,10 @@ Notes:
 ## 5. NDJSON examples (one object per line)
 
 ```ndjson
-{"schema_ver":1,"device_id":"rover-07","image_id":"20250910T101500Z-abc123","captured_at":"2025-09-10T10:15:00Z","gps":{"lat":31.7767,"lon":35.2345,"gps_accuracy_m":2.4},"heading_deg":247.3,"alt_m":1.6,"s3_key":"rover-images/rover-07/2025/09/10/20250910T101500Z-abc123.jpg","meta_src":"manifest","mime_type":"image/jpeg","size_bytes":532112}
-{"schema_ver":1,"device_id":"rover-07","image_id":"20250910T101800Z-def456","captured_at":"2025-09-10T10:18:00Z","gps":{"lat":31.7772,"lon":35.2351},"heading_deg":5.0,"alt_m":1.6,"s3_key":"rover-images/rover-07/2025/09/10/20250910T101800Z-def456.jpg","meta_src":"manifest","temp_c":27.9,"sha256":"4b1f...aa"}
+{"schema_ver":1,"device_id":"rover-07","image_id":"20250910T101500Z-abc123","captured_at":"2025-09-10T10:15:00Z","gps":{"lat":31.7767,"lon":35.2345,"gps_accuracy_m":2.4},"heading_deg":247.3,"alt_m":1.6,"s3_key":"rover-07/2025/09/10/20250910T101500Z-abc123.jpg","meta_src":"manifest","mime_type":"image/jpeg","size_bytes":532112}
+{"schema_ver":1,"device_id":"rover-07","image_id":"20250910T101800Z-def456","captured_at":"2025-09-10T10:18:00Z","gps":{"lat":31.7772,"lon":35.2351},"heading_deg":5.0,"alt_m":1.6,"s3_key":"rover-07/2025/09/10/20250910T101800Z-def456.jpg","meta_src":"manifest","temp_c":27.9,"sha256":"4b1f2c...aa"}
+{"schema_ver":1,"device_id":"rover-07","image_id":"20250910T102100Z-ghi789","captured_at":"2025-09-10T10:21:00Z","gps":{"lat":31.7781,"lon":35.2362},"heading_deg":359.2,"alt_m":1.6,"s3_key":"rover-07/2025/09/10/20250910T102100Z-ghi789.jpg","meta_src":"manifest","pitch_deg":1.0,"roll_deg":0.2}
+
 ```
 
 ---
