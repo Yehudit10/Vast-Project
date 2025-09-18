@@ -2,13 +2,13 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# System CA + add NetFree certs
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY certs/*.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates || true
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+# # System CA + add NetFree certs
+# RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+# COPY certs/*.crt /usr/local/share/ca-certificates/
+# RUN update-ca-certificates || true
+# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+#     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+#     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Python deps
 COPY requirements.txt /app/requirements.txt
@@ -19,10 +19,11 @@ COPY src/vast/gateway /app/vast/gateway
 COPY src/vast/proto   /app/vast/proto
 
 # Generate stubs
-RUN python -m grpc_tools.protoc -I./proto \
+RUN python -m grpc_tools.protoc -I./vast/proto \
     --python_out=. --grpc_python_out=. \
-    ./proto/query.proto
+    ./vast/proto/query.proto
 
+ENV PYTHONPATH=/app/vast/proto/generated:/app
 ENV RUNNER_ADDR=runner:50051
 EXPOSE 8000
-CMD ["uvicorn", "gateway.gateway_main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "vast.gateway.gateway_main:app", "--host", "0.0.0.0", "--port", "8000"]

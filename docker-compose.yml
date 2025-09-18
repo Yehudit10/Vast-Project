@@ -1,0 +1,250 @@
+
+networks:
+  ag_cloud:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  wal_archive:
+  backups:
+  gui_data:
+
+services:
+  # -------------------------
+  # RelDB / Postgres
+  # -------------------------
+  postgres:
+    build: ./RelDB
+    container_name: postgres
+    environment:
+      POSTGRES_USER: missions_user
+      POSTGRES_PASSWORD: pg123
+      POSTGRES_DB: missions_db
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/data
+      WAL_DIR: /var/lib/postgresql/wal_archive
+      BACKUP_DIR: /var/lib/postgresql/backups
+      RETENTION: 7
+      TZ: Asia/Jerusalem
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - wal_archive:/var/lib/postgresql/wal_archive
+      - backups:/var/lib/postgresql/backups
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "missions_user", "-d", "missions_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  
+  postgres_exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: "postgresql://missions_user:pg123@postgres:5432/missions_db?sslmode=disable"
+    command:
+      - "--extend.query-path=/etc/postgres-queries.yml"
+    volumes:
+      - ./RelDB/graphs/postgres-queries.yml:/etc/postgres-queries.yml
+    depends_on:
+      - postgres
+    ports:
+      - "9187:9187"
+    networks:
+      - ag_cloud
+
+  # -------------------------
+  # MQTT + Kafka + Connect + Init
+  # -------------------------
+  kafka:
+    build: 
+      context: ./mqtt_and_kafka/kafka
+      dockerfile: dockerfile
+    container_name: kafka
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: mosquitto
+    command: ["mosquitto", "-c", "/mqtt_and_kafka/mosquitto/config/mosquitto.conf"]
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mqtt_and_kafka/mosquitto/config:/mqtt_and_kafka/mosquitto/config:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "localhost", "-p", "1883", "-t", "$$SYS/#", "-C", "1", "-W", "15"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  connect:
+    build:
+      context: ./mqtt_and_kafka
+      dockerfile: connect.Dockerfile
+    image: local/connect-with-mqtt:1.0.0
+    container_name: connect-1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+      - CONNECT_GROUP_ID=agcloud-connect
+      - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
+      - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
+      - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  init-connector:
+    image: curlimages/curl:8.7.1
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./mqtt_and_kafka/connectors:/connectors
+    networks:
+      - ag_cloud
+    entrypoint: >
+      sh -c "
+        echo '==> Creating MQTT connector...';
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        echo '==> Done.';
+      "
+  runner:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/runner/Dockerfile
+    environment:
+      - RUNNER_MODE=real
+      - SQLITE_DB=/data/app.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./GUI/data:/data:ro
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/gateway/Dockerfile
+    environment:
+      - RUNNER_ADDR=runner:50051
+    ports:
+      - "8000:8000"
+    depends_on:
+      - runner
+    restart: unless-stopped
+
+  sensors_metrics:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/services/Dockerfile
+    environment:
+      - SQLITE_DB=/data/app.db
+    volumes:
+      - ./GUI/data:/data:ro
+    depends_on:
+      - gateway
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+
+ # -------------------------
+  # Prometheus / Grafana
+  # -------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/prometheus-recording.rules.yml:/etc/prometheus/prometheus-recording.rules.yml:ro
+      - ./prometheus/postgres-alerts.yml:/etc/prometheus/postgres-alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - postgres_exporter
+    networks:
+      - ag_cloud
+
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: light
+    volumes:
+    - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - ag_cloud
+
+  # desktop_app:
+  #   build:
+  #     context: ./GUI
+  #     dockerfile: src/vast/desktop/Dockerfile
+  #   environment:
+  #     - GATEWAY_URL=http://gateway:8000
+  #     - DISPLAY=host.docker.internal:0.0
+  #   depends_on:
+  #     - gateway
+  #     - runner
+  #   volumes:
+  #     - ./GUI/src/vast:/app/src/vast
