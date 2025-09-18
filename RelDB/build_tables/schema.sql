@@ -2,6 +2,7 @@
 -- Order matters: referenced tables first.
 
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- === Catalogs / reference tables ===
 
@@ -119,6 +120,13 @@ CREATE TABLE IF NOT EXISTS telemetry_new (
 ) PARTITION BY RANGE (ts);
 
 
+--- === Embeddings table for vector data (e.g. image embeddings) ===
+CREATE TABLE IF NOT EXISTS embeddings (
+  id BIGSERIAL PRIMARY KEY,
+  vec vector(784)
+);
+
+
 -- === Indexes ===
 
 -- Spatial
@@ -142,3 +150,6 @@ CREATE INDEX IF NOT EXISTS ix_files_metadata_gin       ON files     USING GIN (m
 
 -- Regions spatial index
 CREATE INDEX IF NOT EXISTS ix_regions_geom_gist        ON regions USING GIST (geom);
+
+-- Vector index for embeddings (using HNSW)
+CREATE INDEX IF NOT EXISTS idx_embeddings_vec_hnsw    ON embeddings USING hnsw (vec vector_l2_ops)  WITH (m=4, ef_construction=10);

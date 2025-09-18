@@ -1,4 +1,3 @@
-# version: "3.9"
 
 services:
   runner:
@@ -27,13 +26,25 @@ services:
       - runner
     restart: unless-stopped
 
+  sensors_metrics:
+    build:
+      context: .
+      dockerfile: src/vast/services/Dockerfile
+    environment:
+      - SQLITE_DB=/data/app.db
+    volumes:
+      - ./data:/data:ro
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-   
+
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -48,3 +59,17 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+
+
+  # desktop_app:
+  #   build:
+  #     context: .
+  #     dockerfile: src/vast/desktop/Dockerfile
+  #   environment:
+  #     - GATEWAY_URL=http://gateway:8000
+  #     - DISPLAY=host.docker.internal:0.0
+  #   depends_on:
+  #     - gateway
+  #     - runner
+  #   volumes:
+  #     - ./src/vast:/app/src/vast
