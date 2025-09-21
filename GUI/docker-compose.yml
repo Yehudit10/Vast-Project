@@ -61,15 +61,15 @@ services:
       - prometheus
 
 
-  # desktop_app:
-  #   build:
-  #     context: .
-  #     dockerfile: src/vast/desktop/Dockerfile
-  #   environment:
-  #     - GATEWAY_URL=http://gateway:8000
-  #     - DISPLAY=host.docker.internal:0.0
-  #   depends_on:
-  #     - gateway
-  #     - runner
-  #   volumes:
-  #     - ./src/vast:/app/src/vast
+  desktop_app:
+    build:
+      context: .
+      dockerfile: src/vast/desktop/Dockerfile
+    environment:
+      - GATEWAY_URL=http://gateway:8000
+      - DISPLAY=host.docker.internal:0.0
+    depends_on:
+      - gateway
+      - runner
+    volumes:
+      - ./src/vast:/app/src/vast
