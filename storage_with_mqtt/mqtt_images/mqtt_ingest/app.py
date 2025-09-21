@@ -30,7 +30,6 @@ BUCKET           = os.getenv("S3_BUCKET", "imagery")
 MQTT_BROKER      = os.getenv("MQTT_BROKER", "mosquitto")
 CLIENT_ID        = os.getenv("MQTT_CLIENT_ID", "mqtt_ingest")
 DEFAULT_PREFIX   = os.getenv("DEFAULT_PREFIX", "camera-01")
-MQTT_PUB_TOPIC   = os.getenv("MQTT_PUB_TOPIC", "imagery/ingested")
 
 FORCE_DEVICE_ID  = (os.getenv("DEVICE_ID", "").strip() or None)
 
@@ -186,7 +185,6 @@ def _read_token_from_file(path: str) -> str | None:
             t = p.read_text(encoding="utf-8").strip()
             return t or None
     except Exception:
-        
         pass
     return None
 
@@ -270,17 +268,9 @@ def write_db(meta: dict) -> bool:
         return False
     except requests.Timeout as e:
         print(f"[DB][WARN] API timeout ({base}): {e}", flush=True)
-        return False
-    except requests.RequestException as e:
+        return False    except requests.RequestException as e:
         print(f"[DB][ERROR] {e}", flush=True)
         return False
-
-# ---------- MQTT Publisher client ----------
-_pub_client: mqtt.Client | None = None
-
-def publish_ingested(meta: dict) -> None:
-    if _pub_client is not None:
-        _pub_client.publish(MQTT_PUB_TOPIC, json.dumps(meta, ensure_ascii=False), qos=1)
 
 # ---------- Worker Queue ----------
 q_in: "queue.Queue[Tuple[str, bytes, int]]" = queue.Queue()
@@ -319,7 +309,7 @@ def worker():
                     "extra": info.get("extra"),
                 },
             }
-            publish_ingested(db_row)
+            # --- הוסר פרסום ל-MQTT ---
             ok = write_db(db_row)
             if not ok and not DUMMY_DB:
                 save_to_outbox(db_row)
@@ -366,15 +356,6 @@ def main():
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
     client.loop_start()
 
-    global _pub_client
-    _pub_client = mqtt.Client(
-        CallbackAPIVersion.VERSION2,
-        client_id=f"{CLIENT_ID}-pub",
-        protocol=mqtt.MQTTv5,
-    )
-    _pub_client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
-    _pub_client.loop_start()
-
     print(
         f"INGEST ready. mp_threshold={MP_THRESHOLD}, part={PART_SIZE}, conc={MAX_CONC}, workers={INGEST_WORKERS}",
         flush=True
@@ -384,9 +365,6 @@ def main():
         _shutdown.set()
         client.loop_stop()
         client.disconnect()
-        if _pub_client is not None:
-            _pub_client.loop_stop()
-            _pub_client.disconnect()
 
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
