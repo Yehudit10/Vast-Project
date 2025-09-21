@@ -18,7 +18,7 @@ def file_size(p: Path) -> int:
     return p.stat().st_size if p.exists() else 0
 
 
-def run_and_profile(cmd):
+def run_and_profile(cmd, shell=False):
     """
     Run the encode command and sample CPU usage while it runs.
 
@@ -27,7 +27,7 @@ def run_and_profile(cmd):
     """
     start = time.time()
     proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=shell
     )
     parent = psutil.Process(proc.pid)
 
