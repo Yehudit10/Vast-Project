@@ -13,7 +13,6 @@ import logging
 LOGGER = logging.getLogger(__name__)
 _SCHEMA_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-
 def open_db(db_url: str, schema: str = "audio_cls") -> PGConnection:
     if not db_url:
         raise ValueError("db_url is required (e.g., postgresql://user:pass@host:port/db)")
@@ -33,7 +32,6 @@ def open_db(db_url: str, schema: str = "audio_cls") -> PGConnection:
         LOGGER.exception("failed to init schema/search_path")
         raise
     return conn
-
 
 def upsert_run(conn: PGConnection, meta: Dict[str, Any]) -> None:
     try:
@@ -57,7 +55,6 @@ def upsert_run(conn: PGConnection, meta: Dict[str, Any]) -> None:
         LOGGER.exception("upsert_run failed")
         raise
 
-
 def finish_run(conn: PGConnection, run_id: str) -> None:
     try:
         with conn.cursor() as cur:
@@ -68,7 +65,6 @@ def finish_run(conn: PGConnection, run_id: str) -> None:
         conn.rollback()
         LOGGER.exception("finish_run failed: %s", run_id)
         raise
-
 
 def upsert_file(
     conn: PGConnection,
@@ -100,8 +96,7 @@ def upsert_file(
         LOGGER.exception("upsert_file failed: %s", path)
         raise
 
-
-def _jsonify_topk(v: Any) -> psycopg2.extras.Json:
+def _jsonify(v: Any) -> psycopg2.extras.Json:
     if isinstance(v, str):
         try:
             v = json.loads(v)
@@ -109,28 +104,33 @@ def _jsonify_topk(v: Any) -> psycopg2.extras.Json:
             v = {"raw": v}
     return psycopg2.extras.Json(v)
 
-
 def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
     data = dict(row)
-    data["audioset_topk_json"] = _jsonify_topk(data.get("audioset_topk_json"))
+    if "audioset_topk_json" in data and data["audioset_topk_json"] is not None:
+        data["audioset_topk_json"] = _jsonify(data.get("audioset_topk_json"))
+    if "head_probs_json" in data and data["head_probs_json"] is not None:
+        data["head_probs_json"] = _jsonify(data.get("head_probs_json"))
+
     try:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO file_aggregates
-                  (run_id, file_id, audioset_topk_json, head_p_animal, head_p_vehicle,
-                   head_p_shotgun, head_p_other, num_windows, agg_mode)
+                  (run_id, file_id,
+                   head_probs_json, head_pred_label, head_pred_prob, head_unknown_threshold, head_is_another,
+                   num_windows, agg_mode)
                 VALUES
-                  (%(run_id)s, %(file_id)s, %(audioset_topk_json)s, %(head_p_animal)s, %(head_p_vehicle)s,
-                   %(head_p_shotgun)s, %(head_p_other)s, %(num_windows)s, %(agg_mode)s)
+                  (%(run_id)s, %(file_id)s,
+                   %(head_probs_json)s, %(head_pred_label)s, %(head_pred_prob)s, %(head_unknown_threshold)s, %(head_is_another)s,
+                   %(num_windows)s, %(agg_mode)s)
                 ON CONFLICT (run_id, file_id) DO UPDATE SET
-                  audioset_topk_json=EXCLUDED.audioset_topk_json,
-                  head_p_animal=EXCLUDED.head_p_animal,
-                  head_p_vehicle=EXCLUDED.head_p_vehicle,
-                  head_p_shotgun=EXCLUDED.head_p_shotgun,
-                  head_p_other=EXCLUDED.head_p_other,
-                  num_windows=EXCLUDED.num_windows,
-                  agg_mode=EXCLUDED.agg_mode
+                  head_probs_json         = EXCLUDED.head_probs_json,
+                  head_pred_label         = EXCLUDED.head_pred_label,
+                  head_pred_prob          = EXCLUDED.head_pred_prob,
+                  head_unknown_threshold  = EXCLUDED.head_unknown_threshold,
+                  head_is_another         = EXCLUDED.head_is_another,
+                  num_windows             = EXCLUDED.num_windows,
+                  agg_mode                = EXCLUDED.agg_mode
                 """,
                 data,
             )
