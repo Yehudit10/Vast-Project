@@ -3,11 +3,13 @@ __pycache__/
 *.pyc
 .venv/
 .env
+.venv/
+venv/
 
 # Audio/model artifacts
 models/
+model_bundle/
 data/
-data_train/
 *.pth
 *.pt
 *.onnx
@@ -17,3 +19,11 @@ data_train/
 # OS / tooling
 .DS_Store
 Thumbs.db
+
+# caches
+*.log
+*.tmp
+.cache/
+.pytorch/
+.huggingface/
+
