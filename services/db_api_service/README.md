@@ -106,12 +106,8 @@ Both containers must be on the same Docker network to resolve `db-api` by name.
 
 ---
 
-## Testing
+## Testing readme in /test
 
-```bash
-pip install -r requirements.txt
-pytest -q
-```
 
 ---
 
