@@ -7,7 +7,7 @@ api = APIRouter(prefix="/api", tags=["api"], dependencies=[Depends(require_auth)
 api.include_router(files_router)
 
 @api.get("/me")
-def me(principal = Depends(require_auth)):
+def me(principal):
     kind, obj = principal
     if kind == "user":
         return {"type": "user", "id": obj.id, "username": obj.username}

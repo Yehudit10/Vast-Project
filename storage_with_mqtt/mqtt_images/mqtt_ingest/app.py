@@ -41,6 +41,8 @@ DB_API_SERVICE_NAME= os.getenv("DB_API_SERVICE_NAME", "mqtt_ingest").strip() or 
 OUTBOX_DIR         = os.getenv("OUTBOX_DIR", "/app/outbox")
 DUMMY_DB           = os.getenv("DUMMY_DB", "1") == "1"
 
+INGEST_QUEUE_MAXSIZE = int(os.getenv("INGEST_QUEUE_MAXSIZE", "1000"))
+
 # ---------- NUMERIC FROM CONFIG ----------
 MP_THRESHOLD   = cfg.MP_THRESHOLD
 PART_SIZE      = cfg.PART_SIZE
@@ -108,27 +110,40 @@ def normalize_content_type(ctype: str, filename: str) -> str:
     return guess or "application/octet-stream"
 
 def parse_topic(topic: str) -> dict:
-    parts = topic.split("/")
+    parts = [p for p in topic.split("/") if p]
+    now = now_ms()
     result = {
         "camera": DEFAULT_PREFIX,
-        "publish_ts_ms": now_ms(),
+        "publish_ts_ms": now,
         "content_type": "application/octet-stream",
-        "filename": f"{now_ms()}.bin",
+        "filename": f"{now}.bin",
     }
+
     try:
         i = parts.index("imagery")
-        camera = parts[i + 1]
-        pub_ts_ms = int(parts[i + 2])
-        ctype_safe = parts[i + 3]
-        filename = parts[i + 4]
-        result.update({
-            "camera": camera,
-            "publish_ts_ms": pub_ts_ms,
-            "content_type": ctype_safe.replace("_", "/"),
-            "filename": filename,
-        })
-    except Exception:
-        pass
+    except ValueError:
+        i = -1
+
+    if i != -1:
+        # camera
+        if len(parts) > i + 1 and parts[i + 1]:
+            result["camera"] = parts[i + 1]
+
+        # publish_ts_ms
+        if len(parts) > i + 2 and parts[i + 2]:
+            try:
+                ts = int(parts[i + 2])
+                if ts > 0:
+                    result["publish_ts_ms"] = ts
+            except ValueError:
+                pass 
+
+        if len(parts) > i + 3 and parts[i + 3]:
+            result["content_type"] = parts[i + 3].replace("_", "/")
+
+        if len(parts) > i + 4 and parts[i + 4]:
+            result["filename"] = parts[i + 4]
+
     result["content_type"] = normalize_content_type(result["content_type"], result["filename"])
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
     key = f"{result['camera']}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
@@ -137,6 +152,7 @@ def parse_topic(topic: str) -> dict:
     result["image_id"] = stem(result["filename"]) or uuid.uuid4().hex
     result["capture_ts_iso"] = iso_utc(result["publish_ts_ms"])
     return result
+
 
 # ---------- Uploader ----------
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
@@ -242,11 +258,16 @@ _http.mount("https://", HTTPAdapter(max_retries=Retry(total=5, backoff_factor=0.
 
 def write_db(meta: dict) -> bool:
     if DUMMY_DB:
-        print(f"[DB-DUMMY] would POST to {DB_API_BASE or 'N/A'}: {json.dumps(meta, ensure_ascii=False)}", flush=True)
+        print(
+            f"[DB-DUMMY] would POST to {DB_API_BASE or 'N/A'}: {json.dumps(meta, ensure_ascii=False)}",
+            flush=True,
+        )
         return True
+
     if not DB_API_BASE:
         print("[DB][WARN] DB_API_BASE not set; skipping DB write.", flush=True)
         return False
+
     base = DB_API_BASE.rstrip("/")
     try:
         r = _http.post(f"{base}/api/files", json=meta, timeout=10)
@@ -261,19 +282,25 @@ def write_db(meta: dict) -> bool:
             ok = 200 <= r.status_code < 300
             print(f"[DB] PUT {'ok' if ok else r.status_code}", flush=True)
             return ok
+
         print(f"[DB] POST failed: {r.status_code} {r.text[:200]}", flush=True)
         return False
+
     except requests.ConnectionError as e:
         print(f"[DB][WARN] API not reachable ({base}): {e}", flush=True)
         return False
+
     except requests.Timeout as e:
         print(f"[DB][WARN] API timeout ({base}): {e}", flush=True)
-        return False    except requests.RequestException as e:
+        return False
+
+    except requests.RequestException as e:
         print(f"[DB][ERROR] {e}", flush=True)
         return False
 
+
 # ---------- Worker Queue ----------
-q_in: "queue.Queue[Tuple[str, bytes, int]]" = queue.Queue()
+q_in: "queue.Queue[Tuple[str, bytes, int]]" = queue.Queue(maxsize=INGEST_QUEUE_MAXSIZE)
 _shutdown = threading.Event()
 
 def worker():
@@ -309,7 +336,7 @@ def worker():
                     "extra": info.get("extra"),
                 },
             }
-            # --- הוסר פרסום ל-MQTT ---
+
             ok = write_db(db_row)
             if not ok and not DUMMY_DB:
                 save_to_outbox(db_row)
