@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import psycopg2
 import datetime
 from psycopg2 import sql
 
 app = Flask(__name__)
+CORS(app)
 
 # define the connect to the DB
 def get_db_connection():
@@ -15,6 +17,91 @@ def get_db_connection():
         port="5432"
     )
     return conn
+
+@app.route('/schedules', methods=['GET'])
+def get_schedules():
+    client_id = request.args.get('client_id')
+    
+    # connect to the database
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        if client_id:
+            # Get schedules for specific client
+            cur.execute("""
+                SELECT schedule_id, client_id, team, cron_expr, active_days, time_window, last_updated
+                FROM clients 
+                WHERE client_id = %s
+                ORDER BY last_updated DESC
+            """, (client_id,))
+        else:
+            # Get all schedules
+            cur.execute("""
+                SELECT schedule_id, client_id, team, cron_expr, active_days, time_window, last_updated
+                FROM clients 
+                ORDER BY last_updated DESC
+            """)
+        
+        schedules = cur.fetchall()
+        
+        # Convert to list of dictionaries
+        schedule_list = []
+        for schedule in schedules:
+            schedule_list.append({
+                'schedule_id': schedule[0],
+                'client_id': schedule[1],
+                'team': schedule[2],
+                'cron_expr': schedule[3],
+                'active_days': schedule[4],
+                'time_window': schedule[5],
+                'last_updated': schedule[6].isoformat() if schedule[6] else None
+            })
+        
+        return jsonify(schedule_list), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/schedule/<int:schedule_id>', methods=['GET'])
+def get_schedule(schedule_id):
+    # connect to the database
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT schedule_id, client_id, team, cron_expr, active_days, time_window, last_updated
+            FROM clients 
+            WHERE schedule_id = %s
+        """, (schedule_id,))
+        
+        schedule = cur.fetchone()
+        
+        if not schedule:
+            return jsonify({"error": "Schedule not found"}), 404
+        
+        # Convert to dictionary
+        schedule_data = {
+            'schedule_id': schedule[0],
+            'client_id': schedule[1],
+            'team': schedule[2],
+            'cron_expr': schedule[3],
+            'active_days': schedule[4],
+            'time_window': schedule[5],
+            'last_updated': schedule[6].isoformat() if schedule[6] else None
+        }
+        
+        return jsonify(schedule_data), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/schedule', methods=['POST'])
 def add_schedule():
