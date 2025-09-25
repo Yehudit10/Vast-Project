@@ -58,13 +58,12 @@ def create_access_token(sub: str, subject_type: str = "user") -> str:
     payload = {"sub": sub, "sub_type": subject_type, "iat": int(now.timestamp()), "exp": int(exp.timestamp())}
     return _encode_token(payload)
 
-def create_refresh_token(user_id: int, db: Session) -> str:
+def create_refresh_token(user_id: int) -> tuple[str, datetime]:
     token = str(uuid.uuid4())
     expires = datetime.now(timezone.utc) + timedelta(days=REFRESH_TTL_DAYS)
-    db.add(RefreshToken(user_id=user_id, token=token, expires_at=expires))
-    return token
+    return token, expires
 
-# ---------- Guard: require_auth (Service Token or Bearer JWT) ----------
+# ---------- Guard: require_auth ----------
 def require_auth(
     request: Request,
     db: Session = Depends(get_db),
@@ -99,15 +98,16 @@ def require_auth(
 
     return ("user", user)
 
-# ---------- Endpoints: /auth/login, /auth/refresh, /auth/_dev_bootstrap ----------
+# ---------- Endpoints ----------
 @router.post("/login")
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form.username).first()
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="bad credentials")
     access = create_access_token(str(user.id), "user")
-    refresh = create_refresh_token(user.id, db)
-    return {"access_token": access, "token_type": "bearer", "refresh_token": refresh}
+    refresh_token, expires = create_refresh_token(user.id)
+    db.add(RefreshToken(user_id=user.id, token=refresh_token, expires_at=expires))
+    return {"access_token": access, "token_type": "bearer", "refresh_token": refresh_token}
 
 class RefreshIn(BaseModel):
     refresh_token: str
@@ -115,12 +115,29 @@ class RefreshIn(BaseModel):
 @router.post("/refresh")
 def refresh_token(body: RefreshIn, db: Session = Depends(get_db)):
     rt = db.query(RefreshToken).filter(RefreshToken.token == body.refresh_token).first()
-    if not rt or rt.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid/expired refresh token")
-    access = create_access_token(str(rt.user_id), "user")
-    return {"access_token": access, "token_type": "bearer"}
+    if not rt:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid refresh token")
 
-# ---------- Dev bootstrap with dynamic service_name and optional rotation ----------
+    user = rt.user
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="inactive user")
+
+    if rt.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="refresh token expired")
+
+    try:
+        _decode_token(body.refresh_token)
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid refresh token")
+
+    access = create_access_token(str(user.id), "user")
+    db.delete(rt)
+    new_refresh, new_expires = create_refresh_token(user.id)
+    db.add(RefreshToken(user_id=user.id, token=new_refresh, expires_at=new_expires))
+    db.commit()
+
+    return {"access_token": access, "refresh_token": new_refresh, "token_type": "bearer"}
+
 class DevBootstrapIn(BaseModel):
     service_name: str | None = None
     rotate_if_exists: bool = False
@@ -156,7 +173,8 @@ def dev_bootstrap(body: DevBootstrapIn | None = None, db: Session = Depends(get_
             sa.token_hash = hash_sa_token(raw_sa_token)
 
     access = create_access_token(str(user.id), "user")
-    refresh = create_refresh_token(user.id, db)
+    refresh_token, expires = create_refresh_token(user.id)
+    db.add(RefreshToken(user_id=user.id, token=refresh_token, expires_at=expires))
 
     return {
         "created_user": created_user,
@@ -167,7 +185,7 @@ def dev_bootstrap(body: DevBootstrapIn | None = None, db: Session = Depends(get_
         },
         "tokens": {
             "access_token": access,
-            "refresh_token": refresh,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
         },
     }
