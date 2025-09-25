@@ -125,19 +125,15 @@ def refresh_token(body: RefreshIn, db: Session = Depends(get_db)):
     if rt.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="refresh token expired")
 
-    try:
-        _decode_token(body.refresh_token)
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid refresh token")
-
     access = create_access_token(str(user.id), "user")
+
+    # rotate refresh token
     db.delete(rt)
     new_refresh, new_expires = create_refresh_token(user.id)
     db.add(RefreshToken(user_id=user.id, token=new_refresh, expires_at=new_expires))
     db.commit()
 
     return {"access_token": access, "refresh_token": new_refresh, "token_type": "bearer"}
-
 class DevBootstrapIn(BaseModel):
     service_name: str | None = None
     rotate_if_exists: bool = False
