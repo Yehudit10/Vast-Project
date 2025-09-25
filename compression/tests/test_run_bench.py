@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from scripts.run_bench import run_and_profile, file_size, main
 import subprocess
@@ -46,3 +45,10 @@ def test_main():
         reader = csv.DictReader(file)
         rows = list(reader)
         assert len(rows) > 0, "No rows in the results CSV"
+
+# Additional tests for edge cases
+def test_file_size_invalid_file():
+    """Test the file size function with a non-existent file"""
+    invalid_file = Path("data/raw/nonexistent_file.wav")
+    size = file_size(invalid_file)
+    assert size == 0, f"Expected file size to be 0, but got {size}"
