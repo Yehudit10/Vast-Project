@@ -10,11 +10,26 @@ COMP_DIR.mkdir(parents=True, exist_ok=True)
 # Accepted input extensions (case-insensitive)
 INPUT_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"}
 
-def iter_input_files():
-    """Yield input audio files from RAW_DIR."""
-    for p in RAW_DIR.iterdir():
+def iter_input_files(directory=None):
+    """Yield input audio files from the specified directory or use the default RAW_DIR."""
+    
+    if directory is None:
+        directory = RAW_DIR
+
+    directory = Path(directory)
+    
+    if not directory.exists():
+        raise ValueError(f"The directory {directory} does not exist.")
+    
+    for p in directory.iterdir():
         if p.is_file() and p.suffix.lower() in INPUT_EXTS:
             yield p
+
+# def iter_input_files():
+#     """Yield input audio files from RAW_DIR."""
+#     for p in RAW_DIR.iterdir():
+#         if p.is_file() and p.suffix.lower() in INPUT_EXTS:
+#             yield p
 
 def build_ffmpeg_cmds(in_path: Path, flac_level: str = "5", opus_bitrate: str = "96k"):
     """

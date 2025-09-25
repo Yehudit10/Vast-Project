@@ -24,6 +24,8 @@ def get_age_seconds(p: Path, mode: str) -> float:
 
 def is_older_than(p: Path, age_seconds: int, mode: str) -> bool:
     """Check if file age (by mode) is >= threshold."""
+    if mode not in ["mtime", "ctime"]:
+        raise ValueError(f"Invalid mode: {mode}")
     return get_age_seconds(p, mode) >= age_seconds
 
 
@@ -46,6 +48,9 @@ def cleanup_compressed(max_age_days: int, dry_run: bool) -> int:
     Delete compressed files older than <max_age_days>.
     Returns count deleted.
     """
+    if max_age_days < 0:
+        raise ValueError("max_age_days cannot be negative")
+    
     if max_age_days <= 0:
         return 0
 
