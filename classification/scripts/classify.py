@@ -38,7 +38,8 @@ from core.model_io import (
     aggregate_matrix,
     load_labels_from_csv,
     discover_audio_files,
-    env_bool
+    env_bool,
+    softmax_1d
 )
 
 LOGGER = logging.getLogger("audio_cls.classify")
@@ -63,19 +64,6 @@ def _setup_logging(debug: bool | None, level: str | None, log_file: str | None) 
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         handlers=handlers,
     )
-
-
-def softmax_1d(x: np.ndarray) -> np.ndarray:
-    x = np.asarray(x, dtype=np.float32).reshape(-1)
-    if x.size == 0:
-        return x
-    x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
-    m = float(np.max(x))
-    y = np.exp(x - m)
-    s = float(np.sum(y))
-    if not np.isfinite(s) or s <= 0.0:
-        return np.full_like(x, 1.0 / x.size)
-    return y / s
 
 
 def main() -> None:
