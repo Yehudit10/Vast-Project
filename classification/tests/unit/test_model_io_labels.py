@@ -1,4 +1,3 @@
-# tests/unit/test_model_io_labels.py
 import sys
 import types
 from pathlib import Path

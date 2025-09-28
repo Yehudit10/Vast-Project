@@ -1,4 +1,3 @@
-# tests/integration/test_classify_pipeline.py
 import pytest
 import numpy as np
 from pathlib import Path

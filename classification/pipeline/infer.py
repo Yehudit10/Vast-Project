@@ -14,9 +14,9 @@ import numpy as np
 from dotenv import load_dotenv, find_dotenv
 from panns_inference import AudioTagging
 
-from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embedding
-from classification.backbones.vggish import run_vggish_embeddings
-from classification.backbones.ast import run_ast_embedding
+from backbones.cnn14 import load_cnn14_model, run_cnn14_embedding
+from backbones.vggish import run_vggish_embeddings
+from backbones.ast import run_ast_embedding
 from core.model_io import (
     SAMPLE_RATE,
     SUPPORTED_EXTS,
@@ -25,24 +25,13 @@ from core.model_io import (
     segment_waveform,
     aggregate_matrix,
     load_labels_from_csv,
+    discover_audio_files,
+    env_bool
 )
 
 LOGGER = logging.getLogger("audio_cls.classify")
 DEFAULT_CKPT = str(pathlib.Path.home() / "panns_data" / "Cnn14_mAP=0.431.pth")
 
-def env_bool(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return v.strip().lower() in ("1", "true", "yes", "on")
-
-def discover_audio_files(root: pathlib.Path) -> List[pathlib.Path]:
-    if root.is_file():
-        return [root] if root.suffix.lower() in SUPPORTED_EXTS else []
-    files: List[pathlib.Path] = []
-    for ext in SUPPORTED_EXTS:
-        files.extend(root.rglob(f"*{ext}"))
-    return sorted(files)
 
 def _setup_logging(debug: bool | None, level: str | None, log_file: str | None) -> None:
     if level:

@@ -330,3 +330,19 @@ def aggregate_matrix(mat: np.ndarray, mode: Literal["mean", "max"] = "mean") -> 
     # Ensure finite float32 output; all-NaN columns become 0.0
     v = np.nan_to_num(v, nan=0.0, posinf=np.finfo(np.float32).max, neginf=np.finfo(np.float32).min)
     return v.astype(np.float32, copy=False)
+
+
+def discover_audio_files(root: pathlib.Path) -> List[pathlib.Path]:
+    if root.is_file():
+        return [root] if root.suffix.lower() in SUPPORTED_EXTS else []
+    files: List[pathlib.Path] = []
+    for ext in SUPPORTED_EXTS:
+        files.extend(root.rglob(f"*{ext}"))
+    return sorted(files)
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    v = os.getenv(name)
+    if v is None:
+        return default
+    return v.strip().lower() in ("1", "true", "yes", "on")

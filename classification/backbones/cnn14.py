@@ -1,4 +1,3 @@
-# cnn14.py (suggested changes)
 from __future__ import annotations
 from typing import Tuple, List, Optional
 import numpy as np
@@ -23,15 +22,6 @@ def load_cnn14_model(checkpoint_path: Optional[str] = None, checkpoint_url: Opti
 
 def run_cnn14_inference(model: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[str]]:
     return run_inference(model, wav)
-
-# def run_cnn14_embedding(model: AudioTagging, wav: np.ndarray) -> np.ndarray:
-#     """
-#     Run embedding extraction; validate input waveform length.
-#     """
-#     wav = np.asarray(wav)
-#     if wav.size == 0:
-#         raise ValueError("waveform must not be empty")
-#     return run_embedding(model, wav)
 
 def run_embedding(at: AudioTagging, wav: np.ndarray) -> np.ndarray:
     try:
