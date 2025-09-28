@@ -1,4 +1,3 @@
-# tests/integration/test_pipeline.py
 import pytest
 import tempfile
 from pathlib import Path

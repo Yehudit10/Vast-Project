@@ -1,4 +1,3 @@
-# tests/unit/test_alerts.py
 import pytest
 from unittest.mock import patch, MagicMock
 import json

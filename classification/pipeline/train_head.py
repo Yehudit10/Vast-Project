@@ -17,7 +17,7 @@ from head import build_head_pipeline
 from backbones.cnn14 import load_cnn14_model, run_cnn14_embedding
 from backbones.vggish import run_vggish_embeddings
 from backbones.ast import run_ast_embedding
-from core.model_io import SAMPLE_RATE, SUPPORTED_EXTS, load_audio, ensure_numpy_1d
+from core.model_io import SAMPLE_RATE, SUPPORTED_EXTS, load_audio, ensure_numpy_1d, env_bool
 
 # DEFAULT_CLASSES definition with this 11-class taxonomy:
 DEFAULT_CLASSES = [
@@ -36,12 +36,6 @@ DEFAULT_CLASSES = [
 
 
 DEFAULT_CKPT = str(pathlib.Path.home() / "panns_data" / "Cnn14_mAP=0.431.pth")
-
-def env_bool(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return v.strip().lower() in ("1", "true", "yes", "on")
 
 def discover_labeled_files(root: pathlib.Path, class_order: List[str]) -> List[Tuple[str, pathlib.Path]]:
     pairs: List[Tuple[str, pathlib.Path]] = []
