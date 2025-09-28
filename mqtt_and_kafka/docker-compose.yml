@@ -1,30 +1,28 @@
+
 services:
   kafka:
     build: 
       context: ./kafka
       dockerfile: dockerfile
-    # image: bitnami/kafka:3.7
     container_name: kafka
     environment:
-    - ALLOW_PLAINTEXT_LISTENER=yes
-    - KAFKA_ENABLE_KRAFT=yes
-    - KAFKA_CFG_PROCESS_ROLES=broker,controller
-    - KAFKA_CFG_NODE_ID=1
-    - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-    - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
-    - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-    - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
-    - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:29092
-    - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
-    - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
-    - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-    - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
-    - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
-    - BOOTSTRAP=kafka:9092
-
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
     ports:
-      - "9092:9092"  
-      - "29092:29092"  
+      - "9092:9092"
+      - "29092:29092"
     networks:
       - mesh
     healthcheck:
@@ -54,10 +52,9 @@ services:
 
   connect:
     build:
-        context: .
-        dockerfile: connect.Dockerfile
+      context: .
+      dockerfile: connect.Dockerfile
     image: local/connect-with-mqtt:1.0.0
-    # image: confluentinc/cp-kafka-connect:7.6.1
     container_name: connect-1
     depends_on:
       kafka:
@@ -86,6 +83,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  init-connector:
+    image: curlimages/curl:8.7.1
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./connectors:/connectors
+    networks:
+      - mesh
+    entrypoint: >
+      sh -c "
+        echo '==> Creating MQTT connector...';
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        echo '==> Done.';
+      "
 
 networks:
   mesh:

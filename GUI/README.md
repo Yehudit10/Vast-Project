@@ -119,6 +119,7 @@ docker compose up -d prometheus grafana
 docker compose ps
 ```
 
+
 ### Terminal A – Runner (gRPC)
 ```bash
 .\.venv\Scripts\Activate.ps1
@@ -129,11 +130,13 @@ python -m vast.runner.runner_server
 
 ### Terminal B – Gateway (FastAPI)
 ```bash
+.\.venv\Scripts\Activate.ps1
 python -m uvicorn vast.gateway.app:create_app --factory --host 127.0.0.1 --port 9001
 ```
 
 ### Terminal C – Demo metrics exporter (optional)
 ```bash
+.\.venv\Scripts\Activate.ps1
 python -m vast.services.sensors_metrics_app
 ```
 
@@ -267,4 +270,3 @@ python -m vast.services.sensors_metrics_app
 .\.venv\Scripts\Activate.ps1
 $env:GATEWAY_URL = "http://127.0.0.1:9001"
 python .\src\vast\main.py
-
