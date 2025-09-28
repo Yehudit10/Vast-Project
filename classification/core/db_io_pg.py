@@ -106,8 +106,8 @@ def _jsonify(v: Any) -> psycopg2.extras.Json:
 
 def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
     data = dict(row)
-    if "audioset_topk_json" in data and data["audioset_topk_json"] is not None:
-        data["audioset_topk_json"] = _jsonify(data.get("audioset_topk_json"))
+    # if "audioset_topk_json" in data and data["audioset_topk_json"] is not None:
+    #     data["audioset_topk_json"] = _jsonify(data.get("audioset_topk_json"))
     if "head_probs_json" in data and data["head_probs_json"] is not None:
         data["head_probs_json"] = _jsonify(data.get("head_probs_json"))
 
@@ -118,11 +118,11 @@ def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
                 INSERT INTO file_aggregates
                   (run_id, file_id,
                    head_probs_json, head_pred_label, head_pred_prob, head_unknown_threshold, head_is_another,
-                   num_windows, agg_mode)
+                   num_windows, agg_mode, processing_ms)
                 VALUES
                   (%(run_id)s, %(file_id)s,
                    %(head_probs_json)s, %(head_pred_label)s, %(head_pred_prob)s, %(head_unknown_threshold)s, %(head_is_another)s,
-                   %(num_windows)s, %(agg_mode)s)
+                   %(num_windows)s, %(agg_mode)s, %(processing_ms)s)
                 ON CONFLICT (run_id, file_id) DO UPDATE SET
                   head_probs_json         = EXCLUDED.head_probs_json,
                   head_pred_label         = EXCLUDED.head_pred_label,
@@ -130,7 +130,8 @@ def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
                   head_unknown_threshold  = EXCLUDED.head_unknown_threshold,
                   head_is_another         = EXCLUDED.head_is_another,
                   num_windows             = EXCLUDED.num_windows,
-                  agg_mode                = EXCLUDED.agg_mode
+                  agg_mode                = EXCLUDED.agg_mode,
+                  processing_ms           = EXCLUDED.processing_ms
                 """,
                 data,
             )
@@ -140,3 +141,4 @@ def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
         conn.rollback()
         LOGGER.exception("upsert_file_aggregate failed")
         raise
+

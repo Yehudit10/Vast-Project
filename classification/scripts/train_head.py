@@ -42,17 +42,18 @@ def env_bool(name: str, default: bool = False) -> bool:
         return default
     return v.strip().lower() in ("1", "true", "yes", "on")
 
-def discover_labeled_files(root: pathlib.Path, class_order: List[str]) -> List[Tuple[str, pathlib.Path]]:
-    pairs: List[Tuple[str, pathlib.Path]] = []
+def discover_labeled_files(root: pathlib.Path, class_order: List[str]) -> List[Tuple[pathlib.Path, str]]:
+    pairs: List[Tuple[pathlib.Path, str]] = []
     for lbl in class_order:
-        d = root / lbl
-        if not d.exists():
-            print(f"[warn] missing class dir: {d}")
+        class_dir = root / lbl
+        if not class_dir.exists():
+            print(f"[warn] missing class dir: {class_dir}")
             continue
-        for p in d.rglob("*"):
-            if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS:
-                pairs.append((lbl, p))
+        for file_path in class_dir.rglob("*"):
+            if file_path.is_file() and file_path.suffix.lower() in SUPPORTED_EXTS:
+                pairs.append((file_path, lbl))
     return pairs
+
 
 def _embed_clip(backbone: str, at: AudioTagging | None, wav: np.ndarray, device: str, ast_model_dir: str | None) -> np.ndarray:
     if backbone == "vggish":
@@ -127,7 +128,7 @@ def main() -> None:
         sys.exit(5)
 
     X, y = [], []
-    for lbl, path in pairs:
+    for path, lbl in pairs:
         try:
             wav = load_audio(str(path), target_sr=SAMPLE_RATE)
             wav = ensure_numpy_1d(wav)
