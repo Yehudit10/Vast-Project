@@ -146,3 +146,4 @@ def sample_metadata():
         "backbone": "cnn14",
         "train_date": "2025-09-21"
     }
+
