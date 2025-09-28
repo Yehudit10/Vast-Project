@@ -1,4 +1,3 @@
-# tests/e2e/test_e2e_classify_smoke.py
 """
 Smoke E2E test for the classify CLI.
 
