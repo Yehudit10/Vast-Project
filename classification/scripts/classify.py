@@ -22,6 +22,7 @@ import numpy as np
 import logging
 import numpy as np
 from dotenv import load_dotenv, find_dotenv
+from scripts import alerts
 
 from backbones.cnn14 import load_cnn14_model, run_cnn14_embedding
 from backbones.vggish import run_vggish_embeddings
@@ -397,6 +398,10 @@ def main() -> None:
                         processing_ms=float(processing_ms),  # <-- NEW FIELD
                     )
                     upsert_file_aggregate(conn, agg_row)
+                    
+                if pred_label is not None and not is_another:
+                    alerts.send_kafka_alert(str(f), pred_label, float(pred_prob))
+
 
                 LOGGER.info("%s: processed", f.name)
 
