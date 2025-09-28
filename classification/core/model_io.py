@@ -9,6 +9,7 @@ import numpy as np
 import soundfile as sf
 import librosa
 import logging
+import os
 
 try:
     import torch
@@ -346,3 +347,17 @@ def env_bool(name: str, default: bool = False) -> bool:
     if v is None:
         return default
     return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+def softmax_1d(x: np.ndarray) -> np.ndarray:
+    x = np.asarray(x, dtype=np.float32).reshape(-1)
+    if x.size == 0:
+        return x
+    x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+    m = float(np.max(x))
+    y = np.exp(x - m)
+    s = float(np.sum(y))
+    if not np.isfinite(s) or s <= 0.0:
+        return np.full_like(x, 1.0 / x.size)
+    return y / s
+
