@@ -1,4 +1,3 @@
-# tests/conftest.py (replace the top part that computes repo_root/sys.path)
 import os
 import sys
 from pathlib import Path
