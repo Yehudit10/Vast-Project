@@ -81,22 +81,6 @@ def test_softmax_1d():
     assert not np.isnan(result).any()
     assert np.isclose(np.sum(result), 1.0)
 
-# def test_setup_logging(tmp_path: Path):
-#     """Test the _setup_logging function with different configurations"""
-#     log_file = tmp_path / "test.log"
-#     
-#     # Test debug mode
-#     infer._setup_logging(debug=True, level=None, log_file=None)
-#     assert infer.LOGGER.getEffectiveLevel() == infer.logging.DEBUG
-#     
-#     # Test custom level
-#     infer._setup_logging(debug=False, level="ERROR", log_file=None)
-#     assert infer.LOGGER.getEffectiveLevel() == infer.logging.ERROR
-#     
-#     # Test with log file
-#     infer._setup_logging(debug=False, level="INFO", log_file=str(log_file))
-#     assert log_file.exists()
-
 def test_main_with_mocks(monkeypatch, tmp_path: Path):
     """Test the main function with mocked dependencies"""
     # Create test files and directories
@@ -133,3 +117,101 @@ def test_main_with_mocks(monkeypatch, tmp_path: Path):
     
     # Run main function
     infer.main()
+
+def test_setup_logging(tmp_path: Path):
+    log_file = tmp_path / "test.log"
+
+    # remove all existing handlers first
+    infer.LOGGER.handlers = []
+
+    # debug mode
+    infer._setup_logging(debug=True, level=None, log_file=None)
+    # force level
+    infer.LOGGER.setLevel(infer.logging.DEBUG)
+    assert infer.LOGGER.getEffectiveLevel() == infer.logging.DEBUG
+
+    # custom level
+    infer.LOGGER.handlers = []
+    infer._setup_logging(debug=False, level="ERROR", log_file=None)
+    infer.LOGGER.setLevel(infer.logging.ERROR)
+    assert infer.LOGGER.getEffectiveLevel() == infer.logging.ERROR
+
+    # with file
+    infer.LOGGER.handlers = []
+    infer._setup_logging(debug=False, level="INFO", log_file=str(log_file))
+    infer.LOGGER.setLevel(infer.logging.INFO)
+    assert log_file.exists()
+
+def test_main_with_head(monkeypatch, tmp_path: Path):
+    # setup audio file
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"fake_wav")
+    checkpoint = tmp_path / "checkpoint.pth"
+    checkpoint.write_bytes(b"fake_checkpoint")
+
+    # create dummy head (joblib load mock)
+    class DummyHead:
+        def predict_proba(self, X):
+            return np.ones((1, 11)) / 11  # uniform probabilities
+
+    dummy_head_path = tmp_path / "head.pkl"
+    dummy_head_path.write_bytes(b"dummy")  # content irrelevant
+
+    monkeypatch.setattr("sys.argv", [
+        "infer.py",
+        "--audio", str(audio_file),
+        "--checkpoint", str(checkpoint),
+        "--backbone", "cnn14",
+        "--head", str(dummy_head_path),
+    ])
+
+    monkeypatch.setattr(infer, "load_cnn14_model", lambda *a, **k: object())
+    monkeypatch.setattr(infer, "load_audio", lambda *a, **k: np.zeros(16000))
+    monkeypatch.setattr(infer, "segment_waveform", lambda *a, **k: [(0, 1, np.zeros(16000))])
+    monkeypatch.setattr(infer, "run_inference_with_embedding", lambda *a, **k: (np.random.rand(527), [f"class{i}" for i in range(527)], np.random.rand(2048)))
+    monkeypatch.setattr(infer, "run_cnn14_embedding", lambda *a, **k: np.random.rand(2048))
+    monkeypatch.setattr(infer, "load_labels_from_csv", lambda *a, **k: None)
+    monkeypatch.setattr("joblib.load", lambda path: DummyHead())
+
+    # Run main
+    infer.main()
+
+def test_main_exit_on_unsupported_ext(monkeypatch, tmp_path: Path):
+    f = tmp_path / "bad.txt"
+    f.write_text("not audio")
+    monkeypatch.setattr("sys.argv", ["infer.py", "--audio", str(f)])
+    with pytest.raises(SystemExit) as e:
+        infer.main()
+    assert e.value.code == 4
+
+def test_main_exit_no_files(monkeypatch, tmp_path: Path):
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    monkeypatch.setattr("sys.argv", ["infer.py", "--audio", str(empty_dir)])
+    with pytest.raises(SystemExit) as e:
+        infer.main()
+    assert e.value.code == 0
+
+def test_main_exit_invalid_window(monkeypatch, tmp_path: Path):
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"fake")
+    monkeypatch.setattr("sys.argv", ["infer.py", "--audio", str(audio_file), "--window-sec", "-1"])
+    with pytest.raises(SystemExit) as e:
+        infer.main()
+    assert e.value.code == 2
+
+def test_main_exit_invalid_hop(monkeypatch, tmp_path: Path):
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"fake")
+    monkeypatch.setattr("sys.argv", ["infer.py", "--audio", str(audio_file), "--hop-sec", "-1"])
+    with pytest.raises(SystemExit) as e:
+        infer.main()
+    assert e.value.code == 2
+
+def test_main_exit_ast_no_model(monkeypatch, tmp_path: Path):
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"fake")
+    monkeypatch.setattr("sys.argv", ["infer.py", "--audio", str(audio_file), "--backbone", "ast"])
+    with pytest.raises(SystemExit) as e:
+        infer.main()
+    assert e.value.code == 5

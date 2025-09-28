@@ -1,4 +1,3 @@
-# English only.
 from __future__ import annotations
 
 import argparse
@@ -107,6 +106,7 @@ def main() -> None:
     ap.add_argument("--write-db", action="store_true", default=env_bool("WRITE_DB", False))
     ap.add_argument("--db-url", default=os.getenv("DB_URL"))
     ap.add_argument("--db-schema", default=os.getenv("DB_SCHEMA", "audio_cls"))
+    ap.add_argument("--notes", default=None, help="Optional notes for the run metadata")
 
     # logging
     ap.add_argument("--debug", action="store_true", default=env_bool("DEBUG", False))
