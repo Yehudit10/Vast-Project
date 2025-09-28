@@ -3,9 +3,10 @@ FROM postgis/postgis:16-3.4
 
 # ==== 1) Parameters ====
 
-# ==== 2) Install tools: pg_cron + Python + cron ====
+# ==== 2) Install tools: pg_cron + Python + cron + pgvector ====
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-16-cron \
+    postgresql-16-pgvector \
     python3-minimal python3-pip \
     cron \
  && rm -rf /var/lib/apt/lists/*
@@ -21,7 +22,7 @@ RUN echo "wal_level = 'replica'" >> /usr/share/postgresql/postgresql.conf.sample
     echo "archive_timeout = '30s'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "archive_command = 'cp %p /var/lib/postgresql/wal_archive/%f'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "log_checkpoints = on" >> /usr/share/postgresql/postgresql.conf.sample && \
-    echo "shared_preload_libraries = 'pg_cron'" >> /usr/share/postgresql/postgresql.conf.sample && \
+    echo "shared_preload_libraries = 'pg_cron,vector'" >> /usr/share/postgresql/postgresql.conf.sample && \
     echo "cron.database_name = 'missions_db'" >> /usr/share/postgresql/postgresql.conf.sample
 
 # ==== 5) Copy Python PITR scripts ====
@@ -29,6 +30,7 @@ COPY pitr/backup.py       /usr/local/bin/backup.py
 COPY pitr/cron_backup.py  /usr/local/bin/cron_backup.py
 COPY pitr/recover.py      /usr/local/bin/recover.py
 RUN chmod +x /usr/local/bin/*.py
+
 
 # ==== 6) Init files (run once if PGDATA empty) ====
 COPY build_tables/schema.sql                  /docker-entrypoint-initdb.d/01_schema.sql

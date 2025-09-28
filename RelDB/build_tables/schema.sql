@@ -2,6 +2,7 @@
 -- Order matters: referenced tables first.
 
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- === Catalogs / reference tables ===
 
@@ -155,6 +156,12 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
 
 
+--- === Embeddings table for vector data (e.g. image embeddings) ===
+CREATE TABLE IF NOT EXISTS embeddings (
+  id BIGSERIAL PRIMARY KEY,
+  vec vector(784)
+);
+
 -- === Indexes ===
 
 -- Spatial
@@ -180,9 +187,12 @@ CREATE INDEX IF NOT EXISTS ix_files_metadata_gin       ON files     USING GIN (m
 CREATE INDEX IF NOT EXISTS ix_regions_geom_gist        ON regions USING GIST (geom);
 
 
+-- Vector index for embeddings (using HNSW)
+CREATE INDEX IF NOT EXISTS idx_embeddings_vec_hnsw    ON embeddings USING hnsw (vec vector_l2_ops)  WITH (m=4, ef_construction=10);
+
 CREATE INDEX IF NOT EXISTS ix_users_username ON users (username);
 CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id);
 
-
 CREATE UNIQUE INDEX IF NOT EXISTS ux_service_accounts_name ON public.service_accounts (name);
 CREATE INDEX IF NOT EXISTS ix_service_accounts_id ON public.service_accounts (id);
+
