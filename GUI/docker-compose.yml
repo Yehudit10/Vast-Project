@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: src/vast/runner/Dockerfile
+      args:
+        USE_NETFREE: ${USE_NETFREE:-true}
     environment:
       - RUNNER_MODE=real
       - SQLITE_DB=/data/app.db
@@ -18,6 +20,8 @@ services:
     build:
       context: .
       dockerfile: src/vast/gateway/Dockerfile
+      args:
+        USE_NETFREE: ${USE_NETFREE:-true}
     environment:
       - RUNNER_ADDR=runner:50051
     ports:
@@ -60,16 +64,22 @@ services:
     depends_on:
       - prometheus
 
-
+ 
   desktop_app:
     build:
       context: .
       dockerfile: src/vast/desktop/Dockerfile
     environment:
+      - NO_VNC_PORT=8080
       - GATEWAY_URL=http://gateway:8000
       - DISPLAY=host.docker.internal:0.0
+    ports:
+      - "5900:5900"   
+      - "8080:8080"  
     depends_on:
       - gateway
       - runner
     volumes:
       - ./src/vast:/app/src/vast
+    restart: unless-stopped
+  
