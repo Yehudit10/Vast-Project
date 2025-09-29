@@ -49,11 +49,13 @@ docker build --no-cache -t ripeness-baseline:local -f deploy/Dockerfile .
 Connect the container to the same Docker network as the database (`reldb_airnet`):
 
 ```powershell
-docker run --rm --network reldb_airnet `
-  -e PYTHONUNBUFFERED=1 `
-  -e PGHOST=db -e PGPORT=5432 -e PGDATABASE=missions_db -e PGUSER=missions_user -e PGPASSWORD="Missions!ChangeMe123" `
-  -e SAMPLES_DIR="/work/samples" -e FRUIT_TYPE="apple" -e GREEN_LEAF_FLAG_THR=0.10 `
-  -v "$(Resolve-Path .\samples):/work/samples:ro" `
+docker run --rm --network agcloud-net `
+  -e PGHOST=db -e PGPORT=5432 -e PGDATABASE=missions_db `
+  -e PGUSER=missions_user -e PGPASSWORD="Missions!ChangeMe123" `
+  -e FRUIT_TYPE=banana `
+  -e MINIO_URL="http://miniohot:9000" `
+  -e MINIO_ACCESS_KEY=minioadmin -e MINIO_SECRET_KEY=minioadmin123 `
+  -e MINIO_BUCKET=imagery -e MINIO_PREFIX="banana/test" `
   ripeness-baseline:local
 ```
 
