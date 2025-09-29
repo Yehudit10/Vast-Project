@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS detections (
   mean_h        REAL, mean_s REAL, mean_v REAL,
   laplacian_var REAL,
   brown_ratio   REAL,
-  ripeness      VARCHAR(20) NOT NULL,   -- Unripe/Ripe/Overripe
+  ripeness      VARCHAR(20) NOT NULL,  
   quality_flags INTEGER NOT NULL,
   created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -28,3 +28,7 @@ CREATE TABLE IF NOT EXISTS weekly_rollups (
   mean_brown    REAL,
   PRIMARY KEY (fruit_type, iso_year, iso_week)
 );
+
+
+
+

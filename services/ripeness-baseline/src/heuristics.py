@@ -40,9 +40,23 @@ def compute_features(img_bgr: np.ndarray, mask: np.ndarray) -> Features:
     mask_cov = float(np.count_nonzero(m) / (img_bgr.shape[0] * img_bgr.shape[1]))
     return Features(mean_h, mean_s, mean_v, lap_var, brown_ratio, mask_cov)
 
-def classify_ripeness(f: Features, thr: dict) -> str:
-    if f.brown_ratio > thr["overripe_brown_ratio"] or f.mean_v < thr["overripe_min_v"]:
+def classify_ripeness(feat, thr):
+    # --- thresholds 
+    hmin = float(thr.get("unripe_h_min", 30))
+    hmax = float(thr.get("unripe_h_max", 95))
+    min_s = float(thr.get("unripe_min_s", 25))   
+    br_th = float(thr.get("overripe_brown_ratio", 0.12))
+    v_dark = float(thr.get("overripe_min_v", 55))
+
+    mean_h = float(getattr(feat, "mean_h"))
+    mean_s = float(getattr(feat, "mean_s", 0.0))
+    mean_v = float(getattr(feat, "mean_v"))
+    brown_ratio = float(getattr(feat, "brown_ratio"))
+
+    if brown_ratio >= br_th or (brown_ratio >= br_th*0.7 and mean_v <= v_dark and not (hmin <= mean_h <= hmax)):
         return "Overripe"
-    if thr["unripe_h_min"] <= f.mean_h <= thr["unripe_h_max"]:
+
+    if (hmin <= mean_h <= hmax) and (mean_s >= min_s):
         return "Unripe"
+
     return "Ripe"

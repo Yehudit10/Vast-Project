@@ -26,7 +26,7 @@ Quality flags are added to highlight questionable or low-confidence cases.
 - `src/` – Python pipeline (heuristics, quality flags, DB inserts)
 - `samples/` – Place your fruit images here (JPG/PNG/WebP)
 - `deploy/sql/` – Database schema, rollup queries, and view definitions
-- `docs/README.md` – Documentation
+- `README.md` – Documentation
 
 ---
 
@@ -96,7 +96,32 @@ docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
   psql -U missions_user -d missions_db -c `
 "TRUNCATE images, detections RESTART IDENTITY CASCADE;"
 ```
+### run the script to all the types...
 
+```powershell
+# Apple
+python .\src\evaluate_minio.py --minio-url http://127.0.0.1:9001 `
+  --access-key minioadmin --secret-key minioadmin123 `
+  --bucket imagery --prefix apple/test --fruit apple `
+  --thresholds-json .\thresholds.apple.json `
+  --outdir .\eval\apple_test
+
+# Banana
+python .\src\evaluate_minio.py --minio-url http://127.0.0.1:9001 `
+  --access-key minioadmin --secret-key minioadmin123 `
+  --bucket imagery --prefix banana/test --fruit banana `
+  --thresholds-json .\thresholds.banana.json `
+  --outdir .\eval\banana_test
+
+# Orange
+python .\src\evaluate_minio.py --minio-url http://127.0.0.1:9001 `
+  --access-key minioadmin --secret-key minioadmin123 `
+  --bucket imagery --prefix orange/test --fruit orange `
+  --thresholds-json .\thresholds.orange.json `
+  --outdir .\eval\orange_test
+
+
+```
 ---
 
 ## How It Works
@@ -129,5 +154,3 @@ docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
 
 - Thresholds and heuristics can be adjusted in `src/heuristics.py` for different fruit types or conditions.
 - For advanced deployment, see `deploy/k8s-cronjob.yaml` for Kubernetes.
-
-Good

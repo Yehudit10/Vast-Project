@@ -4,14 +4,15 @@ metadata:
   name: ripeness-rollup
   namespace: vectordb
 spec:
-  schedule: "0 3 * * 1"   # כל יום שני 03:00
+  schedule: "0 3 * * 1"   
   jobTemplate:
     spec:
       template:
         spec:
           containers:
           - name: ripeness
-            image: YOUR_REGISTRY/ripeness-baseline:latest
+            image: ripeness-baseline:local
+            imagePullPolicy: IfNotPresent
             env:
             - name: PGHOST
               valueFrom: { secretKeyRef: { name: pg-secret, key: host } }
@@ -23,8 +24,18 @@ spec:
               valueFrom: { secretKeyRef: { name: pg-secret, key: user } }
             - name: PGPASSWORD
               valueFrom: { secretKeyRef: { name: pg-secret, key: password } }
-            - name: SAMPLES_DIR
-              value: "/app/samples"
+      
             - name: FRUIT_TYPE
               value: "apple"
+
+            - name: MINIO_URL
+              value: "http://minio:9000"
+            - name: MINIO_BUCKET
+              value: "imagery"
+            - name: MINIO_PREFIX
+              value: "apple/test"
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: minio, key: accesskey } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: minio, key: secretkey } }
           restartPolicy: OnFailure

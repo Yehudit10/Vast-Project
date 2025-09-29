@@ -14,10 +14,10 @@ SAMPLES_DIR = os.getenv("SAMPLES_DIR", "./samples")
 FRUIT_TYPE  = os.getenv("FRUIT_TYPE", "apple")
 
 THRESHOLDS = {
-    "overripe_brown_ratio": 0.30,
-    "overripe_min_v": 70,       
-    "unripe_h_min": 40,
-    "unripe_h_max": 90,
+    "overripe_brown_ratio": 0.10,
+    "overripe_min_v": 60,       
+    "unripe_h_min": 30,
+    "unripe_h_max": 95,
     "low_light_v": 60,
     "blurry_lap_var": 80.0,
     "small_mask_cov": 0.20,
