@@ -189,7 +189,8 @@ CREATE TABLE IF NOT EXISTS inference_logs (
     score NUMERIC(5,4) NOT NULL,
     latency_ms NUMERIC(8,3) NOT NULL,
     client_ip TEXT,
-    error TEXT
+    error TEXT,
+    image_url TEXT
 );
 
 
