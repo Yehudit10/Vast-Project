@@ -11,8 +11,7 @@ WITH base AS (
     AVG(d.brown_ratio)::REAL           AS mean_brown
   FROM images i
   JOIN detections d USING(image_id)
-  -- לא חייבים לסנן בזמן ריצה, אבל השארתי חלון 21 יום כדי לא לגרד היסטוריה עצומה בכל הרצה
-  WHERE i.captured_at >= NOW() - INTERVAL '21 days'
+  WHERE i.captured_at >= NOW() - INTERVAL '7 days'
   GROUP BY 1,2,3
 )
 INSERT INTO weekly_rollups
