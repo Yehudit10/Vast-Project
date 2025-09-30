@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS training_runs (
     seed INT NOT NULL
 );
 
--- Inferenceevent_logs_sensors logs: one row per API request
+-- Inferenceevent_logs_sensors, instead of Inference logs:
 CREATE TABLE IF NOT EXISTS inference_logs (
     id BIGSERIAL PRIMARY KEY,
     ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
