@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-import os, io, time, hashlib, threading, queue, signal, json, uuid, errno
+# ---------- Imports ----------
+import os, io, time, hashlib, threading, queue, signal, json, uuid, errno, pathlib, mimetypes
 from datetime import datetime, timezone
 from typing import Tuple
+from urllib.parse import quote
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -13,10 +15,6 @@ from paho.mqtt.client import CallbackAPIVersion
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import mimetypes
-from urllib.parse import quote
-
-
 
 try:
     from mqtt_ingest.config import cfg
@@ -32,15 +30,18 @@ BUCKET           = os.getenv("S3_BUCKET", "imagery")
 MQTT_BROKER      = os.getenv("MQTT_BROKER", "mosquitto")
 CLIENT_ID        = os.getenv("MQTT_CLIENT_ID", "mqtt_ingest")
 DEFAULT_PREFIX   = os.getenv("DEFAULT_PREFIX", "camera-01")
-MQTT_PUB_TOPIC   = os.getenv("MQTT_PUB_TOPIC", "imagery/ingested")
 
 FORCE_DEVICE_ID  = (os.getenv("DEVICE_ID", "").strip() or None)
 
-# --- Web Service / Dummy mode ---
-DB_API_BASE      = os.getenv("DB_API_BASE", "").strip()
-DB_API_TOKEN     = os.getenv("DB_API_TOKEN", "").strip()
-OUTBOX_DIR       = os.getenv("OUTBOX_DIR", "/app/outbox")
-DUMMY_DB         = os.getenv("DUMMY_DB", "1") == "1"
+DB_API_BASE        = os.getenv("DB_API_BASE", "").strip()
+DB_API_TOKEN       = os.getenv("DB_API_TOKEN", "").strip()
+DB_API_AUTH_MODE   = os.getenv("DB_API_AUTH_MODE", "service").lower()
+DB_API_TOKEN_FILE  = os.getenv("DB_API_TOKEN_FILE", "/app/secret/db_api_token")
+DB_API_SERVICE_NAME= os.getenv("DB_API_SERVICE_NAME", "mqtt_ingest").strip() or "mqtt_ingest"
+OUTBOX_DIR         = os.getenv("OUTBOX_DIR", "/app/outbox")
+DUMMY_DB           = os.getenv("DUMMY_DB", "1") == "1"
+
+INGEST_QUEUE_MAXSIZE = int(os.getenv("INGEST_QUEUE_MAXSIZE", "1000"))
 
 # ---------- NUMERIC FROM CONFIG ----------
 MP_THRESHOLD   = cfg.MP_THRESHOLD
@@ -109,41 +110,49 @@ def normalize_content_type(ctype: str, filename: str) -> str:
     return guess or "application/octet-stream"
 
 def parse_topic(topic: str) -> dict:
-    """
-    MQTT/imagery/<camera>/<epoch_ms>/<ctype_safe>/<filename>
-    """
-    parts = topic.split("/")
+    parts = [p for p in topic.split("/") if p]
+    now = now_ms()
     result = {
         "camera": DEFAULT_PREFIX,
-        "publish_ts_ms": now_ms(),
+        "publish_ts_ms": now,
         "content_type": "application/octet-stream",
-        "filename": f"{now_ms()}.bin",
+        "filename": f"{now}.bin",
     }
+
     try:
         i = parts.index("imagery")
-        camera = parts[i + 1]
-        pub_ts_ms = int(parts[i + 2])
-        ctype_safe = parts[i + 3]
-        filename = parts[i + 4]
-        result.update({
-            "camera": camera,
-            "publish_ts_ms": pub_ts_ms,
-            "content_type": ctype_safe.replace("_", "/"),
-            "filename": filename,
-        })
-    except Exception:
-        pass
+    except ValueError:
+        i = -1
+
+    if i != -1:
+        # camera
+        if len(parts) > i + 1 and parts[i + 1]:
+            result["camera"] = parts[i + 1]
+
+        # publish_ts_ms
+        if len(parts) > i + 2 and parts[i + 2]:
+            try:
+                ts = int(parts[i + 2])
+                if ts > 0:
+                    result["publish_ts_ms"] = ts
+            except ValueError:
+                pass 
+
+        if len(parts) > i + 3 and parts[i + 3]:
+            result["content_type"] = parts[i + 3].replace("_", "/")
+
+        if len(parts) > i + 4 and parts[i + 4]:
+            result["filename"] = parts[i + 4]
 
     result["content_type"] = normalize_content_type(result["content_type"], result["filename"])
-
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
     key = f"{result['camera']}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
-
     result["key"] = key
     result["device_id"] = result["camera"]
     result["image_id"] = stem(result["filename"]) or uuid.uuid4().hex
     result["capture_ts_iso"] = iso_utc(result["publish_ts_ms"])
     return result
+
 
 # ---------- Uploader ----------
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
@@ -165,7 +174,6 @@ def _ensure_dir(path: str):
             raise
 
 def _safe_file_id(meta: dict) -> str:
-    
     image_id = meta.get("image_id") or meta.get("metadata", {}).get("image_id")
     if not image_id:
         image_id = stem(meta.get("object_key", "") or uuid.uuid4().hex)
@@ -182,17 +190,78 @@ def save_to_outbox(meta: dict) -> None:
     except Exception as e:
         print(f"[OUTBOX][ERROR] {e}", flush=True)
 
+# ---------- Token Bootstrap ----------
+def _safe_join_url(base: str, path: str) -> str:
+    return f"{base.rstrip('/')}/{path.lstrip('/')}"
+
+def _read_token_from_file(path: str) -> str | None:
+    try:
+        p = pathlib.Path(path)
+        if p.exists():
+            t = p.read_text(encoding="utf-8").strip()
+            return t or None
+    except Exception:
+        pass
+    return None
+
+def _write_token_to_file(path: str, token: str) -> None:
+    p = pathlib.Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(token, encoding="utf-8")
+
+def _fetch_token_via_dev_bootstrap(base: str, retries: int = 3, backoff: float = 0.8) -> str | None:
+    url = _safe_join_url(base, "/auth/_dev_bootstrap")
+    payload = {"service_name": DB_API_SERVICE_NAME, "rotate_if_exists": True}
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.post(url, json=payload, timeout=10)
+            if r.status_code not in (200, 201):
+                time.sleep(backoff * attempt)
+                continue
+            data = r.json()
+            raw = (data.get("service_account", {}) or {}).get("raw_token") \
+               or (data.get("service_account", {}) or {}).get("token")
+            if raw and isinstance(raw, str) and raw.strip() and "***" not in raw:
+                return raw.strip()
+        except Exception:
+            time.sleep(backoff * attempt)
+    return None
+
+def get_or_bootstrap_token() -> str | None:
+    if DB_API_TOKEN and DB_API_TOKEN.lower() != "auto":
+        return DB_API_TOKEN
+    if not DB_API_BASE:
+        print("[BOOTSTRAP][WARN] DB_API_BASE not set; cannot bootstrap token.", flush=True)
+        return None
+    token = _read_token_from_file(DB_API_TOKEN_FILE)
+    if token:
+        return token
+    token = _fetch_token_via_dev_bootstrap(DB_API_BASE)
+    if token:
+        _write_token_to_file(DB_API_TOKEN_FILE, token)
+        print(f"[BOOTSTRAP] wrote service token to {DB_API_TOKEN_FILE}", flush=True)
+        return token
+    print("[BOOTSTRAP][ERROR] Failed to obtain service token (dev bootstrap).", flush=True)
+    return None
+
 # ---------- Web Service client ----------
 _http = requests.Session()
-if DB_API_TOKEN:
-    _http.headers.update({"Authorization": f"Bearer {DB_API_TOKEN}"})
+svc_token = get_or_bootstrap_token()
+if svc_token:
+    if DB_API_AUTH_MODE == "service":
+        _http.headers.update({"X-Service-Token": svc_token})
+    else:
+        _http.headers.update({"Authorization": f"Bearer {svc_token}"})
 _http.headers.update({"Content-Type": "application/json"})
 _http.mount("http://",  HTTPAdapter(max_retries=Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])))
 _http.mount("https://", HTTPAdapter(max_retries=Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])))
 
 def write_db(meta: dict) -> bool:
     if DUMMY_DB:
-        print(f"[DB-DUMMY] would POST to {DB_API_BASE or 'N/A'}: {json.dumps(meta, ensure_ascii=False)}", flush=True)
+        print(
+            f"[DB-DUMMY] would POST to {DB_API_BASE or 'N/A'}: {json.dumps(meta, ensure_ascii=False)}",
+            flush=True,
+        )
         return True
 
     if not DB_API_BASE:
@@ -213,26 +282,25 @@ def write_db(meta: dict) -> bool:
             ok = 200 <= r.status_code < 300
             print(f"[DB] PUT {'ok' if ok else r.status_code}", flush=True)
             return ok
+
         print(f"[DB] POST failed: {r.status_code} {r.text[:200]}", flush=True)
         return False
+
     except requests.ConnectionError as e:
         print(f"[DB][WARN] API not reachable ({base}): {e}", flush=True)
         return False
+
     except requests.Timeout as e:
         print(f"[DB][WARN] API timeout ({base}): {e}", flush=True)
         return False
+
     except requests.RequestException as e:
         print(f"[DB][ERROR] {e}", flush=True)
         return False
-# ---------- MQTT Publisher client ----------
-_pub_client: mqtt.Client | None = None
 
-def publish_ingested(meta: dict) -> None:
-    if _pub_client is not None:
-        _pub_client.publish(MQTT_PUB_TOPIC, json.dumps(meta, ensure_ascii=False), qos=1)
 
 # ---------- Worker Queue ----------
-q_in: "queue.Queue[Tuple[str, bytes, int]]" = queue.Queue()
+q_in: "queue.Queue[Tuple[str, bytes, int]]" = queue.Queue(maxsize=INGEST_QUEUE_MAXSIZE)
 _shutdown = threading.Event()
 
 def worker():
@@ -241,7 +309,6 @@ def worker():
             topic, payload, _ = q_in.get(timeout=0.5)
         except queue.Empty:
             continue
-
         info = parse_topic(topic)
         key = info["key"]
         try:
@@ -249,14 +316,13 @@ def worker():
             s3_uri = f"s3://{BUCKET}/{key}"
             etag_real = get_s3_etag(BUCKET, key)
             device_id = FORCE_DEVICE_ID or None
-
             db_row = {
                 "bucket": BUCKET,
                 "object_key": key,
                 "content_type": info["content_type"],
                 "size_bytes": len(payload),
                 "etag": etag_real or checksum,
-                "device_id": device_id,        
+                "device_id": device_id,
                 "mission_id": info.get("mission_id"),
                 "tile_id": info.get("tile_id"),
                 "footprint": info.get("footprint_wkt"),
@@ -271,12 +337,9 @@ def worker():
                 },
             }
 
-            publish_ingested(db_row)
-
             ok = write_db(db_row)
             if not ok and not DUMMY_DB:
                 save_to_outbox(db_row)
-
         except Exception as e:
             print(f"[ERROR] upload failed for key={key}: {e}", flush=True)
         finally:
@@ -303,11 +366,9 @@ def main():
     except Exception:
         s3.create_bucket(Bucket=BUCKET)
 
-    # Workers
     for _ in range(max(2, INGEST_WORKERS)):
         threading.Thread(target=worker, daemon=True).start()
 
-    # MQTT subscriber
     client = mqtt.Client(
         CallbackAPIVersion.VERSION2,
         client_id=CLIENT_ID,
@@ -322,16 +383,6 @@ def main():
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
     client.loop_start()
 
-    # MQTT publisher 
-    global _pub_client
-    _pub_client = mqtt.Client(
-        CallbackAPIVersion.VERSION2,
-        client_id=f"{CLIENT_ID}-pub",
-        protocol=mqtt.MQTTv5,
-    )
-    _pub_client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
-    _pub_client.loop_start()
-
     print(
         f"INGEST ready. mp_threshold={MP_THRESHOLD}, part={PART_SIZE}, conc={MAX_CONC}, workers={INGEST_WORKERS}",
         flush=True
@@ -341,9 +392,6 @@ def main():
         _shutdown.set()
         client.loop_stop()
         client.disconnect()
-        if _pub_client is not None:
-            _pub_client.loop_stop()
-            _pub_client.disconnect()
 
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
