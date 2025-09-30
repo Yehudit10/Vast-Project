@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS event_logs_sensors(
     start_ts   timestamptz NOT NULL DEFAULT now(),
     end_ts     timestamptz NULL,
     details    jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT event_logs_senosrs_end_after_start
+    CONSTRAINT event_logs_sensors_end_after_start
         CHECK (end_ts IS NULL OR end_ts >= start_ts)
 );
 
@@ -246,6 +246,6 @@ CREATE INDEX IF NOT EXISTS idx_infer_ts ON inference_logs (ts);
 CREATE INDEX IF NOT EXISTS idx_infer_fruit ON inference_logs (fruit_type);
 
 -- Sensors logs
-CREATE INDEX IF NOT EXISTS ix_event_logs_sensosrs_device_start ON event_logs_sensors (device_id, start_ts);
-CREATE INDEX IF NOT EXISTS ix_event_logs_sensosrs_start_brin   ON event_logs_sensors USING BRIN (start_ts);
-CREATE INDEX IF NOT EXISTS ix_event_logs_sensosrs_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sensors (device_id, start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
