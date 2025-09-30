@@ -1,4 +1,3 @@
-*.env
 *.crt
 storage_with_mqtt/secrets/
 storage_with_mqtt/mqtt_images/secrets/

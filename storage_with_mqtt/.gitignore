@@ -6,8 +6,6 @@ __pycache__/
 
 # Virtualenv
 venv/
-.env
-.env.*
 
 # Certificates
 *.crt
