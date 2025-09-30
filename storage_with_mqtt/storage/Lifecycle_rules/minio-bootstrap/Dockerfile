@@ -1,7 +1,7 @@
 FROM alpine:3.19
 
 # ===== Deps & Binaries =====
-RUN apk add --no-cache bash curl ca-certificates supervisor && \
+RUN apk add --no-cache bash curl ca-certificates supervisor dos2unix && \
     update-ca-certificates && \
     curl -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && \
     curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && \
@@ -43,7 +43,6 @@ mc version enable "${MC_ALIAS_HOT}/imagery"   || true
 mc version enable "${MC_ALIAS_HOT}/telemetry" || true
 
 echo "[bootstrap] ensuring remote tiers exist on HOT..."
-# imagery → COLD/imagery
 if ! mc ilm tier ls "${MC_ALIAS_HOT}" --json | grep -q '"Name":"COLD_IMAGERY"'; then
   mc ilm tier add s3 "${MC_ALIAS_HOT}" COLD_IMAGERY \
     --endpoint   "${COLD_ENDPOINT}" \
@@ -52,7 +51,6 @@ if ! mc ilm tier ls "${MC_ALIAS_HOT}" --json | grep -q '"Name":"COLD_IMAGERY"'; 
     --bucket imagery \
     --region us-east-1 || true
 fi
-# telemetry → COLD/telemetry
 if ! mc ilm tier ls "${MC_ALIAS_HOT}" --json | grep -q '"Name":"COLD_TELEMETRY"'; then
   mc ilm tier add s3 "${MC_ALIAS_HOT}" COLD_TELEMETRY \
     --endpoint   "${COLD_ENDPOINT}" \
@@ -63,27 +61,17 @@ if ! mc ilm tier ls "${MC_ALIAS_HOT}" --json | grep -q '"Name":"COLD_TELEMETRY"'
 fi
 
 echo "[bootstrap] applying lifecycle policies (per bucket)..."
-
-# --- IMAGERY ---
 mc ilm rule rm "${MC_ALIAS_HOT}/imagery" --all --force || true
 if [ -s "/config/lifecycle-imagery.json" ]; then
   mc ilm import "${MC_ALIAS_HOT}/imagery" < "/config/lifecycle-imagery.json" || true
 else
-  echo "[bootstrap] /config/lifecycle-imagery.json not found; applying fallback"
-  mc ilm rule add "${MC_ALIAS_HOT}/imagery" \
-    --transition-days 7 \
-    --transition-tier COLD_IMAGERY || true
+  mc ilm rule add "${MC_ALIAS_HOT}/imagery" --transition-days 7 --transition-tier COLD_IMAGERY || true
 fi
-
-# --- TELEMETRY ---
 mc ilm rule rm "${MC_ALIAS_HOT}/telemetry" --all --force || true
 if [ -s "/config/lifecycle-telemetry.json" ]; then
   mc ilm import "${MC_ALIAS_HOT}/telemetry" < "/config/lifecycle-telemetry.json" || true
 else
-  echo "[bootstrap] /config/lifecycle-telemetry.json not found; applying fallback"
-  mc ilm rule add "${MC_ALIAS_HOT}/telemetry" \
-    --transition-days 7 \
-    --transition-tier COLD_TELEMETRY || true
+  mc ilm rule add "${MC_ALIAS_HOT}/telemetry" --transition-days 7 --transition-tier COLD_TELEMETRY || true
 fi
 
 echo "[bootstrap] current rules:"
@@ -91,6 +79,9 @@ mc ilm rule ls "${MC_ALIAS_HOT}/imagery"   || true
 mc ilm rule ls "${MC_ALIAS_HOT}/telemetry" || true
 echo "[bootstrap] DONE."
 SH
+
+# ===== Convert init.sh to LF =====
+RUN dos2unix /entrypoint/init.sh
 
 # ===== supervisord.conf =====
 RUN cat > /etc/supervisord.conf <<'CONF'

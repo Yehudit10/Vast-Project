@@ -3,3 +3,6 @@
 storage_with_mqtt/secrets/
 storage_with_mqtt/mqtt_images/secrets/
 MQTT_IMAGES/secrets/
+
+
+# docker pull bitnamilegacy/kafka
