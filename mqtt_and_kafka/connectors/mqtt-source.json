@@ -1,4 +1,6 @@
 {
+  "name": "mqtt-source",
+  "config": {
     "connector.class": "io.confluent.connect.mqtt.MqttSourceConnector",
     "tasks.max": "1",
   
@@ -26,4 +28,4 @@
     "confluent.topic.replication.factor": "1",
     "producer.override.bootstrap.servers": "kafka:9092"
   }
-  
+}
