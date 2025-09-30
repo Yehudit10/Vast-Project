@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS training_runs (
     seed INT NOT NULL
 );
 
--- Inference logs: one row per API request
+-- Inferenceevent_logs_sensors, instead of Inference logs:
 CREATE TABLE IF NOT EXISTS inference_logs (
     id BIGSERIAL PRIMARY KEY,
     ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -192,6 +192,20 @@ CREATE TABLE IF NOT EXISTS inference_logs (
     error TEXT,
     image_url TEXT
 );
+
+-- Sensor event logs table.
+CREATE TABLE IF NOT EXISTS event_logs_sensors(
+    id         bigserial PRIMARY KEY,
+    device_id  text        NOT NULL REFERENCES devices(device_id),
+    issue_type text        NOT NULL,
+    severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
+    start_ts   timestamptz NOT NULL DEFAULT now(),
+    end_ts     timestamptz NULL,
+    details    jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    CONSTRAINT event_logs_sensors_end_after_start
+        CHECK (end_ts IS NULL OR end_ts >= start_ts)
+);
+
 
 
 -- === Indexes ===
@@ -231,3 +245,7 @@ CREATE INDEX IF NOT EXISTS ix_service_accounts_id ON public.service_accounts (id
 CREATE INDEX IF NOT EXISTS idx_infer_ts ON inference_logs (ts);
 CREATE INDEX IF NOT EXISTS idx_infer_fruit ON inference_logs (fruit_type);
 
+-- Sensors logs
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sensors (device_id, start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
