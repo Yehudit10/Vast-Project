@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QSizePoli
 from orthophoto_canvas.ui.viewer_factory import create_orthophoto_viewer
 from vast.orthophoto_canvas.ui.sensors_layer import SensorLayer, add_sensors_by_gps_bulk
 from orthophoto_canvas.ag_io import sensors_api
+import os
 
 class HomeView(QWidget):
     openSensorsRequested    = pyqtSignal()
@@ -31,7 +32,9 @@ class HomeView(QWidget):
         root.addLayout(grid)
 
         # --- Grafana panels (top row) ---
-        base = "http://localhost:3000"
+        grafana_host = os.getenv("GRAFANA_HOST", "grafana")  # Docker service name
+        base = f"http://{grafana_host}:3000"
+
         panel_urls = [
             QUrl(f"{base}/d-solo/agcloud-sensors/sensors?orgId=1&panelId=1&from=now-6h&to=now&refresh=10s&theme=light"),
             QUrl(f"{base}/d-solo/agcloud-sensors/sensors?orgId=1&panelId=2&from=now-6h&to=now&refresh=10s&theme=light"),
@@ -50,6 +53,10 @@ class HomeView(QWidget):
         grid.addWidget(self.viewer, 1, 0, 1, 2)
 
         # Real sensors overlay
+        # Ensure GATEWAY_URL points to the gateway container
+        gateway_url = os.getenv("GATEWAY_URL", "http://gateway:8000")
+        sensors_api.GATEWAY_URL = gateway_url
+
         rows = sensors_api.get_sensors()
         self.sensor_layer = SensorLayer(self.viewer)
         add_sensors_by_gps_bulk(

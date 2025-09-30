@@ -1,11 +1,11 @@
 services:
-  mosquitto:
+  large-mosquitto:
     image: eclipse-mosquitto:2
     restart: unless-stopped
     volumes:
       - ./mqtt_images/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
     ports:
-      - "1883:1883"
+      - "1885:1885"
 
   # ===== MinIO: hot + cold + bootstrap =====
   minio-hot:
@@ -69,34 +69,32 @@ services:
     networks: [minionet]
     restart: unless-stopped
 
-  # ===== Ingestor (מדבר עם ה-HOT) =====
+
   mqtt_ingest:
     build:
       context: ./mqtt_images/mqtt_ingest
     env_file:
-     - ./storage/combined_minio_setup/.env   # <<< מוסיף את הקובץ
-    
+      - ./storage/combined_minio_setup/.env
     environment:
-      - MINIO_ENDPOINT=http://minio-hot:9000
-      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
-      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
-      - S3_BUCKET=imagery
-      - MULTIPART_THRESHOLD_BYTES=5242880
-      - PART_SIZE_BYTES=5242880
-      - MULTIPART_MAX_CONCURRENCY=32
-      - MQTT_BROKER=mosquitto
-      - MQTT_PORT=1883
-      - MQTT_TOPIC=MQTT/imagery/#
-      - MQTT_PUB_TOPIC=imagery/ingested
-      - DUMMY_DB=0
-      - DB_API_BASE=http://host.docker.internal:8080
-      - DB_API_TOKEN=dev-token
-      - OUTBOX_DIR=/app/outbox
-      - INGEST_WORKERS=8
+      MINIO_ENDPOINT: http://minio-hot:9000
+      S3_BUCKET: imagery
+      MULTIPART_THRESHOLD_BYTES: 5242880
+      PART_SIZE_BYTES: 5242880
+      MULTIPART_MAX_CONCURRENCY: 32
+      MQTT_BROKER: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/imagery/#
+      MQTT_PUB_TOPIC: imagery/ingested
+      DUMMY_DB: 0
+      DB_API_BASE: http://host.docker.internal:8080
+      DB_API_TOKEN: dev-token
+      OUTBOX_DIR: /app/outbox
+      INGEST_WORKERS: 8
+      
     volumes:
       - ./mqtt_images/outbox:/app/outbox
     depends_on:
-      mosquitto:
+      large-mosquitto:
         condition: service_started
       minio-hot:
         condition: service_healthy
@@ -107,12 +105,13 @@ services:
       - minionet
     restart: unless-stopped
 
+
   mqtt_publisher:
     build:
       context: ./mqtt_images/mqtt_publisher
     environment:
-      - MQTT_HOST=mosquitto
-      - MQTT_PORT=1883
+      - MQTT_HOST=large-mosquitto
+      - MQTT_PORT=1885
       - MQTT_TOPIC_BASE=MQTT/imagery
       - IMAGES_DIR=/images
       - CAMERA_ID=camera-01
@@ -123,7 +122,7 @@ services:
     volumes:
       - ./mqtt_images/data/real_images:/images:ro
     depends_on:
-      - mosquitto
+      - large-mosquitto
     restart: "no"
 
   # ===== Monitoring (הועבר ל-storage/monitoring) =====
@@ -162,3 +161,6 @@ networks:
 volumes:
   minio-hot-data: {}
   minio-cold-data: {}
+
+
+
