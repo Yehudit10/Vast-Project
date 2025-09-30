@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS inference_logs (
 
 -- Sensor event logs table.
 CREATE TABLE IF NOT EXISTS event_logs_sensors(
-    log_id     bigserial PRIMARY KEY,
+    id         bigserial PRIMARY KEY,
     device_id  text        NOT NULL REFERENCES devices(device_id),
     issue_type text        NOT NULL,
     severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
