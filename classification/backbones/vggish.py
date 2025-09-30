@@ -5,7 +5,6 @@ from core.model_io import ensure_numpy_1d
 import torch
 
 try:
-    # torchvggish==0.2 layout
     from torchvggish import vggish, vggish_input
     _HAS_VGGISH = True
 except Exception:
@@ -53,7 +52,6 @@ def _vggish_embed_window(wav: np.ndarray, sr: int, device: str) -> np.ndarray:
     elif ex.ndim == 4:
         x_np = ex                          # already [N,1,96,64]
     else:
-        # Last resort: squeeze extras then enforce channel dim
         ex = np.squeeze(ex)
         if ex.ndim == 3:
             x_np = ex[:, None, :, :]

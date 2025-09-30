@@ -106,8 +106,6 @@ def _jsonify(v: Any) -> psycopg2.extras.Json:
 
 def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
     data = dict(row)
-    # if "audioset_topk_json" in data and data["audioset_topk_json"] is not None:
-    #     data["audioset_topk_json"] = _jsonify(data.get("audioset_topk_json"))
     if "head_probs_json" in data and data["head_probs_json"] is not None:
         data["head_probs_json"] = _jsonify(data.get("head_probs_json"))
 
