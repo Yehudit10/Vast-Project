@@ -1,5 +1,5 @@
 # Bitnami Kafka single-broker (KRaft)
-FROM bitnami/kafka:3.7
+FROM bitnamilegacy/kafka:latest
 
 USER root
 

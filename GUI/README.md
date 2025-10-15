@@ -119,6 +119,7 @@ docker compose up -d prometheus grafana
 docker compose ps
 ```
 
+
 ### Terminal A – Runner (gRPC)
 ```bash
 .\.venv\Scripts\Activate.ps1
@@ -269,4 +270,3 @@ python -m vast.services.sensors_metrics_app
 .\.venv\Scripts\Activate.ps1
 $env:GATEWAY_URL = "http://127.0.0.1:9001"
 python .\src\vast\main.py
-
