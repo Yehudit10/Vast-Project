@@ -1,0 +1,11 @@
+{
+    "Rules": [
+      {
+        "ID": "seven-days-telemetry",
+        "Status": "Enabled",
+        "Filter": { "Prefix": "" },
+        "Transition": { "Days": 7, "StorageClass": "COLD_TELEMETRY" }
+      }
+    ]
+  }
+  

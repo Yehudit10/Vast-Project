@@ -1,0 +1,63 @@
+groups:
+  - name: postgres_alerts
+    interval: 30s
+
+    rules:
+      # 1) Very high WAL rate (abnormal traffic)
+      - alert: HighWalThroughput
+        expr: pg:wal_bytes:rate_per_s > 5e6   # > ~5MB/s for 5 minutes
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High WAL throughput"
+          description: "WAL rate {{ $value | humanize }} B/s above threshold for 5 minutes"
+
+      # 2) Almost no WAL (risk: system 'frozen' or no traffic)
+      - alert: LowWalThroughput
+        expr: pg:wal_bytes:rate_per_s < 1000  # < 1KB/s
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Very low WAL throughput"
+          description: "Almost no WAL writes for 10 minutes"
+
+      # 3) Replication delay (if replicas exist)
+      - alert: ReplicationLagSecondsHigh
+        expr: pg:replication_lag_seconds > 120
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Replication lag high (seconds)"
+          description: "Replication lag higher than 120 seconds for 5 minutes"
+
+      - alert: ReplicationLagBytesHigh
+        expr: pg:replication_lag_bytes > 50e6  # > ~50MB
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Replication lag high (bytes)"
+          description: "Replication lag greater than 50MB for 5 minutes"
+
+      # 4) Low BRIN efficiency
+      - alert: BrinHitRatioLow
+        expr: pg:brin_hit_ratio < 0.6
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BRIN hit ratio low"
+          description: "BRIN hit ratio dropped below 60% for 10 minutes"
+
+      # 5) Exporter down
+      - alert: PostgresExporterDown
+        expr: up{job="postgres_exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "postgres_exporter down"
+          description: "Exporter not available for 2 minutes"
