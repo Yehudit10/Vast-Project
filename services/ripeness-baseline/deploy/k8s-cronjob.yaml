@@ -4,38 +4,58 @@ metadata:
   name: ripeness-rollup
   namespace: vectordb
 spec:
-  schedule: "0 3 * * 1"   
+  schedule: "0 3 * * 1"          
+  timeZone: "Asia/Jerusalem"
   jobTemplate:
     spec:
       template:
         spec:
+          restartPolicy: OnFailure
           containers:
           - name: ripeness
             image: ripeness-baseline:local
-            imagePullPolicy: IfNotPresent
+            imagePullPolicy: Never
             env:
             - name: PGHOST
-              valueFrom: { secretKeyRef: { name: pg-secret, key: host } }
+              value: "192.168.1.124"  
             - name: PGPORT
               value: "5432"
             - name: PGDATABASE
-              valueFrom: { secretKeyRef: { name: pg-secret, key: db } }
+              value: "missions_db"
             - name: PGUSER
-              valueFrom: { secretKeyRef: { name: pg-secret, key: user } }
+              value: "missions_user"
             - name: PGPASSWORD
-              valueFrom: { secretKeyRef: { name: pg-secret, key: password } }
-      
-            - name: FRUIT_TYPE
-              value: "apple"
+              value: "Missions!ChangeMe123"
+            - name: PGSSLMODE
+              value: "disable"
 
             - name: MINIO_URL
-              value: "http://minio:9000"
+              value: "http://REPLACE_WITH_WINDOWS_IP:9001"
             - name: MINIO_BUCKET
               value: "imagery"
-            - name: MINIO_PREFIX
-              value: "apple/test"
             - name: MINIO_ACCESS_KEY
-              valueFrom: { secretKeyRef: { name: minio, key: accesskey } }
+              value: "minioadmin"
             - name: MINIO_SECRET_KEY
-              valueFrom: { secretKeyRef: { name: minio, key: secretkey } }
-          restartPolicy: OnFailure
+              value: "minioadmin123"
+
+            - name: FRUIT_LIST
+              value: "apple,banana,pear"
+            - name: DEFAULT_PREFIX
+              value: "test"  
+
+            command: ["/bin/sh","-lc"]
+            args:
+              - |
+                set -eu
+                fruits=$(printf "%s" "$FRUIT_LIST" | tr ',' ' ')
+                for f in $fruits; do
+                  export FRUIT_TYPE="$f"
+                  if [ -n "${DEFAULT_PREFIX:-}" ]; then
+                    export MINIO_PREFIX="${f}/${DEFAULT_PREFIX}"
+                  else
+                    export MINIO_PREFIX="${f}/test"
+                  fi
+                  echo "=== Running $FRUIT_TYPE (prefix=$MINIO_PREFIX) ==="
+                  python -u /app/src/main.py
+                done
+
