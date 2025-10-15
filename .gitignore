@@ -3,4 +3,9 @@ data/rover_samples/**
 
 # Ignore data payloads
 /data/
+*.env
+*.crt
+storage_with_mqtt/secrets/
+storage_with_mqtt/mqtt_images/secrets/
+MQTT_IMAGES/secrets/
 

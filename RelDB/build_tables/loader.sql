@@ -121,3 +121,13 @@ SELECT
   md5(g::text),
   CASE WHEN random()<0.3 THEN (100+g) ELSE -1 END
 FROM generate_series(1,100) g;
+
+
+-- Insert 1000 random embeddings
+INSERT INTO embeddings (vec)
+SELECT ARRAY(
+    SELECT random()
+    FROM generate_series(1, 784)
+)
+FROM generate_series(1, 1000)
+ON CONFLICT DO NOTHING;
