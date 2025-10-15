@@ -24,7 +24,6 @@ Quality flags are added to highlight questionable or low-confidence cases.
 ## Project Structure
 
 - `src/` – Python pipeline (heuristics, quality flags, DB inserts)
-- `samples/` – Place your fruit images here (JPG/PNG/WebP)
 - `deploy/sql/` – Database schema, rollup queries, and view definitions
 - `README.md` – Documentation
 
@@ -51,11 +50,10 @@ Connect the container to the same Docker network as the database (`reldb_airnet`
 ```powershell
 docker run --rm --network agcloud-net `
   -e PGHOST=db -e PGPORT=5432 -e PGDATABASE=missions_db `
-  -e PGUSER=missions_user -e PGPASSWORD="Missions!ChangeMe123" `
-  -e FRUIT_TYPE=banana `
-  -e MINIO_URL="http://miniohot:9000" `
+  -e PGUSER=missions_user -e PGPASSWORD="pg123" `
+  -e LOOKBACK_DAYS=7 `
+  -e MINIO_URL="http://minio-hot-1:9000" `
   -e MINIO_ACCESS_KEY=minioadmin -e MINIO_SECRET_KEY=minioadmin123 `
-  -e MINIO_BUCKET=imagery -e MINIO_PREFIX="banana/test" `
   ripeness-baseline:local
 ```
 
@@ -71,7 +69,7 @@ Done. Inserted detections and updated weekly_rollups.
 ### View Results Per Image (Full History)
 
 ```powershell
-docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
+docker exec -e PGPASSWORD="pg123" -it db `
   psql -U missions_user -d missions_db -c `
 "SELECT d.detection_id,
         i.source_path,
@@ -86,19 +84,12 @@ docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
 ### View Weekly Summaries (View Table)
 
 ```powershell
-docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
+docker exec -e PGPASSWORD="pg123" -it db `
   psql -U missions_user -d missions_db -c `
 "SELECT * FROM v_weekly_ripeness ORDER BY iso_year, iso_week;"
 ```
 
-### Reset Results Before Rerun (Optional)
-
-```powershell
-docker exec -e PGPASSWORD="Missions!ChangeMe123" -it db `
-  psql -U missions_user -d missions_db -c `
-"TRUNCATE images, detections RESTART IDENTITY CASCADE;"
-```
-### run the script to all the types...
+### Run Evaluation Script for All Fruit Types...
 
 ```powershell
 # Apple
@@ -144,7 +135,6 @@ python .\src\evaluate_minio.py --minio-url http://127.0.0.1:9001 `
 
 ## Notes
 
-- Add your images under `samples/` before running the container.
 - You can change the fruit type (`FRUIT_TYPE`) or green leaf flag threshold (`GREEN_LEAF_FLAG_THR`) as needed.
 - Weekly rollups aggregate detections by `(fruit_type, iso_year, iso_week)`.
 - Each result includes quality flags (bitmask) and ripeness classification.
