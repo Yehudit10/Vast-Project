@@ -1,0 +1,21 @@
+// query.proto
+syntax = "proto3";
+package query;
+
+message Plan { string json = 1; }
+
+// Extra sensor fields live in props to stay flexible
+message Sensor {
+  string sensor_id = 1;
+  double lat       = 2;
+  double lon       = 3;
+  map<string, string> props = 4; // e.g. battery, status, name...
+}
+
+message SensorList {
+  repeated Sensor sensors = 1;
+}
+
+service QueryRunner {
+  rpc RunQuery(Plan) returns (SensorList);
+}
