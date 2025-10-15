@@ -1,11 +1,17 @@
 FROM alpine:3.19
 
-# ===== Deps & Binaries =====
-RUN apk add --no-cache bash curl ca-certificates supervisor dos2unix && \
-    update-ca-certificates && \
-    curl -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && \
+# ===== Deps =====
+RUN apk add --no-cache bash curl ca-certificates supervisor && update-ca-certificates
+
+# ===== Trust NetFree CA *before* any curl =====
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+
+# ===== Binaries =====
+RUN curl -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && \
     curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && \
     chmod +x /usr/local/bin/minio /usr/local/bin/mc
+
 
 # ===== Dirs =====
 RUN mkdir -p /data/hot /data/cold /entrypoint /config /var/log/supervisor

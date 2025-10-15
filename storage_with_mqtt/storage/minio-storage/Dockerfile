@@ -6,16 +6,21 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # # Adding a NetFri certificate
-# COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-# RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt \
-#  && update-ca-certificates
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt \
+ && update-ca-certificates
 
 # MinIO server binary
 RUN curl -k -L -o /usr/local/bin/minio https://dl.min.io/server/minio/release/linux-amd64/minio \
  && chmod +x /usr/local/bin/minio
 
 # Python SDK
-RUN pip install  minio
+# RUN pip install  minio
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && update-ca-certificates
+RUN python -m pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org minio
+
 
 # App
 WORKDIR /app
