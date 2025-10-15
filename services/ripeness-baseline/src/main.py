@@ -1,15 +1,17 @@
-import os, glob, datetime
+import os, datetime, numpy as np
 import cv2 as cv
+import requests
+from urllib.parse import quote
+from urllib.parse import urlparse, unquote
+from minio import Minio
+from quality import quality_flags
 
-from config import PG, SAMPLES_DIR, FRUIT_TYPE, THRESHOLDS
 from segment import segment_fruit
 from heuristics import compute_features, classify_ripeness
-from quality import quality_flags
-from db import dsn, apply_sql_autocommit, ensure_schema, insert_detection, run_weekly_upsert
-from urllib.parse import urlparse
-from minio import Minio
-from minio.error import S3Error
-import numpy as np, cv2 as cv, io
+from config import PG, SAMPLES_DIR, FRUIT_TYPE, THRESHOLDS, LOOKBACK_DAYS, READ_FROM_LOGS
+from db import dsn, apply_sql_autocommit, ensure_schema, insert_detection, run_weekly_upsert, fetch_inference_logs
+from urllib.parse import urlparse, quote
+import numpy as np, cv2 as cv
 import psycopg
 from pathlib import Path
 
@@ -31,55 +33,85 @@ def list_minio_objects():
         if key.lower().endswith((".jpg",".jpeg",".png",".webp",".bmp")):
             yield cli, key
 
+def imread_from_any(url: str):
+    u = urlparse(url)
+    # נזהה שזה MinIO: אותו host כמו MINIO_URL, או הידוע שלך (minio-hot-1:9000)
+    minio_base = os.getenv("MINIO_URL", "http://minio-hot-1:9000")
+    mu = urlparse(minio_base)
+
+    is_minio = (u.hostname == mu.hostname and (u.port or 80) == (mu.port or 80)) or \
+               (u.hostname == "minio-hot-1" and (u.port or 80) == 9000)
+
+    if is_minio:
+        # קריאה עם AK/SK
+        cli = Minio(
+            f"{mu.hostname}:{mu.port or (443 if mu.scheme=='https' else 80)}",
+            access_key=os.getenv("MINIO_ACCESS_KEY"),
+            secret_key=os.getenv("MINIO_SECRET_KEY"),
+            secure=(mu.scheme == "https"),
+        )
+        # path-style: /<bucket>/<key...>
+        parts = u.path.lstrip("/").split("/", 1)
+        if len(parts) != 2:
+            raise RuntimeError(f"Bad MinIO URL path: {u.path}")
+        bucket, key = parts[0], unquote(parts[1])
+
+        resp = cli.get_object(bucket, key)
+        data = resp.read()
+        resp.close(); resp.release_conn()
+
+        arr = np.frombuffer(data, dtype=np.uint8)
+        return cv.imdecode(arr, cv.IMREAD_COLOR)
+
+    # אחרת — HTTP רגיל
+    safe = quote(url, safe="/:?=&%()[]")
+    r = requests.get(safe, timeout=30)
+    r.raise_for_status()
+    arr = np.frombuffer(r.content, dtype=np.uint8)
+    return cv.imdecode(arr, cv.IMREAD_COLOR)
+
 
 def process_all():
 
     DSN = dsn(PG)
-    apply_sql_autocommit(DSN, SCHEMA_SQL)
-    apply_sql_autocommit(DSN, VIEW_SQL)
+    # apply_sql_autocommit(DSN, SCHEMA_SQL)
+    # apply_sql_autocommit(DSN, VIEW_SQL)
 
-    con = psycopg.connect(DSN)
-
-    with con.cursor() as cur:
-        for ext in ("*.jpg","*.jpeg","*.png","*.webp"):
-            if MINIO_URL:
-                for cli, key in list_minio_objects():
-                    try:
-                        resp = cli.get_object(MINIO_BUCKET, key)
-                        data = resp.read(); resp.close(); resp.release_conn()
-                    except S3Error:
-                        continue
-                    img_arr = np.frombuffer(data, dtype=np.uint8)
-                    img = cv.imdecode(img_arr, cv.IMREAD_COLOR)
-                    if img is None: 
-                        continue
-
-                    mask, leaf_ratio = segment_fruit(img, FRUIT_TYPE)  
-                    feat = compute_features(img, mask)
-                    ripeness = classify_ripeness(feat, THRESHOLDS)
-                    flags = quality_flags(feat, THRESHOLDS, leaf_ratio, mark_outlier=False)
-
-                    insert_detection(cur, FRUIT_TYPE, datetime.datetime.now(), f"s3://{MINIO_BUCKET}/{key}", feat, ripeness, flags)
-            else:
-                for path in glob.glob(os.path.join(SAMPLES_DIR, ext)):
-                    img = cv.imread(path)
+    lookback_days = int(os.getenv("LOOKBACK_DAYS", "7"))
+    rows = fetch_inference_logs(PG, lookback_days=lookback_days,
+                                fruit_filter=None, limit=None)
+    inserted = 0
+    with psycopg.connect(DSN) as con:
+        with con.cursor() as cur:
+            for fruit_type_raw, image_url in rows:
+                try:
+                    
+                    
+                    fruit = fruit_type_raw
+                    img = imread_from_any(image_url)
                     if img is None:
+                        print(f"[skip] cannot read image: {image_url}")
                         continue
-                    mask, leaf_ratio = segment_fruit(img)
 
+                    mask, leaf_ratio = segment_fruit(img, fruit)
                     feat = compute_features(img, mask)
-                    ripeness = classify_ripeness(feat, THRESHOLDS)
+                    ripeness = classify_ripeness(feat,THRESHOLDS)
+                    flags = quality_flags(feat, THRESHOLDS, leaf_ratio, mark_outlier=False)  
 
-                    flags = quality_flags(feat, THRESHOLDS, leaf_ratio, mark_outlier=False)
 
-                    insert_detection(cur, FRUIT_TYPE, datetime.datetime.now(), path, feat, ripeness, flags)
+                    insert_detection(cur, fruit, datetime.datetime.now(), image_url,
+                                     feat, ripeness, flags)
+                    inserted += 1
 
-    con.commit()
-    run_weekly_upsert(con, ROLLUP_SQL)
-    con.commit()
+                except Exception as e:
+                    print(f"[warn] {image_url} | {e}", flush=True)
+                    con.rollback()
+        con.commit()
+        run_weekly_upsert(con, ROLLUP_SQL)
+        con.commit()
+    return inserted
 
-    con.close()
 
 if __name__ == "__main__":
-    process_all()
-    print("Done. Inserted detections and updated weekly_rollups.")
+    inserted = process_all()
+    print(f"Done. Inserted detections {inserted} and updated weekly_rollups.")

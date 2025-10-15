@@ -24,3 +24,6 @@ THRESHOLDS = {
     "near_brown_delta": 0.03,
     "green_leaf_ratio_thr": float(os.getenv("GREEN_LEAF_FLAG_THR", "0.10"))
 }
+
+LOOKBACK_DAYS = int(os.getenv("LOOKBACK_DAYS", "7"))
+READ_FROM_LOGS = os.getenv("READ_FROM_LOGS", "0") in ("1", "true", "True")

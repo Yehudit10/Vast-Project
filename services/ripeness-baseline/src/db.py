@@ -1,6 +1,8 @@
 import psycopg
 from pathlib import Path
+from typing import List, Tuple, Optional
 
+   
 def dsn(pg):
     return f"host={pg['host']} port={pg['port']} dbname={pg['db']} user={pg['user']} password={pg['password']}"
 
@@ -56,3 +58,31 @@ def apply_sql_autocommit(dsn: str, sql_path):
                 cur.execute(sql)
             except Exception as e:
                 print(f"[warn] failed to apply {sql_path}: {e}", flush=True)
+
+def fetch_inference_logs(pg: dict, lookback_days: int = 7,
+                         fruit_filter: Optional[str] = None,
+                         limit: Optional[int] = None) -> List[Tuple[str, str]]:
+    """
+    Returns [(fruit_type, image_url), ...] from the last N days.
+    """
+    sql_parts = [
+        "SELECT fruit_type, image_url",
+        "FROM inference_logs",
+        "WHERE ts >= NOW() - make_interval(days => %s)"
+    ]
+    params = [lookback_days]
+
+    if fruit_filter:
+        sql_parts.append("AND fruit_type = %s")
+        params.append(fruit_filter)
+
+    sql_parts.append("ORDER BY ts DESC")
+    if limit:
+        sql_parts.append(f"LIMIT {int(limit)}")
+
+    sql = " ".join(sql_parts)
+
+    with psycopg.connect(dsn(pg)) as con:
+        with con.cursor() as cur:
+            cur.execute(sql, params)
+            return [(r[0], r[1]) for r in cur.fetchall()]
