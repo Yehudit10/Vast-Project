@@ -54,7 +54,7 @@ def process_all():
                     if img is None: 
                         continue
 
-                    mask, leaf_ratio = segment_fruit(img, FRUIT_TYPE)  # ← שימי לב: ב־segment_fruit צריך fruit
+                    mask, leaf_ratio = segment_fruit(img, FRUIT_TYPE)  
                     feat = compute_features(img, mask)
                     ripeness = classify_ripeness(feat, THRESHOLDS)
                     flags = quality_flags(feat, THRESHOLDS, leaf_ratio, mark_outlier=False)
