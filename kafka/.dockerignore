@@ -1,5 +1,0 @@
-**
-!Dockerfile
-!values-kafka.yaml
-!create-topics.sh
-!ca/**
