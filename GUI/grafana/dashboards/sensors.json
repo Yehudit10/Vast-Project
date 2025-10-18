@@ -1,0 +1,29 @@
+{
+  "uid": "agcloud-sensors",
+  "title": "Sensors",
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Active Sensors",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(sensor_status)", "instant": true, "refId": "A" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "bargauge",
+      "title": "Sensor Status (1=active, 0=inactive)",
+      "gridPos": { "h": 10, "w": 16, "x": 8, "y": 0 },
+      "options": { "displayMode": "lcd", "orientation": "horizontal" },
+      "targets": [
+        { "expr": "sensor_status", "instant": true, "refId": "A", "legendFormat": "{{sensor}}" }
+      ]
+    }
+  ]
+}

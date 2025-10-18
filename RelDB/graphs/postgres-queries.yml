@@ -1,0 +1,136 @@
+# Save as postgres-queries.yml
+# Custom queries for postgres_exporter to expose WAL, replication lag, and BRIN stats.
+
+pg_wal_stats:
+  query: |
+    SELECT wal_records, wal_fpi, wal_bytes
+    FROM pg_stat_wal
+  metrics:
+    - wal_records:
+        usage: COUNTER
+        description: "Number of WAL records since startup"
+    - wal_fpi:
+        usage: COUNTER
+        description: "Number of WAL full page images since startup"
+    - wal_bytes:
+        usage: COUNTER
+        description: "Total WAL bytes generated since startup"
+
+# On PRIMARY: lag in bytes per replica
+pg_replication_lag_bytes_primary:
+  query: |
+    SELECT
+      application_name,
+      GREATEST(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn), 0) AS bytes_lag
+    FROM pg_stat_replication
+  metrics:
+    - application_name:
+        usage: LABEL
+        description: "Replica application_name as seen from primary"
+    - bytes_lag:
+        usage: GAUGE
+        description: "Replication lag in bytes (primary view)"
+
+# On STANDBY: lag in seconds (returns a row only on standby)
+pg_replication_replay_lag_seconds_standby:
+  query: |
+    SELECT
+      EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) AS replay_lag_seconds
+    WHERE pg_is_in_recovery()
+  metrics:
+    - replay_lag_seconds:
+        usage: GAUGE
+        description: "Replication replay lag in seconds (standby only)"
+
+# BRIN index I/O and hit ratio per BRIN index
+pg_brin_index_io:
+  query: |
+    SELECT
+      s.schemaname,
+      s.relname AS table_name,
+      s.indexrelname AS index_name,
+      s.idx_blks_read,
+      s.idx_blks_hit,
+      CASE
+        WHEN (s.idx_blks_read + s.idx_blks_hit) > 0
+          THEN (s.idx_blks_hit::float / (s.idx_blks_read + s.idx_blks_hit))
+        ELSE NULL
+      END AS brin_hit_ratio
+    FROM pg_statio_user_indexes s
+    JOIN pg_class i ON i.oid = s.indexrelid
+    JOIN pg_am am ON am.oid = i.relam
+    WHERE am.amname = 'brin'
+  metrics:
+    - schemaname:
+        usage: LABEL
+        description: "Schema"
+    - table_name:
+        usage: LABEL
+        description: "Table"
+    - index_name:
+        usage: LABEL
+        description: "BRIN index name"
+    - idx_blks_read:
+        usage: COUNTER
+        description: "Index blocks read from disk for this BRIN index"
+    - idx_blks_hit:
+        usage: COUNTER
+        description: "Index blocks found in cache for this BRIN index"
+    - brin_hit_ratio:
+        usage: GAUGE
+        description: "Cache hit ratio for this BRIN index (0..1)"
+
+
+# Active connections
+pg_active_connections:
+  query: |
+    SELECT state, COUNT(*) as count
+    FROM pg_stat_activity
+    GROUP BY state
+  metrics:
+    - state:
+        usage: LABEL
+        description: "Connection state (active, idle, etc.)"
+    - count:
+        usage: GAUGE
+        description: "Number of connections per state"
+
+# Cache hit ratio per table
+pg_table_cache_hit_ratio:
+  query: |
+    SELECT
+      relname as table,
+      heap_blks_read,
+      heap_blks_hit,
+      CASE
+        WHEN (heap_blks_read + heap_blks_hit) > 0
+        THEN (heap_blks_hit::float / (heap_blks_read + heap_blks_hit))
+        ELSE NULL
+      END as cache_hit_ratio
+    FROM pg_statio_user_tables
+  metrics:
+    - table:
+        usage: LABEL
+        description: "Table name"
+    - heap_blks_read:
+        usage: COUNTER
+        description: "Disk blocks read"
+    - heap_blks_hit:
+        usage: COUNTER
+        description: "Cache hits"
+    - cache_hit_ratio:
+        usage: GAUGE
+        description: "Cache hit ratio (0..1)"
+
+# Database size
+pg_database_size:
+  query: |
+    SELECT datname, pg_database_size(datname) as size_bytes
+    FROM pg_database
+  metrics:
+    - datname:
+        usage: LABEL
+        description: "Database name"
+    - size_bytes:
+        usage: GAUGE
+        description: "Database size in bytes"
