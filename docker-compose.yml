@@ -312,18 +312,25 @@ services:
       context: ./storage_with_mqtt/storage/minio-storage
     container_name: minio-hot
     environment:
-      MINIO_PROMETHEUS_AUTH_TYPE: public
-      # MinIO core credentials
+      MINIO_PROMETHEUS_AUTH_TYPE: public     
+      # Root MinIO service (local)
+      MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      # Bind + console ports
+      # Hot / Cold MinIO endpoints
+      HOT_ENDPOINT: http://minio-hot:9000
+      COLD_ENDPOINT: http://minio-cold:9000
+      # Hot / Cold bind addresses
       HOT_ADDRESS: :9000
       HOT_CONSOLE: :9001
-      # Bucket aliases
+      COLD_ADDRESS: :9100
+      COLD_CONSOLE: :9101
+      # mc aliases
+      MC_ALIAS_HOT: hot
+      MC_ALIAS_COLD: cold
+      # Buckets
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
-      # mc alias (used by bootstrap)
-      MC_ALIAS_HOT: hot
     ports:
       - "9001:9000"   # HOT S3
       - "9002:9001"   # HOT Console
@@ -342,17 +349,24 @@ services:
     container_name: minio-cold
     environment:
       MINIO_PROMETHEUS_AUTH_TYPE: public
-      # MinIO core credentials
+      # Root MinIO service (local)
+      MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      # Bind + console ports
+      # Hot / Cold MinIO endpoints
+      HOT_ENDPOINT: http://minio-hot:9000
+      COLD_ENDPOINT: http://minio-cold:9000
+      # Hot / Cold bind addresses
+      HOT_ADDRESS: :9000
+      HOT_CONSOLE: :9001
       COLD_ADDRESS: :9100
       COLD_CONSOLE: :9101
-      # Bucket aliases
+      # mc aliases
+      MC_ALIAS_HOT: hot
+      MC_ALIAS_COLD: cold
+      # Buckets
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
-      # mc alias (used by bootstrap)
-      MC_ALIAS_COLD: cold
     ports:
       - "9101:9000"   # COLD S3
       - "9102:9001"   # COLD Console
@@ -378,15 +392,21 @@ services:
         condition: service_healthy
     command: ["/bin/bash","-lc","/entrypoint/init.sh; tail -f /dev/null"]
     environment:
+      # Root MinIO service (local)
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      # Hot / Cold MinIO endpoints
+      HOT_ENDPOINT: http://minio-hot:9000
+      COLD_ENDPOINT: http://minio-cold:9000
+      # Hot / Cold bind addresses
+      HOT_ADDRESS: :9000
+      HOT_CONSOLE: :9001
+      COLD_ADDRESS: :9100
+      COLD_CONSOLE: :9101
       # mc aliases
       MC_ALIAS_HOT: hot
       MC_ALIAS_COLD: cold
-      # Endpoints for both MinIO instances
-      HOT_ENDPOINT: http://minio-hot:9000
-      COLD_ENDPOINT: http://minio-cold:9000
-      # Root credentials
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
       # Buckets
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
@@ -401,17 +421,22 @@ services:
       context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
     container_name: mqtt_ingest
     environment:
-      MINIO_ENDPOINT: localhost:9000
+      # Root MinIO service (local)
+      MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
+      # Hot / Cold MinIO endpoints
       HOT_ENDPOINT: http://minio-hot:9000
       COLD_ENDPOINT: http://minio-cold:9000
+      # Hot / Cold bind addresses
       HOT_ADDRESS: :9000
       HOT_CONSOLE: :9001
       COLD_ADDRESS: :9100
       COLD_CONSOLE: :9101
+      # mc aliases
       MC_ALIAS_HOT: hot
       MC_ALIAS_COLD: cold
+      # Buckets
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
       # ---- mqtt_ingest service vars ----
