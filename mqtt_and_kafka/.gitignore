@@ -1,0 +1,24 @@
+# Secrets & certs
+*.key
+*.csr
+*.srl
+*.crt
+
+# Runtime junk
+data/
+logs/
+tmp/
+*.log
+*.pid
+.DS_Store
+Thumbs.db
+*.tar
+*.zip
+*.tgz
+__pycache__/
+
+# Ignore all .jar files
+*.jar
+
+# Allow .jar files under lib/ directory
+!connect/plugins/confluentinc-kafka-connect-mqtt-1.7.6/lib/*.jar
