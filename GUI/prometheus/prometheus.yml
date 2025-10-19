@@ -1,0 +1,15 @@
+# prometheus.yml 
+global:
+  scrape_interval: 15s 
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093'] 
+        
+scrape_configs:
+  # Sensors metrics (GUI)
+  - job_name: 'sensors-demo'
+    static_configs:
+      - targets: ['sensors_metrics:8000']
+

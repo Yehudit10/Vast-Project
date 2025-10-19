@@ -1,0 +1,48 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtualenv
+venv/
+.env
+.env.*
+
+# Certificates
+*.crt
+*.pem
+*.key
+
+# Docker
+*.log
+.dockerignore
+docker-compose.override.yml
+
+# IDE/Editor
+.vscode/
+.idea/
+
+# System
+*.DS_Store
+Thumbs.db
+
+# Test / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build / Dist
+build/
+dist/
+*.egg-info/
+
+# Project specific
+mqtt_images/outbox/
+mqtt_images/data/real_images/
+storage/minio-storage/data/
+storage/combined_minio_setup/config/
+storage/monitoring/grafana-data/
+
+# Windows ADS metadata (downloaded files)
+*:Zone.Identifier
