@@ -1,7 +1,20 @@
+
+# ==========================
+# Docker Compose - AG Cloud
+# ==========================
+
+version: "3.9"
+
+# --------------------------
+# Networks
+# --------------------------
 networks:
   ag_cloud:
     driver: bridge
 
+# --------------------------
+# Volumes
+# --------------------------
 volumes:
   postgres_data:
   wal_archive:
@@ -10,11 +23,14 @@ volumes:
   minio-hot-data: {}
   minio-cold-data: {}
 
-
+# ==========================
+# Services
+# ==========================
 services:
-  # -------------------------
+
+  # --------------------------
   # RelDB / Postgres
-  # -------------------------
+  # --------------------------
   postgres:
     build: ./RelDB
     container_name: postgres
@@ -45,7 +61,6 @@ services:
       - ag_cloud
     restart: unless-stopped
 
-  
   postgres_exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     environment:
@@ -61,9 +76,9 @@ services:
     networks:
       - ag_cloud
 
-  # -------------------------
-  # MQTT + Kafka + Connect + Init
-  # -------------------------
+  # --------------------------
+  # MQTT / Kafka / Connect
+  # --------------------------
   kafka:
     build: 
       context: ./mqtt_and_kafka/kafka
@@ -97,7 +112,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-    
+
   mosquitto:
     image: eclipse-mosquitto:2.0
     container_name: mosquitto
@@ -163,9 +178,13 @@ services:
     entrypoint: >
       sh -c "
         echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
         echo '==> Done.';
       "
+
+  # --------------------------
+  # GUI / Runner / Gateway
+  # --------------------------
   runner:
     build:
       context: ./GUI
@@ -184,12 +203,12 @@ services:
     restart: unless-stopped
 
   gateway:
+    container_name: gateway
     build:
       context: ./GUI
       dockerfile: src/vast/gateway/Dockerfile
       args:
         USE_NETFREE: ${USE_NETFREE:-true}
-    container_name: gateway
     environment:
       - RUNNER_ADDR=runner:50051
     ports:
@@ -213,10 +232,9 @@ services:
       - ag_cloud
     restart: unless-stopped
 
-
-  # -------------------------
+  # --------------------------
   # Prometheus / Grafana
-  # -------------------------
+  # --------------------------
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -242,8 +260,8 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
-    - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-    - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
       - "3000:3000"
     depends_on:
@@ -251,9 +269,9 @@ services:
     networks:
       - ag_cloud
 
-#-------------------------
-# Desktop App
-#-------------------------
+  # --------------------------
+  # Desktop App
+  # --------------------------
   desktop_app:
     build:
       context: ./GUI
@@ -263,15 +281,18 @@ services:
       - NO_VNC_PORT=8080
       - DISPLAY=host.docker.internal:0.0
     ports:
-      - "5900:5900"   
-      - "8080:8080"  
+      - "5900:5900"
+      - "8080:8080"
     depends_on:
       - gateway
       - runner
     volumes:
       - ./GUI/src/vast:/app/src/vast
     restart: unless-stopped
-  
+
+  # --------------------------
+  # Large Mosquitto
+  # --------------------------
   large-mosquitto:
     container_name: large-mosquitto
     image: eclipse-mosquitto:2
@@ -283,7 +304,9 @@ services:
     networks:
       - ag_cloud
 
-  # ===== MinIO: hot + cold + bootstrap =====
+  # --------------------------
+  # MinIO: hot + cold + bootstrap
+  # --------------------------
   minio-hot:
     env_file:
       - ./storage_with_mqtt/storage/combined_minio_setup/.env
@@ -346,6 +369,9 @@ services:
     networks: [ag_cloud]
     restart: unless-stopped
 
+  # --------------------------
+  # MQTT Ingest & Publisher
+  # --------------------------
   mqtt_ingest:
     build:
       context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
@@ -363,9 +389,11 @@ services:
       MQTT_TOPIC: MQTT/imagery/# 
       MQTT_PUB_TOPIC: imagery/ingested
       DUMMY_DB: 0
-      DB_API_BASE: http://host.docker.internal:8080
-      DB_API_TOKEN: dev-token
+      DB_API_BASE: http://db_api_service:8001
+      DB_API_TOKEN: auto
       OUTBOX_DIR: /app/outbox
+      DB_API_AUTH_MODE: service
+      DB_API_SERVICE_NAME: mqtt_ingest
       INGEST_WORKERS: 8  
     volumes:
       - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
@@ -375,6 +403,8 @@ services:
       minio-hot:
         condition: service_healthy
       mc-bootstrap:
+        condition: service_started
+      db_api_service:
         condition: service_started
     networks:
       - ag_cloud
@@ -393,11 +423,27 @@ services:
       - LIMIT=0
       - SHUFFLE=1
       - MQTT_QOS=2
-      - PUBLISH_DELAY_MS=10
+      - PUBLISH_DELAY_MS=100
     volumes:
       - ./storage_with_mqtt/mqtt_images/data/real_images:/images:ro
     depends_on:
       - large-mosquitto
+      - mqtt_ingest
     networks:
       - ag_cloud
 
+  # --------------------------
+  # DB API Service
+  # --------------------------
+  db_api_service:
+    build: ./services/db_api_service
+    container_name: db_api_service
+    env_file:
+      - ./services/db_api_service/.env
+    ports:
+      - "8001:8001"
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+    depends_on:
+      - postgres
