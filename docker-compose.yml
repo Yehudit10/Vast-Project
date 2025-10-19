@@ -224,6 +224,7 @@ services:
     container_name: sensors_metrics
     environment:
       - SQLITE_DB=/data/app.db
+      - GATEWAY_URL=http://gateway:8000
     volumes:
       - ./GUI/data:/data:ro
     depends_on:
@@ -280,6 +281,7 @@ services:
     environment:
       - NO_VNC_PORT=8080
       - DISPLAY=host.docker.internal:0.0
+      - GATEWAY_URL=http://sensors_metrics:8000
     ports:
       - "5900:5900"
       - "8080:8080"
@@ -288,6 +290,8 @@ services:
       - runner
     volumes:
       - ./GUI/src/vast:/app/src/vast
+    networks:
+      - ag_cloud
     restart: unless-stopped
 
   # --------------------------
