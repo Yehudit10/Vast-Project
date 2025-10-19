@@ -31,6 +31,9 @@ TOPICS=(
   dev-robot-status
   dev-robot-telemetry-raw
   dev-robot-state
+  sensor-telemetry
+  sensor-anomalies
+  dev-robot-telemetry-anomalies
 )
 
 # Idempotent creation with retention.ms

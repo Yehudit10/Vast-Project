@@ -161,6 +161,52 @@ CREATE TABLE IF NOT EXISTS embeddings (
   id BIGSERIAL PRIMARY KEY,
   vec vector(784)
 );
+CREATE TABLE IF NOT EXISTS training_runs (
+    id BIGSERIAL PRIMARY KEY,
+    run_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    backbone TEXT NOT NULL,
+    image_size INT NOT NULL,
+    num_epochs INT NOT NULL,
+    train_split NUMERIC(4,3) NOT NULL,
+    top1_acc NUMERIC(5,4) NOT NULL,
+    best_top1_acc NUMERIC(5,4) NOT NULL,
+    artifacts_bucket TEXT NOT NULL,
+    artifacts_prefix TEXT NOT NULL,
+    labels_object TEXT NOT NULL,
+    best_ckpt_object TEXT NOT NULL,
+    metrics_object TEXT NOT NULL,
+    cm_object TEXT NOT NULL,
+    seed INT NOT NULL
+);
+
+-- Inferenceevent_logs_sensors, instead of Inference logs:
+CREATE TABLE IF NOT EXISTS inference_logs (
+    id BIGSERIAL PRIMARY KEY,
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    model_backbone TEXT NOT NULL,
+    image_size INT NOT NULL,
+    fruit_type TEXT NOT NULL,
+    score NUMERIC(5,4) NOT NULL,
+    latency_ms NUMERIC(8,3) NOT NULL,
+    client_ip TEXT,
+    error TEXT,
+    image_url TEXT
+);
+
+-- Sensor event logs table.
+CREATE TABLE IF NOT EXISTS event_logs_sensors(
+    id         bigserial PRIMARY KEY,
+    device_id  text        NOT NULL REFERENCES devices(device_id),
+    issue_type text        NOT NULL,
+    severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
+    start_ts   timestamptz NOT NULL DEFAULT now(),
+    end_ts     timestamptz NULL,
+    details    jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    CONSTRAINT event_logs_sensors_end_after_start
+        CHECK (end_ts IS NULL OR end_ts >= start_ts)
+);
+
+
 
 -- === Indexes ===
 
@@ -196,3 +242,10 @@ CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id)
 CREATE UNIQUE INDEX IF NOT EXISTS ux_service_accounts_name ON public.service_accounts (name);
 CREATE INDEX IF NOT EXISTS ix_service_accounts_id ON public.service_accounts (id);
 
+CREATE INDEX IF NOT EXISTS idx_infer_ts ON inference_logs (ts);
+CREATE INDEX IF NOT EXISTS idx_infer_fruit ON inference_logs (fruit_type);
+
+-- Sensors logs
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sensors (device_id, start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
