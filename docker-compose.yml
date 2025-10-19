@@ -308,13 +308,22 @@ services:
   # MinIO: hot + cold + bootstrap
   # --------------------------
   minio-hot:
-    env_file:
-      - ./storage_with_mqtt/storage/combined_minio_setup/.env
     build:
       context: ./storage_with_mqtt/storage/minio-storage
     container_name: minio-hot
     environment:
-      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+      # MinIO core credentials
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      # Bind + console ports
+      HOT_ADDRESS: :9000
+      HOT_CONSOLE: :9001
+      # Bucket aliases
+      BUCKET_IMAGERY: imagery
+      BUCKET_TELEMETRY: telemetry
+      # mc alias (used by bootstrap)
+      MC_ALIAS_HOT: hot
     ports:
       - "9001:9000"   # HOT S3
       - "9002:9001"   # HOT Console
@@ -328,13 +337,22 @@ services:
       - minio-hot-data:/data
 
   minio-cold:
-    env_file:
-      - ./storage_with_mqtt/storage/combined_minio_setup/.env
     build:
       context: ./storage_with_mqtt/storage/minio-storage
     container_name: minio-cold
     environment:
-      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+      # MinIO core credentials
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      # Bind + console ports
+      COLD_ADDRESS: :9100
+      COLD_CONSOLE: :9101
+      # Bucket aliases
+      BUCKET_IMAGERY: imagery
+      BUCKET_TELEMETRY: telemetry
+      # mc alias (used by bootstrap)
+      MC_ALIAS_COLD: cold
     ports:
       - "9101:9000"   # COLD S3
       - "9102:9001"   # COLD Console
@@ -348,8 +366,6 @@ services:
       - minio-cold-data:/data
 
   mc-bootstrap:
-    env_file:
-      - ./storage_with_mqtt/storage/combined_minio_setup/.env
     build:
       context: ./storage_with_mqtt/storage/Lifecycle_rules/minio-bootstrap
     volumes:
@@ -362,10 +378,18 @@ services:
         condition: service_healthy
     command: ["/bin/bash","-lc","/entrypoint/init.sh; tail -f /dev/null"]
     environment:
+      # mc aliases
       MC_ALIAS_HOT: hot
       MC_ALIAS_COLD: cold
-      HOT_ENDPOINT:  http://minio-hot:9000
+      # Endpoints for both MinIO instances
+      HOT_ENDPOINT: http://minio-hot:9000
       COLD_ENDPOINT: http://minio-cold:9000
+      # Root credentials
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      # Buckets
+      BUCKET_IMAGERY: imagery
+      BUCKET_TELEMETRY: telemetry
     networks: [ag_cloud]
     restart: unless-stopped
 
@@ -376,17 +400,28 @@ services:
     build:
       context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
     container_name: mqtt_ingest
-    env_file:
-      - ./storage_with_mqtt/storage/combined_minio_setup/.env
     environment:
-      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      HOT_ENDPOINT: http://minio-hot:9000
+      COLD_ENDPOINT: http://minio-cold:9000
+      HOT_ADDRESS: :9000
+      HOT_CONSOLE: :9001
+      COLD_ADDRESS: :9100
+      COLD_CONSOLE: :9101
+      MC_ALIAS_HOT: hot
+      MC_ALIAS_COLD: cold
+      BUCKET_IMAGERY: imagery
+      BUCKET_TELEMETRY: telemetry
+      # ---- mqtt_ingest service vars ----
       S3_BUCKET: imagery
       MULTIPART_THRESHOLD_BYTES: 5242880
       PART_SIZE_BYTES: 5242880
       MULTIPART_MAX_CONCURRENCY: 32
       MQTT_BROKER: large-mosquitto
       MQTT_PORT: 1885
-      MQTT_TOPIC: MQTT/imagery/# 
+      MQTT_TOPIC: MQTT/imagery/#
       MQTT_PUB_TOPIC: imagery/ingested
       DUMMY_DB: 0
       DB_API_BASE: http://db_api_service:8001
@@ -438,8 +473,14 @@ services:
   db_api_service:
     build: ./services/db_api_service
     container_name: db_api_service
-    env_file:
-      - ./services/db_api_service/.env
+    environment:
+      DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+      ENV: dev
+      JWT_SECRET: change-me-please-very-secret
+      JWT_ALGO: HS256
+      ACCESS_TTL_MIN: 15
+      REFRESH_TTL_DAYS: 14
+      DEV_SA_NAME: my-ingest-service
     ports:
       - "8001:8001"
     networks:
