@@ -449,7 +449,7 @@ services:
       MQTT_TOPIC: MQTT/imagery/#
       MQTT_PUB_TOPIC: imagery/ingested
       DUMMY_DB: 0
-      DB_API_BASE: http://db_api_service:8001
+      DB_API_BASE: host.docker.internal:8080
       DB_API_TOKEN: auto
       OUTBOX_DIR: /app/outbox
       DB_API_AUTH_MODE: service
