@@ -13,21 +13,21 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 
 from app.db import engine, session_scope
+from app.config import settings
 
-# Configure allowed tables (can move to env/config later)
-ALLOWED_TABLES = {"event_logs_sensors"}
-STRICT_UNKNOWN_FIELDS = True
+ALLOWED_TABLES = set(settings.ALLOWED_TABLES)
+STRICT_UNKNOWN_FIELDS = settings.STRICT_UNKNOWN_FIELDS
 
 # Loads and caches SQLAlchemy table metadata for allowed tables.
-@lru_cache(maxsize=1)
-def load_metadata() -> MetaData:
+@lru_cache(maxsize=8)
+def load_metadata(allowed: tuple[str, ...]) -> MetaData:
     md = MetaData()
-    md.reflect(bind=engine, only=list(ALLOWED_TABLES))
+    md.reflect(bind=engine, only=list(allowed))
     return md
 
 # Returns the SQLAlchemy table object for the given resource name.
 def get_table(resource: str):
-    md = load_metadata()
+    md = load_metadata(tuple(sorted(ALLOWED_TABLES)))
     return md.tables.get(resource)
 
 # --- type mapping + validation (pydantic v1 style) ---
