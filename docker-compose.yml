@@ -312,25 +312,9 @@ services:
       context: ./storage_with_mqtt/storage/minio-storage
     container_name: minio-hot
     environment:
-      MINIO_PROMETHEUS_AUTH_TYPE: public     
-      # Root MinIO service (local)
-      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_PROMETHEUS_AUTH_TYPE: public
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      # Hot / Cold MinIO endpoints
-      HOT_ENDPOINT: http://minio-hot:9000
-      COLD_ENDPOINT: http://minio-cold:9000
-      # Hot / Cold bind addresses
-      HOT_ADDRESS: :9000
-      HOT_CONSOLE: :9001
-      COLD_ADDRESS: :9100
-      COLD_CONSOLE: :9101
-      # mc aliases
-      MC_ALIAS_HOT: hot
-      MC_ALIAS_COLD: cold
-      # Buckets
-      BUCKET_IMAGERY: imagery
-      BUCKET_TELEMETRY: telemetry
     ports:
       - "9001:9000"   # HOT S3
       - "9002:9001"   # HOT Console
@@ -349,24 +333,8 @@ services:
     container_name: minio-cold
     environment:
       MINIO_PROMETHEUS_AUTH_TYPE: public
-      # Root MinIO service (local)
-      MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      # Hot / Cold MinIO endpoints
-      HOT_ENDPOINT: http://minio-hot:9000
-      COLD_ENDPOINT: http://minio-cold:9000
-      # Hot / Cold bind addresses
-      HOT_ADDRESS: :9000
-      HOT_CONSOLE: :9001
-      COLD_ADDRESS: :9100
-      COLD_CONSOLE: :9101
-      # mc aliases
-      MC_ALIAS_HOT: hot
-      MC_ALIAS_COLD: cold
-      # Buckets
-      BUCKET_IMAGERY: imagery
-      BUCKET_TELEMETRY: telemetry
     ports:
       - "9101:9000"   # COLD S3
       - "9102:9001"   # COLD Console
@@ -392,22 +360,12 @@ services:
         condition: service_healthy
     command: ["/bin/bash","-lc","/entrypoint/init.sh; tail -f /dev/null"]
     environment:
-      # Root MinIO service (local)
-      MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      # Hot / Cold MinIO endpoints
       HOT_ENDPOINT: http://minio-hot:9000
       COLD_ENDPOINT: http://minio-cold:9000
-      # Hot / Cold bind addresses
-      HOT_ADDRESS: :9000
-      HOT_CONSOLE: :9001
-      COLD_ADDRESS: :9100
-      COLD_CONSOLE: :9101
-      # mc aliases
       MC_ALIAS_HOT: hot
       MC_ALIAS_COLD: cold
-      # Buckets
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
     networks: [ag_cloud]
@@ -421,40 +379,22 @@ services:
       context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
     container_name: mqtt_ingest
     environment:
-      # Root MinIO service (local)
       MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
-      # Hot / Cold MinIO endpoints
-      HOT_ENDPOINT: http://minio-hot:9000
-      COLD_ENDPOINT: http://minio-cold:9000
-      # Hot / Cold bind addresses
-      HOT_ADDRESS: :9000
-      HOT_CONSOLE: :9001
-      COLD_ADDRESS: :9100
-      COLD_CONSOLE: :9101
-      # mc aliases
-      MC_ALIAS_HOT: hot
-      MC_ALIAS_COLD: cold
-      # Buckets
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
-      # ---- mqtt_ingest service vars ----
-      S3_BUCKET: imagery
-      MULTIPART_THRESHOLD_BYTES: 5242880
-      PART_SIZE_BYTES: 5242880
-      MULTIPART_MAX_CONCURRENCY: 32
       MQTT_BROKER: large-mosquitto
       MQTT_PORT: 1885
       MQTT_TOPIC: MQTT/imagery/#
       MQTT_PUB_TOPIC: imagery/ingested
       DUMMY_DB: 0
-      DB_API_BASE: host.docker.internal:8080
+      DB_API_BASE: http://db_api_service:8001
       DB_API_TOKEN: auto
       OUTBOX_DIR: /app/outbox
       DB_API_AUTH_MODE: service
       DB_API_SERVICE_NAME: mqtt_ingest
-      INGEST_WORKERS: 8  
+      INGEST_WORKERS: 8
     volumes:
       - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
     depends_on:
