@@ -2,19 +2,34 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl ca-certificates && \
+# Build argument
+ARG USE_NETFREE=true
+
+# Install basic packages
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
-COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+# Install NetFree certificates only if USE_NETFREE=true
+RUN if [ "$USE_NETFREE" = "true" ]; then \
+        echo "Configuring NetFree certificates..."; \
+        # Check if the certificate file exists
+        if [ -f ./netfree-ca.crt ]; then \
+            cp ./netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt; \
+            chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt; \
+            update-ca-certificates; \
+        else \
+            echo "No NetFree certificate found, skipping"; \
+        fi; \
+    fi
 
+# SSL cert environment variables
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
+
 
 RUN python -m pip install --no-cache-dir --upgrade pip certifi
 
@@ -23,6 +38,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
-EXPOSE 8080
+EXPOSE 8001
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
