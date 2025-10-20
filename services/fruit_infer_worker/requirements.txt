@@ -1,0 +1,4 @@
+kafka-python==2.0.2
+minio==7.2.7
+pillow==10.4.0
+# Add torch/torchvision as needed for your model

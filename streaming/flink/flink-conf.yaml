@@ -1,0 +1,14 @@
+jobmanager.rpc.address: jobmanager
+taskmanager.numberOfTaskSlots: 2
+parallelism.default: 2
+
+# Checkpointing to S3/MinIO
+execution.checkpointing.interval: 10s
+state.checkpoints.dir: s3://flink-checkpoints
+state.savepoints.dir: s3://flink-savepoints
+
+# S3 / MinIO access
+s3.endpoint: http://minio:9000
+s3.path.style.access: true
+s3.access.key: minioadmin
+s3.secret.key: minioadmin123

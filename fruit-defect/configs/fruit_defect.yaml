@@ -1,0 +1,37 @@
+# קובץ: configs/fruit_defect.yaml
+data:
+  train_dir: "C:/Users/משתמש/Desktop/vectordb_efrat/Datasets/Fruit and Vegetable Disease - Healthy vs Rotten/train"
+  val_dir:   "C:/Users/משתמש/Desktop/vectordb_efrat/Datasets/Fruit and Vegetable Disease - Healthy vs Rotten/val"
+  test_dir:  "C:/Users/משתמש/Desktop/vectordb_efrat/Datasets/Fruit and Vegetable Disease - Healthy vs Rotten/test"
+
+model:
+  backbone: "mobilenet_v3_small"   # התחלה מהירה; אפשר לשנות ל-resnet18 אם צריך דיוק גבוה יותר
+  img_size: 192
+
+train:
+  epochs: 8
+  batch_size: 32
+  lr: 3e-4
+  weight_decay: 1e-4
+
+inference:
+  img_size: 192
+
+paths:
+  best_weights: "outputs/fruit_cls_best.pt"
+
+# seg:
+#   train_images: "C:/Users/משתמש/Desktop/vectordb/fruit-defect/Datasets/Strawberry Disease Detection Dataset/train"
+#   train_masks:  "C:/Users/משתמש/Desktop/vectordb/fruit-defect/Datasets/Strawberry Disease Detection Dataset/train_masks"
+#   val_images:   "C:/Users/משתמש/Desktop/vectordb/fruit-defect/Datasets/Strawberry Disease Detection Dataset/val"
+#   val_masks:    "C:/Users/משתמש/Desktop/vectordb/fruit-defect/Datasets/Strawberry Disease Detection Dataset/val_masks"
+#   test_images:  "C:/Users/משתמש/Desktop/vectordb/fruit-defect/Datasets/Strawberry Disease Detection Dataset/test"
+#   test_masks:   "C:/Users/משתמש/Desktop/vectordb/fruit-defect/Datasets/Strawberry Disease Detection Dataset/test_masks"
+#   img_size: 256
+#   epochs: 20
+#   batch_size: 8
+#   lr: 1e-3
+#   weight_decay: 1e-5
+#   best_weights: "outputs/seg_best.pt"
+#   out_dir: "outputs/seg_predictions"
+#   iou_threshold: 0.5

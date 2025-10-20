@@ -1,0 +1,10 @@
+torch
+torchvision
+torchaudio
+pillow
+numpy
+pyyaml
+tqdm
+scikit-learn
+tensorboard
+minio
