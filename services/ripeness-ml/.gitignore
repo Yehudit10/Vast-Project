@@ -3,6 +3,7 @@ __pycache__/
 *.onnx
 checkpoints/
 data/
+datasets/
 *.png
 .venv/
 venv/
