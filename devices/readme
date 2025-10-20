@@ -8,3 +8,15 @@ docker run -it --rm `
 
 
 docker network connect storage_with_mqtt_minionet storage_with_mqtt-mosquitto-1
+
+
+#####################
+
+
+docker compose build
+
+
+docker compose up
+
+
+docker compose down

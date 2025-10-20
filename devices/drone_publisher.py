@@ -5,23 +5,38 @@ import time
 import uuid
 import hashlib
 from datetime import datetime, timezone
-import paho.mqtt.client as mqtt
+import paho.mqtt.client as mqtt # type: ignore
 
 # ---- Configuration ----
 IMAGES_DIR = os.getenv("IMAGES_DIR", "/data/images")
 META_DIR = os.getenv("META_DIR", "/data/metadata")
-MQTT_HOST = os.getenv("MQTT_HOST", "large-mosquitto")
-MQTT_PORT = int(os.getenv("MQTT_PORT", "1885"))
-MQTT_TOPIC = os.getenv("MQTT_TOPIC", "MQTT/imagery/air")
+
+MQTT_HOST_DATA = os.getenv("MQTT_HOST_DATA", "large-mosquitto")
+MQTT_PORT_DATA = int(os.getenv("MQTT_PORT_DATA", "1885"))
+MQTT_TOPIC_DATA = os.getenv("MQTT_TOPIC_DATA", "MQTT/imagery/air")
+
+MQTT_HOST_META = os.getenv("MQTT_HOST_META", "mosquitto")
+MQTT_PORT_META = int(os.getenv("MQTT_PORT_META", "1883"))
+MQTT_TOPIC_META = os.getenv("MQTT_TOPIC_META", "MQTT/soak/test/air")
+
 CAMERA_ID = os.getenv("CAMERA_ID", "drone-01")
 INTERVAL_CHECK = int(os.getenv("INTERVAL_CHECK", "180"))
 INTERVAL_PUBLISH = int(os.getenv("INTERVAL_PUBLISH", "20"))
 QOS = int(os.getenv("MQTT_QOS", "1"))
 
 # ---- MQTT Setup ----
-client = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
-client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
-client.loop_start()
+client_data = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
+client_data.connect(MQTT_HOST_DATA, MQTT_PORT_DATA, keepalive=60)
+client_data.loop_start()
+
+# client = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
+# client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
+# client.loop_start()
+
+client_meta = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
+client_meta.connect(MQTT_HOST_META, MQTT_PORT_META, keepalive=60)
+client_meta.loop_start()
+
 
 def sha256_hex(path: str):
     with open(path, "rb") as f:
@@ -39,18 +54,14 @@ def load_metadata_for(img_name):
     return {}
 
 def publish_image(image_path):
-    # meta = load_metadata_for(image_path)
-    # msg = {
-    #     "camera_id": CAMERA_ID,
-    #     "timestamp": iso_utc(),
-    #     "image_name": os.path.basename(image_path),
-    #     "image_hash": sha256_hex(image_path),
-    #     "metadata": meta,
-    # }
-    msg = load_metadata_for(image_path)
-    payload = json.dumps(msg, ensure_ascii=False)
-    client.publish(MQTT_TOPIC, payload, qos=QOS)
-    print(f"Published message for image: {msg['image_name']}", flush=True)
+    meta_data = load_metadata_for(image_path)
+    payload = json.dumps(meta_data, ensure_ascii=False)
+    with open(image_path, "rb") as f:
+                data = f.read()
+    client_data.publish(MQTT_TOPIC_DATA, payload=data, qos=QOS)
+    client_meta.publish(MQTT_TOPIC_META, payload, qos=QOS)
+    print(f"Published message for image: {meta_data['image_name']}", flush=True)
+
 
 def get_all_images():
     exts = {".jpg", ".jpeg", ".png", ".tif"}
@@ -59,7 +70,8 @@ def get_all_images():
             if os.path.splitext(f)[1].lower() in exts]
 
 def main():
-    print(f"Drone simulator started | Broker: {MQTT_HOST}:{MQTT_PORT} | Topic: {MQTT_TOPIC}")
+    print(f"Drone simulator started | Broker: {MQTT_HOST_DATA}:{MQTT_PORT_DATA} | Topic: {MQTT_TOPIC_DATA}")
+    print(f"Drone simulator started | Broker: {MQTT_HOST_META}:{MQTT_PORT_META} | Topic: {MQTT_TOPIC_META}")
     sent_hashes = set()
 
     while True:
@@ -84,4 +96,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("Stopped manually.")
-        client.loop_stop()
+        client_data.loop_stop()
+        client_data.disconnect()
+        client_meta.loop_stop()
+        client_meta.disconnect()

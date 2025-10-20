@@ -1,0 +1,15 @@
+services:
+  drone-publisher:
+    build: .
+    container_name: drone-publisher
+    env_file: .env
+    volumes:
+      - ./images:/data/images:ro
+      - ./metadata:/data/metadata:ro
+    networks:
+      - storage_with_mqtt_minionet
+    command: ["python", "-u", "/app/drone_publisher.py"]
+
+networks:
+  storage_with_mqtt_minionet:
+    external: true
