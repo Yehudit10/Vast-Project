@@ -1,5 +1,5 @@
 from pathlib import Path
-from scripts.run_bench import run_and_profile, file_size, main
+from src.run_bench import run_and_profile, file_size, main
 import subprocess
 import csv
 
