@@ -1,27 +1,20 @@
 from __future__ import annotations
-
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QUrl, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QSizePolicy
-
-# Map viewer (PyQt6 version)
+from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QSizePolicy, QPushButton
 from orthophoto_canvas.ui.viewer_factory import create_orthophoto_viewer
 from vast.orthophoto_canvas.ui.sensors_layer import SensorLayer, add_sensors_by_gps_bulk
 from orthophoto_canvas.ag_io import sensors_api
 import os
 
+
 class HomeView(QWidget):
-    openSensorsRequested    = pyqtSignal()
-    openAlertsRequested     = pyqtSignal()
-    openSettingsRequested   = pyqtSignal()
-    openProcessingRequested = pyqtSignal()
-    openPredictionsRequested = pyqtSignal()
+    openSensorsRequested = pyqtSignal()
 
     def __init__(self, api, parent: QWidget | None = None):
         super().__init__(parent)
 
         root = QVBoxLayout(self)
-
         header = QLabel("Sensors Dashboard (Grafana)")
         header.setStyleSheet("font-size: 20px; font-weight: 600;")
         root.addWidget(header)
@@ -31,10 +24,8 @@ class HomeView(QWidget):
         grid.setVerticalSpacing(12)
         root.addLayout(grid)
 
-        # --- Grafana panels (top row) ---
-        grafana_host = os.getenv("GRAFANA_HOST", "grafana")  # Docker service name
+        grafana_host = os.getenv("GRAFANA_HOST", "grafana")
         base = f"http://{grafana_host}:3000"
-
         panel_urls = [
             QUrl(f"{base}/d-solo/agcloud-sensors/sensors?orgId=1&panelId=1&from=now-6h&to=now&refresh=10s&theme=light"),
             QUrl(f"{base}/d-solo/agcloud-sensors/sensors?orgId=1&panelId=2&from=now-6h&to=now&refresh=10s&theme=light"),
@@ -47,16 +38,12 @@ class HomeView(QWidget):
             r, c = divmod(i, 2)
             grid.addWidget(view, r, c)
 
-        # --- Map viewer (bottom row; spans two columns) ---
         tiles_root = "./src/vast/orthophoto_canvas/data/tiles"
         self.viewer = create_orthophoto_viewer(tiles_root, forced_scheme=None, parent=self)
         grid.addWidget(self.viewer, 1, 0, 1, 2)
 
-        # Real sensors overlay
-        # Ensure GATEWAY_URL points to the gateway container
         gateway_url = os.getenv("GATEWAY_URL", "http://gateway:8000")
         sensors_api.GATEWAY_URL = gateway_url
-
         rows = sensors_api.get_sensors()
         self.sensor_layer = SensorLayer(self.viewer)
         add_sensors_by_gps_bulk(
@@ -65,3 +52,7 @@ class HomeView(QWidget):
             center_on_first=True,
             default_radius_px=0.2
         )
+
+        self.sensor_types_btn = QPushButton("Sensor Types")
+        self.sensor_types_btn.clicked.connect(self.openSensorsRequested.emit)
+        root.addWidget(self.sensor_types_btn)

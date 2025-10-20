@@ -286,13 +286,13 @@ services:
       - "5900:5900"
       - "8080:8080"
     depends_on:
-      - gateway
-      - runner
+      - db_api_service 
     volumes:
-      - ./GUI/src/vast:/app/src/vast
+        - ./GUI/src/vast:/app/src/vast
     networks:
       - ag_cloud
     restart: unless-stopped
+
 
   # --------------------------
   # Large Mosquitto
