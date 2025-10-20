@@ -1,0 +1,28 @@
+path,gt,pred,type
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Apple__Healthy\FreshApple (17).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Apple__Rotten\rotated_by_30_Screen Shot 2018-06-08 at 2.36.43 PM.png,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Banana__Healthy\freshBanana (438).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Bellpepper__Rotten\rottenPepper (192).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Bellpepper__Rotten\rottenPepper (645).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Carrot__Rotten\rottenCarrot (161).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Carrot__Rotten\rottenCarrot (410).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Carrot__Rotten\rottenCarrot (74).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Cucumber__Rotten\rottenCucumber (355).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Grape__Rotten\RottenGrape (12).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Grape__Rotten\RottenGrape (152).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Jujube__Rotten\RottenJujube (89).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Mango__Rotten\anthracnose_121.jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Mango__Rotten\rottenMango (347).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Healthy\freshPotato (21).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Healthy\freshPotato (3).png,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Healthy\freshPotato (41).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Healthy\freshPotato (51).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Healthy\freshPotato (600).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Healthy\freshPotato (68).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Rotten\rottenPotato (178).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Rotten\rottenPotato (183).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Rotten\rottenPotato (211).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Rotten\rottenPotato (364).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Potato__Rotten\rottenPotato (69).jpg,defect,ok,FN
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Tomato__Healthy\freshTomato (130).jpg,ok,defect,FP
+C:\Users\משתמש\Desktop\vectordb\fruit-defect\FruitVeg_split\test\Tomato__Rotten\rottenTomato (75).jpg,defect,ok,FN
