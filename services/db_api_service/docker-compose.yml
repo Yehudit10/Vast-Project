@@ -1,0 +1,39 @@
+version: "3.9"
+
+volumes:
+  contracts: {} 
+services:
+  contracts-gen:
+    build:
+      context: .
+      dockerfile: app/contracts/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - contracts:/app/app/contracts
+    networks: [airnet]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+    environment:
+        DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+    volumes:
+      - contracts:/app/app/contracts
+    ports:
+      - "8080:8080"
+    depends_on:
+      contracts-gen:
+        condition: service_completed_successfully
+    networks: [airnet]
+    restart: unless-stopped
+
+networks:
+  airnet:
+    name: airnet
+    driver: bridge
+
+
