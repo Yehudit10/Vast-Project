@@ -1,0 +1,10 @@
+docker run -it --rm `
+  --network storage_with_mqtt_minionet `
+  -v ${PWD}\images:/data/images:ro `
+  -v ${PWD}\metadata:/data/metadata:ro `
+  -e MQTT_HOST=storage_with_mqtt-mosquitto-1 `
+  -e MQTT_PORT=1883 `
+  drone-publisher
+
+
+docker network connect storage_with_mqtt_minionet storage_with_mqtt-mosquitto-1
