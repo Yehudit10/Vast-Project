@@ -4,3 +4,55 @@ storage_with_mqtt/secrets/
 storage_with_mqtt/mqtt_images/secrets/
 MQTT_IMAGES/secrets/
 
+
+# Node.js
+/node_modules/
+/npm-debug.log
+/yarn-debug.log
+/yarn-error.log
+
+# Coverage reports
+/coverage/
+/htmlcov/
+/*.lcov
+*.html
+
+# IDE or Editor folders
+/.vscode/
+/.idea/
+/*.sublime-workspace
+/*.sublime-project
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+/logs
+*.log
+
+# Build files
+/dist/
+/build/
+/*.tgz
+
+# Jest test coverage output
+/coverage/
+/*.lcov-report/
+/coverage-html/
+
+# Specific to Jest
+jest.config.js
+jest.log
+
+# Miscellaneous
+*.bak
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Ignore config files
+.env
+*.local
+

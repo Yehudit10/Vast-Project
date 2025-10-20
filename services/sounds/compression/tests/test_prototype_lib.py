@@ -3,7 +3,7 @@ import pytest
 import tempfile
 import shutil
 from unittest.mock import patch, MagicMock
-from scripts.prototype_lib import iter_input_files, build_ffmpeg_cmds, INPUT_EXTS, RAW_DIR, COMP_DIR
+from src.prototype_lib import iter_input_files, build_ffmpeg_cmds, INPUT_EXTS, RAW_DIR, COMP_DIR
 
 # Test for iter_input_files function to ensure it retrieves all valid audio files.
 def test_iter_input_files():
