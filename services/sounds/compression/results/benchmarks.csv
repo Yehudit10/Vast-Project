@@ -1,3 +1,0 @@
-file,codec,orig_bytes,encoded_bytes,compression_ratio_orig_over_encoded,encode_time_sec,encode_cpu_avg_percent
-crying-animal-84745.mp3,flac,74400,314441,0.237,0.121,0.0
-crying-animal-84745.mp3,opus,74400,41630,1.787,0.121,0.0
