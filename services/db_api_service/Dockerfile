@@ -18,10 +18,10 @@ RUN if [ "$USE_NETFREE" = "true" ]; then \
             update-ca-certificates; \
             echo "Certificate installed successfully"; \
         else \
-            echo "ERROR: No NetFree certificate found at /app/certs/netfree-ca.crt"; \
-            exit 1; \
+            echo "WARNING: No NetFree certificate found at /app/certs/netfree-ca.crt, continuing without it."; \
         fi; \
     fi
+
 # SSL cert environment variables
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
