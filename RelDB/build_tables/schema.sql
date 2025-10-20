@@ -209,7 +209,13 @@ CREATE TABLE IF NOT EXISTS event_logs_sensors(
 
 
 -- === Indexes ===
+-- === Sensor types (simple list) ===
+CREATE TABLE IF NOT EXISTS sensors (
+  sensor_name text PRIMARY KEY   
+);
 
+-- === Indexes ===
+CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
 -- Spatial
 CREATE INDEX IF NOT EXISTS ix_missions_area_geom_gist  ON missions   USING GIST (area_geom);
 CREATE INDEX IF NOT EXISTS ix_telemetry_geom_gist      ON telemetry  USING GIST (geom);
