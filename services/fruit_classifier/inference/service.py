@@ -35,7 +35,6 @@ CFG = None  # ייטען מה-YAML של הקונפיג
 def _load_labels(labels_path: str):
     with open(labels_path, "r", encoding="utf-8") as f:
         d = json.load(f)
-    # הפורמט אצלנו: {class_name: index}. צריך גם הפוך.
     idx_to_class = {int(v): k for k, v in d.items()}
     return d, idx_to_class
 
