@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Byte-compiled / cache
 __pycache__/
 *.py[cod]
@@ -36,3 +37,45 @@ dist/
 
 # Logs
 *.log
+=======
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+env/
+venv/
+.env
+.env.*
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Certificates / secrets
+*.crt
+*.pem
+*.key
+.env
+.env.*
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+>>>>>>> 13b26e63af38998892cda8b52e08f6aa283f8843

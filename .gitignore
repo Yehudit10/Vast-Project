@@ -3,23 +3,42 @@ data/rover_samples/**
 
 # Ignore data payloads
 /data/
+# --- Secrets and Certificates ---
 *.env
 *.crt
+*/certs/
+**/certs/
+**/secrets/
 storage_with_mqtt/secrets/
 storage_with_mqtt/mqtt_images/secrets/
 MQTT_IMAGES/secrets/
 
-# Ignore virtual environment
-.venv/
-venv/
+# Ignore environment and IDE files
+.env
 
-# Ignore Python cache
+# --- Python ---
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.pytest_cache/
+.venv/
+venv/
 
-# Ignore environment and IDE files
-.env
-.idea/
+# --- VSCode / Editor ---
 .vscode/
+.idea/
 
+# --- Docker / Build ---
+*.log
+*.pid
+*.bak
+*.tmp
+*.swp
+.env.local
+.env.*
+!.env.example
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
