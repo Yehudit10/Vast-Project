@@ -6,10 +6,9 @@ services:
     volumes:
       - ./images:/data/images:ro
       - ./metadata:/data/metadata:ro
-    networks:
-      - storage_with_mqtt_minionet
     command: ["python", "-u", "/app/drone_publisher.py"]
 
 networks:
-  storage_with_mqtt_minionet:
+  default:
     external: true
+    name: agcloud_ag_cloud

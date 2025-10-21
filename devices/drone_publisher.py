@@ -13,15 +13,14 @@ META_DIR = os.getenv("META_DIR", "/data/metadata")
 
 MQTT_HOST_DATA = os.getenv("MQTT_HOST_DATA", "large-mosquitto")
 MQTT_PORT_DATA = int(os.getenv("MQTT_PORT_DATA", "1885"))
-MQTT_TOPIC_DATA = os.getenv("MQTT_TOPIC_DATA", "MQTT/imagery/air")
-
+ב
 MQTT_HOST_META = os.getenv("MQTT_HOST_META", "mosquitto")
 MQTT_PORT_META = int(os.getenv("MQTT_PORT_META", "1883"))
-MQTT_TOPIC_META = os.getenv("MQTT_TOPIC_META", "MQTT/soak/test/air")
+MQTT_TOPIC_META = os.getenv("MQTT_TOPIC_META", "dev-robot-images-keys")
 
 CAMERA_ID = os.getenv("CAMERA_ID", "drone-01")
-INTERVAL_CHECK = int(os.getenv("INTERVAL_CHECK", "180"))
-INTERVAL_PUBLISH = int(os.getenv("INTERVAL_PUBLISH", "20"))
+INTERVAL_CHECK = int(os.getenv("INTERVAL_CHECK", "10"))
+INTERVAL_PUBLISH = int(os.getenv("INTERVAL_PUBLISH", "10"))
 QOS = int(os.getenv("MQTT_QOS", "1"))
 
 # ---- MQTT Setup ----
