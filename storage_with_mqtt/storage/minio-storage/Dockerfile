@@ -15,7 +15,9 @@ RUN curl -k -L -o /usr/local/bin/minio https://dl.min.io/server/minio/release/li
  && chmod +x /usr/local/bin/minio
 
 # Python SDK
-RUN pip install  minio
+# RUN pip install  minio
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --no-cache-dir minio
+
 
 # App
 WORKDIR /app

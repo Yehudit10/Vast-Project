@@ -20,6 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-randr0 \
     && rm -rf /var/lib/apt/lists/*
 
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates || true
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+  REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+  PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
+
 RUN wget -qO- https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz | tar xz -C /opt && \
     mv /opt/noVNC-1.4.0 /opt/noVNC && \
     git clone https://github.com/novnc/websockify /opt/noVNC/utils/websockify
