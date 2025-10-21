@@ -3,8 +3,8 @@ import os, time, glob, random, pathlib
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import CallbackAPIVersion
 
-HOST = os.getenv("MQTT_HOST", "mosquitto")
-PORT = int(os.getenv("MQTT_PORT", "1883"))
+HOST = os.getenv("MQTT_HOST", "large-mosquitto")
+PORT = int(os.getenv("MQTT_PORT", "1885"))
 TOPIC_BASE = os.getenv("MQTT_TOPIC_BASE", "MQTT/imagery")
 IMAGES_DIR = os.getenv("IMAGES_DIR", "/images")
 CAMERA_ID  = os.getenv("CAMERA_ID", "camera-01")
