@@ -54,7 +54,6 @@ services:
     volumes:
       - ./storage/combined_minio_setup/config:/config:ro
       - ./data/config:/config
-
     depends_on:
       minio-hot:
         condition: service_healthy
