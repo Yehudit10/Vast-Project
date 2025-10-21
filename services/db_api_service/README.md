@@ -6,13 +6,7 @@ A FastAPI microservice for managing image/file metadata in the **AgCloud** platf
 
 Build:
 ```bash
-docker build -t db-api-service:latest ./services/db_api_service
-```
-
-Run:
-**Host access (publish port, for development only):**
-```bash
-docker run --rm -d --name db-api-service-run   -p 8080:8080   --env-file .env   db-api-service:latest
+docker compose up -d --build
 ```
 
 Check health:
@@ -20,6 +14,20 @@ Check health:
 curl http://localhost:8080/healthz
 curl http://localhost:8080/ready
 ```
+
+Stop and clean up:
+```bash
+docker compose down
+```
+
+## Generic API Support
+The service now includes a Generic API layer that automatically exposes CRUD endpoints for allowed database tables.
+
+To enable a table:
+
+1. Open the config file app/config.py.
+
+2. Add the table name under the ALLOWED_TABLES list.
 
 ## Authentication
 
