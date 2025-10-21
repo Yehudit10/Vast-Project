@@ -55,7 +55,7 @@ def build_generic_router(contract_store) -> APIRouter:
             handle_repo_exceptions(e)
 
     # List rows from the DB for the specified resource. Supports filters, ordering, pagination.
-    @tables_router.get("/{resource}/rows")
+    @tables_router.get("/{resource}")
     def list_rows(
         resource: str,
         request: Request,
@@ -82,7 +82,7 @@ def build_generic_router(contract_store) -> APIRouter:
             handle_repo_exceptions(e)
 
     # Insert a single row into the resource after validation.
-    @tables_router.post("/{resource}/rows", status_code=201)
+    @tables_router.post("/{resource}", status_code=201)
     def create_row(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: InsertRequest = ...,

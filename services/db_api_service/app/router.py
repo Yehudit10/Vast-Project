@@ -13,7 +13,6 @@ def build_router(contract_store) -> APIRouter:
 
     api.include_router(files_router)
 
-    # הראוטר הגנרי – מקבל את ה-contract_store
     api.include_router(build_generic_router(contract_store))
 
     return api

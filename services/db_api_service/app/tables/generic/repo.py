@@ -207,7 +207,7 @@ def list_rows(
     except SQLAlchemyError as e:
         raise DbSqlError("sql error", {"detail": str(e)})
 
-def insert_one(resource: str, payload: Dict[str, Any], returning: str = "keys") -> Dict[str, Any]:
+def insert_row(resource: str, payload: Dict[str, Any], returning: str = "keys") -> Dict[str, Any]:
     """
     Insert a single row into resource after validating against the contract.
     Returns {"affected_rows": 1, "returning": <row_dict> | None}.
