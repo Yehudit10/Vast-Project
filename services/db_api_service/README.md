@@ -2,7 +2,7 @@
 
 A FastAPI microservice for managing image/file metadata in the **AgCloud** platform.
 
-## Quickstart (Dockerfile)
+## Quickstart (Docker Compose)
 
 Build:
 ```bash
@@ -97,20 +97,14 @@ Invoke-WebRequest "http://localhost:8080/api/files?limit=2" `
 
 ## Networking & Access
 
-**Host access (publish port, for development only):**
-```bash
-docker run --rm -d --name db-api-service-run   -p 127.0.0.1:8080:8080   --env-file .env   db-api-service:latest
-```
-Use `http://localhost:8080`. Bind to `127.0.0.1` for local-only, or change the host port (e.g. `8081`) to avoid conflicts.
+When running via Docker Compose, all services share the same internal network automatically.  
+You can access the API at:
 
-**Inter-container access (same network, no published port required):**
-```bash
-docker network create api_net || true
+http://localhost:8080
 
-docker run -d --name db-api --network api_net --env-file .env db-api-service:latest
-docker run --rm --network api_net curlimages/curl:8.9.1 curl -s http://db-api:8080/healthz
-```
-Both containers must be on the same Docker network to resolve `db-api` by name.
+If other services need to reach it internally, use the service name defined in `docker-compose.yml`
+(for example `db-api`).
+
 
 ---
 
