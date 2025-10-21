@@ -9,3 +9,17 @@ storage_with_mqtt/secrets/
 storage_with_mqtt/mqtt_images/secrets/
 MQTT_IMAGES/secrets/
 
+# Ignore virtual environment
+.venv/
+venv/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore environment and IDE files
+.env
+.idea/
+.vscode/
+

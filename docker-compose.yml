@@ -163,7 +163,7 @@ services:
     entrypoint: >
       sh -c "
         echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
         echo '==> Done.';
       "
   runner:
