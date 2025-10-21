@@ -1,0 +1,11 @@
+{
+    "Rules": [
+      {
+        "ID": "seven-days-imagery",
+        "Status": "Enabled",
+        "Filter": { "Prefix": "" },
+        "Transition": { "Days": 7, "StorageClass": "COLD_IMAGERY" }
+      }
+    ]
+  }
+  
