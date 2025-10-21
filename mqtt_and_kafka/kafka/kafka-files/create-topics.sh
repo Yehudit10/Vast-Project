@@ -34,6 +34,8 @@ TOPICS=(
   sensor-telemetry
   sensor-anomalies
   dev-robot-telemetry-anomalies
+  irrigation.control
+  irrigation.control.dlq
 )
 
 # Idempotent creation with retention.ms
