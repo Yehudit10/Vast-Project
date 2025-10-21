@@ -1,58 +1,38 @@
+# --- Secrets and Certificates ---
 *.env
 *.crt
+*/certs/
+**/certs/
+**/secrets/
 storage_with_mqtt/secrets/
 storage_with_mqtt/mqtt_images/secrets/
 MQTT_IMAGES/secrets/
 
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.venv/
+venv/
 
-# Node.js
-/node_modules/
-/npm-debug.log
-/yarn-debug.log
-/yarn-error.log
+# --- VSCode / Editor ---
+.vscode/
+.idea/
 
-# Coverage reports
-/coverage/
-/htmlcov/
-/*.lcov
-*.html
+# --- Docker / Build ---
+*.log
+*.pid
+*.bak
+*.tmp
+*.swp
+.env.local
+.env.*
+!.env.example
 
-# IDE or Editor folders
-/.vscode/
-/.idea/
-/*.sublime-workspace
-/*.sublime-project
-
-# OS generated files
+# --- OS files ---
 .DS_Store
 Thumbs.db
 
-# Logs
-/logs
-*.log
-
-# Build files
-/dist/
-/build/
-/*.tgz
-
-# Jest test coverage output
-/coverage/
-/*.lcov-report/
-/coverage-html/
-
-# Specific to Jest
-jest.config.js
-jest.log
-
-# Miscellaneous
-*.bak
-*.swp
-*.swo
-*.sublime-workspace
-*.sublime-project
-
-# Ignore config files
-.env
-*.local
 
