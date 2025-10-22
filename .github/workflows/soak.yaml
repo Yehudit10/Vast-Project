@@ -39,7 +39,7 @@ jobs:
       #     docker build -t kafka-single:local .
 
       - name: Copy kafka env file
-        run: cp kafka-files/kafka.env.example ./kafka.env.example
+        run: cp mqtt_and_kafka/kafka/kafka-files/kafka.env.example ./kafka.env.example
       # - name: Copy kafka env file
       #   run: |
       #     cp kafka/kafka.env.example ./kafka.env.example
