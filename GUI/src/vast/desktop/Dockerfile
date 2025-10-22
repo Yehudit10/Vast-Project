@@ -24,24 +24,36 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
   PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 
-RUN wget -qO- https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz | tar xz -C /opt && \
-# COPY certs /app/certs
-# RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-#         echo "Configuring NetFree certificates..."; \
-#         cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-#         update-ca-certificates; \
-#     fi
+# # COPY certs /app/certs
+# # RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+# #         echo "Configuring NetFree certificates..."; \
+# #         cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+# #         update-ca-certificates; \
+# #     fi
 
-# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-# ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-# ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+# # ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# # ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+# # ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
-# RUN mkdir -p /opt && \
-#     wget --tries=3 --timeout=30 -O /tmp/novnc.tar.gz https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz && \
-#     tar xzf /tmp/novnc.tar.gz -C /opt && \
-    mv /opt/noVNC-1.4.0 /opt/noVNC && \
-    rm /tmp/novnc.tar.gz && \
+# RUN wget -qO- https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz | tar xz -C /opt && \
+
+# # RUN mkdir -p /opt && \
+# #     wget --tries=3 --timeout=30 -O /tmp/novnc.tar.gz https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz && \
+# #     tar xzf /tmp/novnc.tar.gz -C /opt && \
+#     mv /opt/noVNC-1.4.0 /opt/noVNC && \
+#     rm /tmp/novnc.tar.gz && \
+#     git clone --depth 1 https://github.com/novnc/websockify /opt/noVNC/utils/websockify
+# noVNC + websockify
+RUN set -eux; \
+    mkdir -p /opt; \
+    wget --tries=3 --timeout=30 -O /tmp/novnc.tar.gz \
+      https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz; \
+    tar xzf /tmp/novnc.tar.gz -C /opt; \
+    mv /opt/noVNC-1.4.0 /opt/noVNC; \
+    rm -f /tmp/novnc.tar.gz; \
     git clone --depth 1 https://github.com/novnc/websockify /opt/noVNC/utils/websockify
+
+
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

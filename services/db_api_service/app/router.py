@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.auth import require_auth, require_token
+from app.auth import require_auth
 from app.tables.files.router import router as files_router
 
 api = APIRouter(prefix="/api", tags=["api"], dependencies=[Depends(require_auth)])
