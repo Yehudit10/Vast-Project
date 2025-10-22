@@ -9,24 +9,8 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QUrl
 from home_view import HomeView
 from views.sensors_view import SensorsView
+from views.sound_view import SoundView
 from dashboard_api import DashboardApi
-import os
-
-
-# create SoundView class to display HTML content
-class SoundView(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        web_view = QWebEngineView(self)
-        
-        notification_api_url = "http://notification_api:5000"
-        print(f"[SoundView] Loading URL: {notification_api_url}")
-        web_view.setUrl(QUrl(notification_api_url))
-        
-        layout.addWidget(web_view)
 
 
 class MainWindow(QMainWindow):
