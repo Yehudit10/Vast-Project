@@ -1,4 +1,3 @@
-# File: classification/scripts/alerts.py
 import json
 import time
 import logging

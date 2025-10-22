@@ -4,22 +4,6 @@ import numpy as np
 from panns_inference import AudioTagging
 from classification.core.model_io import _to_numpy, ensure_checkpoint
 
-# def load_cnn14_model(checkpoint_path: Optional[str] = None, checkpoint_url: Optional[str] = None, device: str = "cpu") -> AudioTagging:
-#     """
-#     Load a CNN14 AudioTagging model.
-#     - Accepts either a local checkpoint_path or a checkpoint_url.
-#     - device defaults to "cpu".
-#     """
-#     if checkpoint_path:
-#         ckpt = ensure_checkpoint(checkpoint_path, checkpoint_url)
-#         return AudioTagging(checkpoint_path=ckpt, device=device)
-#     elif checkpoint_url:
-#         # If only URL provided, allow AudioTagging to handle it (or pass URL as checkpoint_path)
-#         # Many wrappers accept a path-like or URL; if not, tests should patch AudioTagging.
-#         return AudioTagging(checkpoint_path=checkpoint_url, device=device)
-#     else:
-#         raise FileNotFoundError("Either checkpoint_path or checkpoint_url must be provided.")
-
 def load_cnn14_model(
     checkpoint_path: Optional[str] = None,
     checkpoint_url: Optional[str] = None,
@@ -36,9 +20,6 @@ def load_cnn14_model(
     ckpt = ensure_checkpoint(checkpoint_path, checkpoint_url)  # returns a local path
     return AudioTagging(checkpoint_path=ckpt, device=device)
 
-
-# def run_cnn14_inference(model: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[str]]:
-#     return run_inference(model, wav)
 
 def run_embedding(at: AudioTagging, wav: np.ndarray) -> np.ndarray:
     try:
