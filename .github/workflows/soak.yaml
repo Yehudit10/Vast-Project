@@ -224,24 +224,54 @@ jobs:
       - name: Start stack
         run: docker compose up -d --wait || docker compose up -d
 
+      # - name: Wait for services to be ready
+      #   run: |
+      #     echo "Waiting for Kafka to complete initialization..."
+      #     # Wait for your app-start.sh to finish topics creation and smoke test
+      #     for i in $(seq 1 120); do
+      #       if docker compose logs kafka 2>/dev/null | grep -q "Bridge is ready and running\|✅ PASS\|Kafka starting"; then
+      #         echo "Kafka initialization completed!"
+      #         break
+      #       fi
+      #       echo "Waiting for Kafka initialization... ($i/120)"
+      #       docker compose ps kafka
+      #       docker compose logs kafka --tail=5
+      #       sleep 2
+      #     done
+          
+      #     echo "Waiting for bridge to be ready..."
+      #     for i in $(seq 1 60); do
+      #       if docker compose logs mqtt-kafka-bridge 2>/dev/null | grep -q "Bridge is ready and running"; then
+      #         echo "Bridge is ready!"
+      #         break
+      #       fi
+      #       echo "Waiting for bridge... ($i/60)"
+      #       docker compose ps mqtt-kafka-bridge
+      #       docker compose logs mqtt-kafka-bridge --tail=5
+      #       sleep 2
+      #     done
+          
+      #     echo "=== All Services Status ==="
+      #     docker compose ps
       - name: Wait for services to be ready
         run: |
           echo "Waiting for Kafka to complete initialization..."
-          # Wait for your app-start.sh to finish topics creation and smoke test
           for i in $(seq 1 120); do
-            if docker compose logs kafka 2>/dev/null | grep -q "Bridge is ready and running\|✅ PASS\|Kafka starting"; then
-              echo "Kafka initialization completed!"
+            STATUS=$(docker compose ps -q kafka | xargs -r docker inspect -f '{{.State.Health.Status}}' || echo "unknown")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Kafka is healthy!"
               break
             fi
-            echo "Waiting for Kafka initialization... ($i/120)"
+            echo "Waiting for Kafka initialization... ($i/120) status=$STATUS"
             docker compose ps kafka
             docker compose logs kafka --tail=5
             sleep 2
           done
-          
+
           echo "Waiting for bridge to be ready..."
           for i in $(seq 1 60); do
-            if docker compose logs mqtt-kafka-bridge 2>/dev/null | grep -q "Bridge is ready and running"; then
+            # הימנעי מאימוג'י; בדקי טקסט פשוט מהלוגים
+            if docker compose logs mqtt-kafka-bridge 2>/dev/null | grep -qE "Bridge is ready and running|Bridge status - MQTT received"; then
               echo "Bridge is ready!"
               break
             fi
@@ -250,9 +280,10 @@ jobs:
             docker compose logs mqtt-kafka-bridge --tail=5
             sleep 2
           done
-          
+
           echo "=== All Services Status ==="
           docker compose ps
+
 
       - name: Debug services connectivity
         run: |
