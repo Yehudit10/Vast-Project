@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS incidents (                                          
   incident_id       uuid PRIMARY KEY,                                                                                               -- [ADDED]
   mission_id        bigint REFERENCES missions(mission_id)           ON DELETE SET NULL,                                            -- [ADDED]
   device_id         text   REFERENCES devices(device_id)             ON DELETE SET NULL,                                            -- [ADDED]
-  anomaly           text                                                                                                                         -- [ADDED]
+  anomaly           text,                                                                                                                      -- [ADDED]
   started_at        timestamptz NOT NULL,                                                                                            -- [ADDED]
   ended_at          timestamptz,                                                                                                     -- [ADDED]
   duration_sec      double precision,                                                                                                 -- [ADDED]
