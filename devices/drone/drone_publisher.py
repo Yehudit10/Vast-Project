@@ -28,10 +28,6 @@ client_data = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
 client_data.connect(MQTT_HOST_DATA, MQTT_PORT_DATA, keepalive=60)
 client_data.loop_start()
 
-# client = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
-# client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
-# client.loop_start()
-
 client_meta = mqtt.Client(client_id=f"drone-simulator-{uuid.uuid4().hex[:6]}")
 client_meta.connect(MQTT_HOST_META, MQTT_PORT_META, keepalive=60)
 client_meta.loop_start()
