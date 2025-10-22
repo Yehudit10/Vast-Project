@@ -128,13 +128,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS clients (
-  schedule_id BIGSERIAL PRIMARY KEY,         
-  client_id   BIGINT NOT NULL,               
-  team        VARCHAR(150),                  
-  cron_expr   TEXT,                          
-  active_days TEXT,                         
-  time_window TEXT,                         
-  last_updated TIMESTAMPTZ NOT NULL DEFAULT now()  
+  schedule_id BIGSERIAL PRIMARY KEY,
+  client_id   BIGINT NOT NULL,
+  team        VARCHAR(150),
+  cron_expr   TEXT,
+  active_days TEXT,
+  time_window TEXT,
+  last_updated TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- service_accounts
@@ -249,3 +249,85 @@ CREATE INDEX IF NOT EXISTS idx_infer_fruit ON inference_logs (fruit_type);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sensors (device_id, start_ts);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
+
+
+
+/* ===========================
+   ADDED: Incidents schema v1
+   =========================== */
+
+-- =========================
+-- Incidents: one event row
+-- =========================
+-- anomaly_type_id   int    REFERENCES anomaly_types(anomaly_type_id) ON DELETE SET NULL, 
+CREATE TABLE IF NOT EXISTS incidents (                                                                                              -- [ADDED]
+  incident_id       uuid PRIMARY KEY,                                                                                               -- [ADDED]
+  mission_id        bigint REFERENCES missions(mission_id)           ON DELETE SET NULL,                                            -- [ADDED]
+  device_id         text   REFERENCES devices(device_id)             ON DELETE SET NULL,                                            -- [ADDED]
+  anomaly           text                                                                                                                         -- [ADDED]
+  started_at        timestamptz NOT NULL,                                                                                            -- [ADDED]
+  ended_at          timestamptz,                                                                                                     -- [ADDED]
+  duration_sec      double precision,                                                                                                 -- [ADDED]
+  frame_start       int,                                                                                                              -- [ADDED]
+  frame_end         int,                                                                                                              -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  -- NEW: aggregate severity (mean tracks/frame over the incident)                                                                    -- [ADDED]
+  severity          real,                                                                                                             -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  -- image-space ROI; keep flexible                                                                                                   -- [ADDED]
+  roi_pixels        jsonb,                                                                                                            -- [ADDED]
+  -- optional map footprint (camera frustum, area of interest, etc.)                                                                  -- [ADDED]
+  footprint         geometry(Polygon,4326),                                                                                           -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  -- canonical media for playback (referencing your existing files table)                                                             -- [ADDED]
+  clip_file_id      bigint REFERENCES files(file_id)   ON DELETE SET NULL,                                                            -- [ADDED]
+  poster_file_id    bigint REFERENCES files(file_id)   ON DELETE SET NULL,                                                            -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  -- optional pre-baked UI timeline (array of {frame,ts,box,conf,url,...})                                                            -- [ADDED]
+  frames_manifest   jsonb,                                                                                                            -- [ADDED]
+  is_real           boolean,
+  ack     boolean DEFAULT false,                                                                                                       -- [ADDED]
+  meta              jsonb DEFAULT '{}'::jsonb                                                                                        -- [ADDED]
+);                                                                                                                                  -- [ADDED]
+
+-- Helpful indexes                                                                                                                  -- [ADDED]
+CREATE INDEX IF NOT EXISTS ix_incidents_device_time  ON incidents (device_id, started_at DESC);                                      -- [ADDED]
+CREATE INDEX IF NOT EXISTS ix_incidents_mission_time ON incidents (mission_id, started_at DESC);                                     -- [ADDED]
+
+-- ==========================================
+-- Per-frame timeline: one row per frame
+-- Store ALL detections (bbox + conf + track_id) in JSONB
+-- ==========================================
+DROP TABLE IF EXISTS incident_frames CASCADE;                                                                                        -- [ADDED]
+
+CREATE TABLE incident_frames (                                                                                                       -- [ADDED]
+  incident_id   uuid NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE,                                                   -- [ADDED]
+  frame_idx     int  NOT NULL,                                                                                                       -- [ADDED]
+  ts            timestamptz NOT NULL,                                                                                                -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  -- List of detection objects:                                                                                                       -- [ADDED]
+  -- [{"x1":int,"y1":int,"x2":int,"y2":int,"conf":float|null,"track_id":int|null}, ...]                                               -- [ADDED]
+  detections    jsonb NOT NULL DEFAULT '[]'::jsonb,                                                                                  -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  cls_name      text,                                                                                                                -- [ADDED]
+  cls_id        text,                                                                                                                -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  -- Annotated (or raw) frame stored in files                                                                                         -- [ADDED]
+  file_id       bigint REFERENCES files(file_id) ON DELETE SET NULL,                                                                 -- [ADDED]
+                                                                                                                                    -- [ADDED]
+  meta          jsonb DEFAULT '{}'::jsonb,                                                                                           -- [ADDED]
+  PRIMARY KEY (incident_id, frame_idx)                                                                                               -- [ADDED]
+);                                                                                                                                  -- [ADDED]
+
+-- Useful indexes                                                                                                                    -- [ADDED]
+CREATE INDEX IF NOT EXISTS ix_incident_frames_ts                                                                                     -- [ADDED]
+  ON incident_frames (incident_id, ts);                                                                                              -- [ADDED]
+
+-- JSONB GIN index for detection queries (by bbox/conf/track_id)                                                                     -- [ADDED]
+CREATE INDEX IF NOT EXISTS ix_incident_frames_detections_gin                                                                         -- [ADDED]
+  ON incident_frames USING GIN (detections jsonb_path_ops);                                                                          -- [ADDED]
+
+-- (Optional) denormalized count for quick metrics                                                                                    -- [ADDED]
+ALTER TABLE incident_frames                                                                                                          -- [ADDED]
+  ADD COLUMN IF NOT EXISTS num_tracks int                                                                                            -- [ADDED]
+  GENERATED ALWAYS AS (jsonb_array_length(detections)) STORED;                                                                       -- [ADDED]
