@@ -3,30 +3,25 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 
 # Application configuration validated via Pydantic.
 # Holds paths and runtime flags used across the service.
-class Settings(BaseModel):
+class Settings(BaseSettings):
     CONTRACTS_DIR: Path = Path("app/contracts")
-    ALLOWED_TABLES: List[str] = [
-        "event_logs_sensors", "devices"
-    ]
+    ALLOWED_TABLES: List[str] = []  # provided via ENV or .env (comma-separated)
     STRICT_UNKNOWN_FIELDS: bool = True
 
-    # Normalize ALLOWED_TABLES input before model validation.
-    # Accepts a comma-separated string for convenience or any iterable,
-    # then returns a deduplicated, lowercase, order-preserving list.
+    # Accept comma-separated string or iterable; normalize to lowercase unique list.
     @field_validator("ALLOWED_TABLES", mode="before")
     @classmethod
     def _normalize_allowed_tables(cls, v):
-        # Accept list/tuple/set or comma-separated string (dev convenience)
         if isinstance(v, str):
             v = [x.strip() for x in v.split(",") if x.strip()]
-        # Normalize: lowercase + unique order-preserving
         seen = set()
-        result = []
+        result: List[str] = []
         for name in v:
             key = name.strip().lower()
             if key and key not in seen:
@@ -34,13 +29,16 @@ class Settings(BaseModel):
                 result.append(key)
         return result
 
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
 
 # Global settings instance used by the application modules.
 settings = Settings()
 
 
 # Utility: centralized check whether a table name is allowed.
-# Comparison is case-insensitive and trims whitespace.
 def is_table_allowed(table_name: str) -> bool:
     """Centralized check used by routers/repos."""
     return table_name.strip().lower() in settings.ALLOWED_TABLES

@@ -1,20 +1,12 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, HTTPException, Path, Query, Depends, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Path, Query, Depends, Request, Body
 
 from app.auth import require_auth
 from . import repo
 
 
 # ----- Request models -----
-class InsertRequest(BaseModel):
-    data: Dict[str, Any]
-
-
-class InsertBatchRequest(BaseModel):
-    data: List[Dict[str, Any]]
-
 
 def build_generic_router(contract_store) -> APIRouter:
     """
@@ -62,7 +54,7 @@ def build_generic_router(contract_store) -> APIRouter:
         limit: int = Query(50, ge=1, le=500),
         offset: int = Query(0, ge=0),
         order_by: Optional[str] = Query(None),
-        order_dir: str = Query("desc", pattern="^(?i)(asc|desc)$"),
+        order_dir: str = Query("desc", pattern="^(?i:asc|desc)$")
     ):
         try:
             # Extract user filters from query parameters (exclude pagination/order params).
@@ -85,11 +77,11 @@ def build_generic_router(contract_store) -> APIRouter:
     @tables_router.post("/{resource}", status_code=201)
     def create_row(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
-        body: InsertRequest = ...,
+        body: Dict[str, Any] = Body(...),
         returning: str = Query("keys", enum=["keys", "full"]),
     ):
         try:
-            return repo.insert_row(resource, body.data, returning)
+            return repo.insert_row(resource, body, returning)
         except Exception as e:
            handle_repo_exceptions(e)
 
@@ -97,10 +89,54 @@ def build_generic_router(contract_store) -> APIRouter:
     @tables_router.post("/{resource}/rows:batch")
     def create_rows_batch(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
-        body: InsertBatchRequest = ...,
+        body: List[Dict[str, Any]] = Body(...),
     ):
         try:
-            return repo.insert_batch(resource, body.data)
+            return repo.insert_batch(resource, body)
+        except Exception as e:
+            handle_repo_exceptions(e)
+
+    # Partial update (PATCH): body must include {"keys": {...}, "data": {...}}
+    @tables_router.patch("/{resource}/rows")
+    def patch_row(
+        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        body: Dict[str, Any] = Body(...),
+    ):
+        try:
+            keys = body.get("keys")
+            data = body.get("data")
+            if not isinstance(keys, dict) or not isinstance(data, dict):
+                raise HTTPException(status_code=400, detail="body must include 'keys' and 'data' objects")
+            return repo.update_row(resource, keys, data, replace=False)
+        except Exception as e:
+            handle_repo_exceptions(e)
+
+    # Full replace (PUT): body must include {"keys": {...}, "data": {...}} and does full validation
+    @tables_router.put("/{resource}/rows")
+    def put_row(
+        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        body: Dict[str, Any] = Body(...),
+    ):
+        try:
+            keys = body.get("keys")
+            data = body.get("data")
+            if not isinstance(keys, dict) or not isinstance(data, dict):
+                raise HTTPException(status_code=400, detail="body must include 'keys' and 'data' objects")
+            return repo.update_row(resource, keys, data, replace=True)
+        except Exception as e:
+            handle_repo_exceptions(e)
+
+    # Delete row
+    @tables_router.delete("/{resource}/rows")
+    def delete_row(
+        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        body: Dict[str, Any] = Body(...),
+    ):
+        try:
+            keys = body.get("keys")
+            if not isinstance(keys, dict):
+                raise HTTPException(status_code=400, detail="body must include 'keys' object")
+            return repo.delete_row(resource, keys)
         except Exception as e:
             handle_repo_exceptions(e)
 

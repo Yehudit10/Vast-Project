@@ -4,15 +4,17 @@ from app.db import engine
 from app.models import Base
 from app.contracts.loader import ContractStore
 from app.router import build_router
+from app.tables.generic import repo
 from .config import settings
 
 contract_store = ContractStore(settings.CONTRACTS_DIR)
+repo.set_contract_store(contract_store)
+
 app = FastAPI(title="Storage DB API", version="1.1.0")
 
 @app.on_event("startup")
 def load_contracts_on_startup():
     contract_store.load_all()
-    pass    
 
 @app.get("/healthz")
 def healthz():
