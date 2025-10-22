@@ -8,7 +8,7 @@ COMPOSE_CMD="docker compose"               # change to 'docker-compose' if neede
 NETWORK_NAME="agcloud_mesh"                # must match your docker-compose.yml
 MOSQUITTO_SVC="mosquitto"
 KAFKA_SVC="kafka"
-CONNECT_SVC="connect-1"
+CONNECT_SVC="connect"
 # ----------------------
 
 echo "==> Bringing stack down (volumes too) ..."
@@ -36,7 +36,7 @@ wait_healthy() {
 
 wait_healthy "$KAFKA_SVC"
 wait_healthy "$MOSQUITTO_SVC"
-# connect-1 sometimes reports 'starting' while REST is already up; still wait:
+# connect sometimes reports 'starting' while REST is already up; still wait:
 wait_healthy "$CONNECT_SVC"
 
 # --- verify connector plugin is available ---

@@ -216,7 +216,23 @@ CREATE TABLE IF NOT EXISTS event_logs_sensors(
 
 
 
--- === Indexes ===
+CREATE TABLE IF NOT EXISTS sensors (
+  id SERIAL PRIMARY KEY,
+  sensor_name TEXT UNIQUE NOT NULL,
+  sensor_type TEXT NOT NULL,
+  owner_name TEXT,
+  location_lat DOUBLE PRECISION,
+  location_lon DOUBLE PRECISION,
+  install_date TIMESTAMP DEFAULT NOW(),
+  status TEXT DEFAULT 'active',
+  description TEXT,
+  last_maintenance TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
+CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
+CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
+CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (location_lat, location_lon);
 
 -- Spatial
 CREATE INDEX IF NOT EXISTS ix_missions_area_geom_gist  ON missions   USING GIST (area_geom);
