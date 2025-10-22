@@ -1,0 +1,11 @@
+{
+  "image_name": "DRN-482A_20251019T081622Z.jpg",
+  "drone_id": "DRN-482A",
+  "capture_time": "2025-10-19T08:16:22Z",
+  "gis_origin": {
+    "latitude": 31.89519,
+    "longitude": 34.9681
+  },
+  "altitude_m": 120.0,
+  "done": false
+}
