@@ -163,7 +163,7 @@ services:
     entrypoint: >
       sh -c "
         echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
         echo '==> Done.';
       "
   runner:
@@ -408,6 +408,8 @@ services:
     build:
       context: ./services/sounds/classifier
       dockerfile: Dockerfile.classifier-svc
+      args:
+        CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
     container_name: classifier
     restart: unless-stopped
 
