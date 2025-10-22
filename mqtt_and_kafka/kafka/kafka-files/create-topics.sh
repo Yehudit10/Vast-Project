@@ -32,6 +32,10 @@ TOPICS=(
   dev-robot-telemetry-raw
   dev-robot-state
   dev-camera-security
+  sensor-telemetry
+  sensor-anomalies
+  dev-robot-telemetry-anomalies
+
 )
 
 # Idempotent creation with retention.ms
