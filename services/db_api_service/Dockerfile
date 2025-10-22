@@ -59,8 +59,3 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
 
 
-<<<<<<< HEAD
-# Run FastAPI app with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
-=======
->>>>>>> 8930acc7679ad3b0782d15449fd4176f5a9ea2d2
