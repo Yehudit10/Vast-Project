@@ -132,34 +132,6 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
             raise
 
 
-# def load_audioset_labels_from_pkg() -> Optional[List[str]]:
-#     try:
-#         import panns_inference, inspect, os, csv
-#         pkg_dir = os.path.dirname(inspect.getfile(panns_inference))
-#         csv_path = os.path.join(pkg_dir, "resources", "class_labels_indices.csv")
-#         with open(csv_path, newline="", encoding="utf-8") as f:
-#             rows = list(csv.DictReader(f))
-#         if rows and "index" in rows[0]:
-#             rows.sort(key=lambda r: int(r["index"]))
-#         return [(r.get("display_name") or r.get("name") or "").strip() for r in rows] or None
-#     except Exception:
-#         LOGGER.debug("failed to load labels from pkg", exc_info=True)
-#         return None
-
-
-# def load_labels_from_csv(csv_path: str) -> Optional[List[str]]:
-#     try:
-#         import csv
-#         with open(csv_path, newline="", encoding="utf-8") as f:
-#             rows = list(csv.DictReader(f))
-#         if rows and "index" in rows[0]:
-#             rows.sort(key=lambda r: int(r["index"]))
-#         return [(r.get("display_name") or r.get("name") or "").strip() for r in rows] or None
-#     except Exception:
-#         LOGGER.debug("failed to load labels csv: %s", csv_path, exc_info=True)
-#         return None
-
-
 def _to_numpy(x: Any) -> np.ndarray:
     if (torch is not None) and hasattr(torch, "Tensor") and isinstance(x, torch.Tensor):  # type: ignore
         x = x.detach().cpu().numpy()
@@ -174,47 +146,6 @@ def _to_numpy(x: Any) -> np.ndarray:
     elif arr.ndim != 1:
         arr = arr.reshape(-1)
     return arr
-
-
-# def run_inference(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[str]]:
-#     try:
-#         res = at.inference(wav)
-#     except Exception:
-#         res = at.inference(wav[None, :])
-
-#     clipwise: Optional[np.ndarray] = None
-#     labels: Optional[List[str]] = None
-
-#     if isinstance(res, dict):
-#         clipwise = _to_numpy(res.get("clipwise_output"))
-#         raw_labels = res.get("labels")
-#         if isinstance(raw_labels, (list, tuple)):
-#             labels = [str(x) for x in raw_labels]
-#     elif isinstance(res, tuple):
-#         if len(res) >= 1:
-#             clipwise = _to_numpy(res[0])
-#         if len(res) >= 3 and isinstance(res[2], (list, tuple)):
-#             labels = [str(x) for x in res[2]]
-
-#     if clipwise is None:
-#         clipwise = _to_numpy(res)
-
-#     clipwise = clipwise.reshape(-1).astype(np.float32, copy=False)
-#     if np.isnan(clipwise).any() or np.isinf(clipwise).any():
-#         clipwise = np.nan_to_num(clipwise, nan=0.0, posinf=1.0, neginf=0.0)
-
-#     if labels is None and hasattr(at, "labels"):
-#         try:
-#             labels = [str(x) for x in list(at.labels)]  # type: ignore[attr-defined]
-#         except Exception:
-#             labels = None
-
-#     if labels is None:
-#         labels = load_audioset_labels_from_pkg() or [f"class_{i}" for i in range(clipwise.size)]
-#     if len(labels) != clipwise.size:
-#         labels = [f"class_{i}" for i in range(clipwise.size)]
-
-#     return clipwise, labels
 
 
 def segment_waveform(
@@ -257,59 +188,6 @@ def segment_waveform(
     return [np.asarray(seg, dtype=np.float32).flatten() for seg in segments]
 
 
-# def run_inference_with_embedding(at: AudioTagging, wav: np.ndarray) -> Tuple[np.ndarray, List[str], Optional[np.ndarray]]:
-#     try:
-#         res = at.inference(wav)
-#     except Exception:
-#         res = at.inference(wav[None, :])
-
-#     clipwise = None
-#     labels: Optional[List[str]] = None
-#     embedding = None
-
-#     if isinstance(res, dict):
-#         clipwise = _to_numpy(res.get("clipwise_output"))
-#         embedding = res.get("embedding", None)
-#         raw_labels = res.get("labels")
-#         if isinstance(raw_labels, (list, tuple)):
-#             labels = [str(x) for x in raw_labels]
-#     elif isinstance(res, tuple):
-#         if len(res) >= 1:
-#             clipwise = _to_numpy(res[0])
-#         if len(res) >= 2:
-#             embedding = res[1]
-#         if len(res) >= 3 and isinstance(res[2], (list, tuple)):
-#             labels = [str(x) for x in res[2]]
-
-#     if clipwise is None:
-#         clipwise = _to_numpy(res)
-
-#     clipwise = clipwise.reshape(-1).astype(np.float32, copy=False)
-#     if np.isnan(clipwise).any() or np.isinf(clipwise).any():
-#         clipwise = np.nan_to_num(clipwise, nan=0.0, posinf=1.0, neginf=0.0)
-
-#     if labels is None and hasattr(at, "labels"):
-#         try:
-#             labels = [str(x) for x in list(at.labels)]  # type: ignore[attr-defined]
-#         except Exception:
-#             labels = None
-#     if labels is None:
-#         labels = load_audioset_labels_from_pkg() or [f"class_{i}" for i in range(clipwise.size)]
-#     if len(labels) != clipwise.size:
-#         labels = [f"class_{i}" for i in range(clipwise.size)]
-
-#     emb_out: Optional[np.ndarray] = None
-#     if embedding is not None:
-#         try:
-#             emb_out = _to_numpy(embedding).reshape(-1).astype(np.float32, copy=False)
-#             if np.isnan(emb_out).any() or np.isinf(emb_out).any():
-#                 emb_out = np.nan_to_num(emb_out, nan=0.0, posinf=0.0, neginf=0.0)
-#         except Exception:
-#             emb_out = None
-
-#     return clipwise, labels, emb_out
-
-
 def aggregate_matrix(mat: np.ndarray, mode: Literal["mean", "max"] = "mean") -> np.ndarray:
     if not isinstance(mat, np.ndarray):
         raise TypeError("mat must be a numpy.ndarray")
@@ -331,33 +209,4 @@ def aggregate_matrix(mat: np.ndarray, mode: Literal["mean", "max"] = "mean") -> 
     # Ensure finite float32 output; all-NaN columns become 0.0
     v = np.nan_to_num(v, nan=0.0, posinf=np.finfo(np.float32).max, neginf=np.finfo(np.float32).min)
     return v.astype(np.float32, copy=False)
-
-
-# def discover_audio_files(root: pathlib.Path) -> List[pathlib.Path]:
-#     if root.is_file():
-#         return [root] if root.suffix.lower() in SUPPORTED_EXTS else []
-#     files: List[pathlib.Path] = []
-#     for ext in SUPPORTED_EXTS:
-#         files.extend(root.rglob(f"*{ext}"))
-#     return sorted(files)
-
-
-# def env_bool(name: str, default: bool = False) -> bool:
-#     v = os.getenv(name)
-#     if v is None:
-#         return default
-#     return v.strip().lower() in ("1", "true", "yes", "on")
-
-
-# def softmax_1d(x: np.ndarray) -> np.ndarray:
-#     x = np.asarray(x, dtype=np.float32).reshape(-1)
-#     if x.size == 0:
-#         return x
-#     x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
-#     m = float(np.max(x))
-#     y = np.exp(x - m)
-#     s = float(np.sum(y))
-#     if not np.isfinite(s) or s <= 0.0:
-#         return np.full_like(x, 1.0 / x.size)
-#     return y / s
 

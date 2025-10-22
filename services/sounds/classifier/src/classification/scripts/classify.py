@@ -1,4 +1,3 @@
-# classification/scripts/classify.py
 from __future__ import annotations
 
 import os
@@ -14,7 +13,6 @@ import joblib
 from minio import Minio
 from minio.error import S3Error
 
-# Core audio/model utilities
 from classification.core.model_io import (
     SAMPLE_RATE,
     load_audio,           # returns 1-D float32 mono @ SAMPLE_RATE
@@ -260,9 +258,6 @@ def run_classification_job(*, s3_bucket: str, s3_key: str) -> Dict[str, object]:
             conn = None
             try:
                 conn = dbio.open_db(DB_URL, schema=DB_SCHEMA)
-                # you can upsert a minimal row; adapt to your schema/tables:
-                # dbio.upsert_file(...) + dbio.upsert_file_aggregate(...)
-                # (left as-is since your project already contains these helpers)
                 conn.commit()
             finally:
                 if conn:
