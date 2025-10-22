@@ -95,6 +95,26 @@ Invoke-WebRequest "http://localhost:8080/api/files?limit=2" `
 
 ---
 
+---
+
+## Example: Generic API Usage
+
+The Generic API provides unified CRUD endpoints for any allowed table.
+
+### Available endpoints
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| GET | `/api/tables/{resource}/schema` | Get table schema |
+| GET | `/api/tables/{resource}` | List rows |
+| POST | `/api/tables/{resource}` | Create a single row |
+| POST | `/api/tables/{resource}/rows:batch` | Create multiple rows in one request |
+
+### Example 1 — List rows
+```bash
+curl -X GET "http://localhost:8080/api/tables/event_logs_sensors?limit=5" \
+  -H "Authorization: Bearer <access_token>"
+```
+
 ## Networking & Access
 
 When running via Docker Compose, all services share the same internal network automatically.  
@@ -104,6 +124,20 @@ http://localhost:8080
 
 If other services need to reach it internally, use the service name defined in `docker-compose.yml`
 (for example `db-api`).
+
+### Example 2 — Create a single row
+```bash
+curl -X POST "http://localhost:8080/api/tables/event_logs_sensors" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "device_id": "dev-a",
+        "issue_type": "temperature_out_of_range",
+        "severity": "warn",
+        "start_ts": "2025-10-15T20:09:02.065445+03:00",
+        "details": {"measured": 52.4, "expected_range": [0, 50], "unit": "°C"}
+      }'
+```
 
 
 ---
