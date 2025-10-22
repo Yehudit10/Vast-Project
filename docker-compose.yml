@@ -77,35 +77,26 @@ services:
       - ag_cloud
 
   plant_stress:
-    build:
-      context: ./services/plant_stress
-      dockerfile: Dockerfile
-    # image: company/plant_stress:latest
-    container_name: plant_stress
+    build: ./services/plant_stress
     environment:
-      INPUT_DIR: /data/inbox
-      MODEL_DIR: /models
-      PERIOD_DAYS: "0"    
-      CONF_THRESHOLD: "0.0"
-      POSTGRES_DSN: "postgresql://missions_user:pg123@postgres:5432/missions_db"
-      PG_WRITE: "0"
-
-      DB_API_REPORT: "1"
-      DB_API_BASE: "http://host.docker.internal:8001"
-      DB_API_AUTH_MODE: "service"
-      DB_API_TOKEN: "auto"
-      DB_API_TOKEN_FILE: "/app/secret/db_api_token"
-      DB_API_SERVICE_NAME: "plant_stress"
+      - INPUT_DIR=/data/inbox
+      - MODEL_DIR=/models
+      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
+      - CONFIDENCE_THRESHOLD=0.6
+      # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
     volumes:
-      - ./services/plant_stress/models:/models:ro
-      - ./services/plant_stress/samples:/data/inbox:ro
-      - ./services/plant_stress/secrets:/app/secret:ro
+      - "./services/plant_stress/models:/models:ro"
+      - "./services/plant_stress/samples:/data/inbox:ro"
+
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+    command: ["python", "-u", "/app/app.py"]
     networks:
       - ag_cloud
-    restart: "no" 
+
+
+ 
 
   # -------------------------
   # MQTT + Kafka + Connect + Init
