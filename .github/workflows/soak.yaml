@@ -51,7 +51,7 @@ jobs:
             kafka:
               image: kafka-single:local
               env_file:
-                - ./kafka/kafka.env.example
+                - mqtt_and_kafka/kafka/kafka-files/kafka.env.example
               ports:
                 - "9092:9092"
                 - "29092:9094"
