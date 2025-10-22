@@ -184,6 +184,7 @@ def main():
             batch.append((fpath, "", None, "", f"Error: {e}", dt.datetime.utcnow()))
             print(f"[ERR] {fpath} -> {e}")
 
+
     # Write to Postgres
     try:
         if batch:
