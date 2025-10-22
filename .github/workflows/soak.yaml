@@ -231,7 +231,7 @@ jobs:
           docker compose version || docker-compose --version || true
 
       - name: Start stack
-        run: docker compose up -d --wait || docker compose up -d
+        run: docker compose up -d
 
       # - name: Wait for services to be ready
       #   run: |
