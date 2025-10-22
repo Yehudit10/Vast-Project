@@ -2,7 +2,7 @@ name: Soak Test (MQTT to Kafka Bridge)
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "sounds-ruth" ]
+    branches: [ "main", "sounds-ruth", "ruthhermelin/soak" ]
 permissions:
   contents: read
   checks: write
@@ -31,13 +31,18 @@ jobs:
         run: mkdir -p "$ARTIFACT_DIR"
 
       - name: Build Kafka image
-        run: |
-          cd kafka
-          docker build -t kafka-single:local .
+        run: docker build -t kafka-single:local mqtt_and_kafka/kafka
+
+      # - name: Build Kafka image
+      #   run: |
+      #     cd kafka
+      #     docker build -t kafka-single:local .
 
       - name: Copy kafka env file
-        run: |
-          cp kafka/kafka.env.example ./kafka.env.example
+        run: cp kafka-files/kafka.env.example ./kafka.env.example
+      # - name: Copy kafka env file
+      #   run: |
+      #     cp kafka/kafka.env.example ./kafka.env.example
 
       - name: Create docker-compose.yml & configs
         run: |
