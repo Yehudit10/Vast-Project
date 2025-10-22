@@ -137,12 +137,21 @@ CREATE TABLE IF NOT EXISTS clients (
   last_updated TIMESTAMPTZ NOT NULL DEFAULT now()  
 );
 
+-- CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     predicted_class TEXT NOT NULL,
+--     confidence FLOAT NOT NULL,
+--     -- status TEXT NOT NULL,
+--     prediction_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
 CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    predicted_class TEXT NOT NULL,
-    confidence FLOAT NOT NULL,
-    -- status TEXT NOT NULL,
-    prediction_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  id               BIGSERIAL PRIMARY KEY,
+  file             TEXT,
+  predicted_class  TEXT,
+  confidence       DOUBLE PRECISION,
+  watering_status  TEXT,
+  status           TEXT,
+  prediction_time  TIMESTAMPTZ DEFAULT now()
 );
 
 -- service_accounts

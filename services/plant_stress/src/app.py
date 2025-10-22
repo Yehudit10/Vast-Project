@@ -1,231 +1,206 @@
-# services/plant_stress/src/app.py
-
-import os, sys, glob, datetime as dt, pickle
+import os, sys, time, glob, pickle, datetime as dt
 from pathlib import Path
-from typing import List, Tuple
 import numpy as np
 import librosa
 import tensorflow as tf
 import psycopg2
-from psycopg2.extras import execute_values
+import psycopg2.extras
 
-# ← אם את משתמשת בדיווח ל-db_api, הקובץ הזה חייב להיות אצלך:
-# services/plant_stress/src/db_api_client.py
-# והוא כולל את write_db_entry(meta)
-try:
-    from db_api_client import write_db_entry  # אופציונלי (ידפיס שגיאה אם אין)
-    _HAS_DB_API_CLIENT = True
-except Exception as _e:
-    print(f"[db_api] client not available: {_e}")
-    _HAS_DB_API_CLIENT = False
+# ======== Environment Config ========
+INPUT_DIR    = os.environ.get("INPUT_DIR", "/data/inbox")
+MODEL_DIR    = os.environ.get("MODEL_DIR", "/models")
+POSTGRES_DSN = os.environ.get("POSTGRES_DSN", "postgresql://postgres:postgres@localhost:5432/postgres")
+PERIOD_DAYS  = int(os.environ.get("PERIOD_DAYS", "0"))   # 0 = process all files
 
-# ============ ENV / CONFIG ============
-INPUT_DIR = os.getenv("INPUT_DIR", "/data/inbox")
-MODEL_DIR = os.getenv("MODEL_DIR", "/models")
-POSTGRES_DSN = os.getenv(
-    "POSTGRES_DSN",
-    "postgresql://postgres:postgres@host.docker.internal:5432/missions_db"
-)
-PERIOD_DAYS = int(os.getenv("PERIOD_DAYS", "7"))
-CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", "0.0"))
-
-# דיווח ל-db_api (לא חובה): 1=לשלוח, 0=לא לשלוח
-DB_API_REPORT = os.getenv("DB_API_REPORT", "0") == "1"
-# שם bucket ל-db_api (כששולחים meta)
-DB_API_BUCKET = os.getenv("DB_API_BUCKET", "local-audio")
-
-# ============ Ultrasound constants (2ms @ 500kHz) ============
+# ======== Audio Parameters (2ms @ 500kHz) ========
 SAMPLE_RATE = 500_000
 DURATION_MS = 2
-N_SAMPLES = int(SAMPLE_RATE * DURATION_MS / 1000)  # 1000
-N_FFT = 256
-HOP_LENGTH = 64
-N_MELS = 64
+N_SAMPLES   = int(SAMPLE_RATE * DURATION_MS / 1000)  # 1000 samples
+N_FFT       = 256
+HOP_LENGTH  = 64
+N_MELS      = 64
 
-# ============ Audio helpers ============
-def load_audio(path: Path):
-    audio, sr = librosa.load(str(path), sr=None, mono=True)
+# ======== Watering Status Mapping ========
+CLASS_TO_STATUS = {
+    "Drought_Tomato":   "Watering required",
+    "Drought_Tobacco":  "Watering required",
+    "Control_Empty":    "Normal / Empty",
+    "Control_Greenhouse": "Greenhouse noise / Normal",
+}
+CONFIDENCE_THRESHOLD = float(os.environ.get("CONFIDENCE_THRESHOLD", "0.60"))
+
+# ======== Load Model / Scaler / LabelEncoder ========
+model_path = os.path.join(MODEL_DIR, "ultrasonic_plant_cnn.keras")
+scaler_path = os.path.join(MODEL_DIR, "scaler_params.npz")
+le_path     = os.path.join(MODEL_DIR, "label_encoder.pkl")
+
+print(f"INPUT_DIR={INPUT_DIR}")
+print(f"MODEL_DIR={MODEL_DIR}")
+print(f"POSTGRES_DSN={POSTGRES_DSN}")
+
+MODEL = tf.keras.models.load_model(model_path)
+
+sc = np.load(scaler_path)
+SCALER_MEAN  = sc["mean"]
+SCALER_SCALE = sc["scale"]
+
+with open(le_path, "rb") as f:
+    LABEL_ENCODER = pickle.load(f)
+
+# ======== Helper Functions ========
+def load_and_preprocess_audio(file_path: str):
+    """Load audio, resample to 500kHz, crop/pad to 2ms (1000 samples)."""
+    audio, sr = librosa.load(file_path, sr=None, mono=True)
+    if sr != SAMPLE_RATE:
+        audio = librosa.resample(audio, orig_sr=sr, target_sr=SAMPLE_RATE)
+        sr = SAMPLE_RATE
+
     if len(audio) > N_SAMPLES:
         start = (len(audio) - N_SAMPLES) // 2
         audio = audio[start:start + N_SAMPLES]
     elif len(audio) < N_SAMPLES:
         pad = N_SAMPLES - len(audio)
-        audio = np.pad(audio, (0, pad))
-    return audio.astype(np.float32), (sr or SAMPLE_RATE)
+        audio = np.pad(audio, (0, pad), mode='constant')
 
-def extract_features(audio: np.ndarray, sr: int) -> np.ndarray:
+    return audio.astype(np.float32), sr
+
+def extract_ultrasonic_features(audio: np.ndarray, sr: int):
+    """Short time/frequency features for 2ms window."""
     feats = []
-    feats.extend([np.mean(audio), np.std(audio), np.max(audio), np.min(audio), np.var(audio), np.median(audio)])
+    feats.extend([np.mean(audio), np.std(audio), np.max(audio), np.min(audio),
+                  np.var(audio), np.median(audio)])
     zcr = librosa.feature.zero_crossing_rate(audio, hop_length=HOP_LENGTH)[0]
     feats.extend([np.mean(zcr), np.std(zcr), np.max(zcr)])
-    fft = np.abs(np.fft.fft(audio))[: len(audio) // 2]
+    fft = np.abs(np.fft.fft(audio))[:len(audio)//2]
     feats.extend([np.mean(fft), np.std(fft), np.max(fft), np.argmax(fft)])
     try:
-        sc = librosa.feature.spectral_centroid(y=audio, sr=sr, hop_length=HOP_LENGTH, n_fft=N_FFT)[0]
-        ro = librosa.feature.spectral_rolloff(y=audio, sr=sr, hop_length=HOP_LENGTH, n_fft=N_FFT)[0]
-        feats.extend([np.mean(sc), np.mean(ro)])
+        spectral_centroids = librosa.feature.spectral_centroid(y=audio, sr=sr, hop_length=HOP_LENGTH)[0]
+        spectral_rolloff   = librosa.feature.spectral_rolloff(y=audio, sr=sr, hop_length=HOP_LENGTH)[0]
+        feats.extend([np.mean(spectral_centroids), np.mean(spectral_rolloff)])
     except Exception:
         feats.extend([0.0, 0.0])
-    rms = librosa.feature.rms(y=audio, hop_length=HOP_LENGTH, frame_length=N_FFT)[0]
+    rms = librosa.feature.rms(y=audio, hop_length=HOP_LENGTH)[0]
     feats.extend([np.mean(rms), np.std(rms)])
     return np.array(feats, dtype=np.float32)
 
-def create_melspec(audio: np.ndarray, sr: int) -> np.ndarray:
-    try:
-        mel = librosa.feature.melspectrogram(
-            y=audio, sr=sr, n_fft=N_FFT, hop_length=HOP_LENGTH, n_mels=N_MELS, fmax=sr // 2
-        )
-        db = librosa.power_to_db(mel, ref=np.max)
-        norm = (db - db.min()) / (db.max() - db.min() + 1e-8)
-        return norm.astype(np.float32)
-    except Exception:
-        T = max(1, N_SAMPLES // HOP_LENGTH)
-        return np.zeros((N_MELS, T), dtype=np.float32)
+def create_spectrogram_features(audio: np.ndarray, sr: int):
+    """Small Mel-spectrogram adapted for 2ms."""
+    mel = librosa.feature.melspectrogram(
+        y=audio, sr=sr, n_fft=N_FFT, hop_length=HOP_LENGTH,
+        n_mels=N_MELS, fmax=sr//2
+    )
+    mel_db  = librosa.power_to_db(mel, ref=np.max)
+    mel_norm = (mel_db - mel_db.min()) / (mel_db.max() - mel_db.min() + 1e-8)
+    return mel_norm.astype(np.float32)
 
-# ============ Artifacts ============
-def _find(path_globs: List[str]) -> str | None:
-    for patt in path_globs:
-        m = glob.glob(patt)
-        if m:
-            return m[0]
-    return None
+def normalize_features(x: np.ndarray):
+    return (x - SCALER_MEAN) / SCALER_SCALE
 
-def load_artifacts():
-    model_path = _find([
-        os.path.join(MODEL_DIR, 'ultrasonic_plant_cnn.keras'),
-        os.path.join(MODEL_DIR, '*.keras'),
-    ])
-    scaler_path = _find([
-        os.path.join(MODEL_DIR, 'scaler_params.npz'),
-        os.path.join(MODEL_DIR, '*scaler*.npz'),
-        os.path.join(MODEL_DIR, '*normalization*.npz'),
-    ])
-    label_path = _find([
-        os.path.join(MODEL_DIR, 'label_encoder.pkl'),
-        os.path.join(MODEL_DIR, '*label*encoder*.pkl'),
-    ])
-    if not model_path or not scaler_path or not label_path:
-        raise SystemExit("[!] Missing model/scaler/labels in MODEL_DIR")
-    model = tf.keras.models.load_model(model_path)
-    d = np.load(scaler_path)
-    mean = d['mean'] if 'mean' in d.files else d.get('scaler_mean')
-    scale = d['scale'] if 'scale' in d.files else d.get('scaler_scale')
-    with open(label_path, 'rb') as f:
-        le = pickle.load(f)
-    return model, mean, scale, le
-
-# ============ DB (Postgres) ============
-def db_connect():
-    try:
-        return psycopg2.connect(POSTGRES_DSN)
-    except Exception as e:
-        raise SystemExit(f"[DB] connection failed: {e}")
-
-def db_insert_many(rows: List[Tuple[str, float]]) -> int:
-    """
-    rows = [(predicted_class, confidence), ...]
-    prediction_time נקבע אוטומטית ע"י ה-DB (DEFAULT CURRENT_TIMESTAMP)
-    """
-    if not rows:
-        return 0
-    query = """
-        INSERT INTO ultrasonic_plant_predictions (predicted_class, confidence)
-        VALUES %s
-    """
-    with db_connect() as conn, conn.cursor() as cur:
-        execute_values(cur, query, rows)
-    return len(rows)
-
-# ============ Predict ============
-def predict_one(model, mean, scale, le, path: Path) -> Tuple[str, float]:
-    audio, sr = load_audio(path)
-    feats = extract_features(audio, sr)
-    spec = create_melspec(audio, sr)
-    feats_norm = (feats - mean) / scale
-    fb = feats_norm[np.newaxis, :]
-    sb = spec[np.newaxis, ..., np.newaxis]
-    probs = model.predict([fb, sb], verbose=0)[0]
-    idx = int(np.argmax(probs))
-    conf = float(probs[idx])
-    label = str(le.classes_[idx])
-    return label, conf
-
-# ============ Main ============
-def main():
-    print(f"INPUT_DIR={INPUT_DIR}\nMODEL_DIR={MODEL_DIR}\nPOSTGRES_DSN={POSTGRES_DSN}")
-    model, mean, scale, le = load_artifacts()
-
-    # אם PERIOD_DAYS <= 0 – לא מסננים לפי זמן בכלל
-    use_time_filter = PERIOD_DAYS > 0
-    if use_time_filter:
-        cutoff = dt.datetime.utcnow() - dt.timedelta(days=PERIOD_DAYS)
-        print(f"[i] Time filter enabled: last {PERIOD_DAYS} days (cutoff UTC={cutoff.isoformat()}Z)")
-    else:
+def files_to_process(root: str, period_days: int):
+    p = Path(root)
+    if not p.exists():
+        print(f"[!] INPUT_DIR not found: {root}")
+        return []
+    exts = {".wav", ".WAV"}
+    allf = [str(pp) for pp in p.rglob("*") if pp.suffix in exts]
+    if period_days <= 0:
         print("[i] Time filter disabled (PERIOD_DAYS<=0): processing ALL .wav files")
+        return sorted(allf)
+    cutoff = time.time() - period_days * 86400
+    return sorted([f for f in allf if Path(f).stat().st_mtime >= cutoff])
 
-    # איסוף wav בצורה case-insensitive
-    wavs: List[Path] = []
-    for p in Path(INPUT_DIR).rglob('*'):
-        try:
-            if p.is_file() and p.suffix.lower() == '.wav':
-                if not use_time_filter:
-                    wavs.append(p)
-                else:
-                    mtime = dt.datetime.utcfromtimestamp(p.stat().st_mtime)
-                    if mtime >= cutoff:
-                        wavs.append(p)
-        except Exception:
-            continue
+def ensure_table(conn):
+    sql = """
+    CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
+      id               BIGSERIAL PRIMARY KEY,
+      file             TEXT,
+      predicted_class  TEXT,
+      confidence       DOUBLE PRECISION,
+      watering_status  TEXT,
+      status           TEXT,
+      prediction_time  TIMESTAMPTZ DEFAULT now()
+    );
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql)
+    conn.commit()
 
-    if not wavs:
-        print("[i] No WAV files found.")
+def insert_rows(conn, rows):
+    """rows: list of tuples(file, predicted_class, confidence, watering_status, status, prediction_time)"""
+    sql = """
+    INSERT INTO ultrasonic_plant_predictions
+      (file, predicted_class, confidence, watering_status, status, prediction_time)
+    VALUES %s
+    """
+    with conn.cursor() as cur:
+        psycopg2.extras.execute_values(cur, sql, rows, page_size=500)
+    conn.commit()
+
+# ======== Main Run ========
+def main():
+    files = files_to_process(INPUT_DIR, PERIOD_DAYS)
+    if not files:
+        print("No files to process. Exiting.")
         return 0
 
-    batch_pg: List[Tuple[str, float]] = []
-    inserted_api = 0
+    try:
+        conn = psycopg2.connect(POSTGRES_DSN)
+        ensure_table(conn)
+    except Exception as e:
+        print(f"[!] Postgres connection error: {e}")
+        return 2
 
-    # חישוב יחסיות עבור object_key ל-db_api
-    input_dir_abs = str(Path(INPUT_DIR).resolve())
+    batch = []
+    ok, fail = 0, 0
+    start = time.time()
 
-    for p in sorted(wavs):
+    for fpath in files:
         try:
-            label, conf = predict_one(model, mean, scale, le, p)
-            if conf >= CONF_THRESHOLD:
-                batch_pg.append((label, conf))
-            print(f"OK {p} -> {label} ({conf:.3f})")
+            audio, sr = load_and_preprocess_audio(fpath)
+            feats = extract_ultrasonic_features(audio, sr)
+            spec  = create_spectrogram_features(audio, sr)
 
-            # דיווח ל-db_api (לא חובה)
-            if DB_API_REPORT and _HAS_DB_API_CLIENT:
-                # קביעת object_key יחסית ל-INPUT_DIR אם אפשר
-                p_abs = str(p.resolve())
-                if p_abs.startswith(input_dir_abs):
-                    try:
-                        object_key = str(Path(p_abs).relative_to(input_dir_abs)).replace("\\", "/")
-                    except Exception:
-                        object_key = p.name
-                else:
-                    object_key = p.name
+            feats_norm = normalize_features(feats)
+            feats_batch = feats_norm[np.newaxis, :]
+            spec_batch  = spec[np.newaxis, ..., np.newaxis]
 
-                meta = {
-                    "bucket": DB_API_BUCKET,
-                    "object_key": object_key,
-                    "service": "plant_stress",
-                    "mime": "audio/wav",
-                    "timestamp": dt.datetime.utcnow().isoformat() + "Z",
-                    "predicted_class": label,
-                    "confidence": conf,
-                    "tags": ["ultrasonic", "2ms@500kHz"],
-                }
-                ok = write_db_entry(meta)
-                if ok:
-                    inserted_api += 1
+            probs = MODEL.predict([feats_batch, spec_batch], verbose=0)[0]
+            idx   = int(np.argmax(probs))
+            pred_class = LABEL_ENCODER.classes_[idx]
+            conf  = float(probs[idx])
 
+            watering_status = CLASS_TO_STATUS.get(pred_class, "Undefined")
+            if conf < CONFIDENCE_THRESHOLD:
+                watering_status = f"{watering_status} (Uncertain)"
+
+            batch.append((
+                fpath, str(pred_class), conf, watering_status, "Success",
+                dt.datetime.utcnow()
+            ))
+            ok += 1
+            print(f"OK {fpath} -> {pred_class} ({conf:.3f})")
         except Exception as e:
-            print(f"[!] Fail {p}: {e}")
+            fail += 1
+            batch.append((fpath, "", None, "", f"Error: {e}", dt.datetime.utcnow()))
+            print(f"[ERR] {fpath} -> {e}")
 
-    inserted_pg = db_insert_many(batch_pg)
-    print(f"Done. processed={len(wavs)} inserted_pg={inserted_pg} inserted_api={inserted_api if DB_API_REPORT else 'disabled'}")
-    return inserted_pg
+    # Write to Postgres
+    try:
+        if batch:
+            insert_rows(conn, batch)
+            print(f"Inserted {len(batch)} rows to Postgres.")
+    except Exception as e:
+        print(f"[!] Insert error: {e}")
+        return 3
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
-if __name__ == '__main__':
-    sys.exit(0 if main() is not None else 1)
+    elapsed = time.time() - start
+    print(f"Done. processed={len(files)} ok={ok} fail={fail} elapsed_sec={elapsed:.1f}")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
