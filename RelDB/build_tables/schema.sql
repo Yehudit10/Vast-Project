@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     predicted_class TEXT NOT NULL,
     confidence FLOAT NOT NULL,
-    status TEXT NOT NULL,
+    -- status TEXT NOT NULL,
     prediction_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
