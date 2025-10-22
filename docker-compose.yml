@@ -163,7 +163,7 @@ services:
     entrypoint: >
       sh -c "
         echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
         echo '==> Done.';
       "
   runner:
@@ -363,8 +363,8 @@ services:
       MQTT_TOPIC: MQTT/imagery/# 
       MQTT_PUB_TOPIC: imagery/ingested
       DUMMY_DB: 0
-      DB_API_BASE: http://host.docker.internal:8080
-      DB_API_TOKEN: dev-token
+      DB_API_BASE: http://host.docker.internal:8088 #http://host.docker.internal:8080
+      DB_API_TOKEN: f451510d-6fb4-40c7-aef7-45cb1c211202
       OUTBOX_DIR: /app/outbox
       INGEST_WORKERS: 8  
     volumes:
@@ -400,4 +400,39 @@ services:
       - large-mosquitto
     networks:
       - ag_cloud
+
+  ##########addeed
+  db-api:
+    build:
+      context: ./services/db_api_service         # ← directory that has your Dockerfile (adjust if different)
+      dockerfile: Dockerfile
+    container_name: db-api
+    environment:
+      # App/runtime
+      ENV: dev                   # dev enables /auth/_dev_bootstrap; use "prod" in production
+      TZ: Asia/Jerusalem
+
+      # Auth/JWT (needed by your app even if you use service tokens for S2S)
+      JWT_SECRET: change-me
+      ACCESS_TTL_MIN: 15
+      REFRESH_TTL_DAYS: 14
+
+      # Database connection
+      DATABASE_URL: postgresql://missions_user:pg123@postgres:5432/missions_db
+      DB_DSN: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8088:8080"              # host:container (8088 on host to avoid conflict with desktop_app 8080)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
 
