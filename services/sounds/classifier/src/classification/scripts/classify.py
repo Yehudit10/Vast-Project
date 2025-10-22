@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import os
-import time
-import json
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
+from panns_inference import AudioTagging
 
 import numpy as np
 import joblib
@@ -15,6 +14,7 @@ from minio.error import S3Error
 
 from classification.core.model_io import (
     SAMPLE_RATE,
+    _to_numpy,
     load_audio,           # returns 1-D float32 mono @ SAMPLE_RATE
     segment_waveform,     # returns List[np.ndarray] after our fix
     aggregate_matrix,
@@ -178,7 +178,11 @@ def _aggregate_probs(per_window_probs: np.ndarray) -> np.ndarray:
 # -----------------------------
 # Public API for service
 # -----------------------------
-def classify_file(path: str) -> Tuple[str, Dict[str, float]]:
+def classify_file(
+    path: str,
+    pann_model: Optional[AudioTagging] = None,  # kept for API-compatibility; not used here
+    sk_pipeline: Optional[Any] = None           # actively used when provided
+) -> Tuple[str, Dict[str, float]]:
     """
     Run full classification for a local audio file:
       - load waveform @ SAMPLE_RATE
@@ -188,20 +192,76 @@ def classify_file(path: str) -> Tuple[str, Dict[str, float]]:
       - apply unknown threshold → return "another" if top-1 prob < UNKNOWN_THRESHOLD
     Returns (label, probs_dict)
     """
-    _load_backbone_once()
     _load_head_once()
+    if pann_model is None:
+        _load_backbone_once()
 
-    wav = load_audio(path, SAMPLE_RATE)        # returns 1-D float32 mono
+    wav = load_audio(path, SAMPLE_RATE).astype(np.float32)        # returns 1-D float32 mono
     sr = SAMPLE_RATE
 
-    # per-window embeddings
-    E = _segments_embeddings(wav, sr)          # (N, D)
-    if E.shape[0] == 0:
-        return "another", {c: 0.0 for c in R.classes}
+    def _extract_embedding_from_panns_output(out):
+        """
+        Support both tuple and dict outputs from panns_inference.
+        Returns np.ndarray embedding.
+        """
+        import numpy as np
 
-    # predict_proba per window
-    # NOTE: most sklearn heads expect (N, D) and return (N, C)
-    per_window_probs = R.head.predict_proba(E)   # shape (N, C)
+        if isinstance(out, dict):
+            # Newer versions: dict with 'embedding' or 'frame_embedding' keys
+            for k in ("embedding", "frame_embedding", "embedding_mean", "clipwise_output"):
+                if k in out and out[k] is not None:
+                    return np.asarray(out[k], dtype=np.float32)
+            # fallback
+            return np.asarray(next(iter(out.values())), dtype=np.float32)
+
+        elif isinstance(out, (list, tuple)):
+            # Older versions: tuple (clipwise_output, embedding)
+            if len(out) >= 2:
+                return np.asarray(out[1], dtype=np.float32)
+            return np.asarray(out[0], dtype=np.float32)
+
+        else:
+            # Unexpected case
+            raise TypeError(f"Unsupported PANN output type: {type(out)}")
+
+        
+    if pann_model is not None:
+        segments = segment_waveform(wav, sr)  # returns List[np.ndarray]
+        if not segments:
+            return "another", {c: 0.0 for c in R.classes}
+        
+        feats: List[np.ndarray] = []
+        for seg in segments:
+            seg = np.asarray(seg, dtype=np.float32)
+            if seg.ndim == 1:
+                seg = seg[None, :]  # shape (1, T)
+                
+            out = pann_model.inference(seg)
+
+            # handle tuple or dict automatically
+            if isinstance(out, (list, tuple)):
+                # panns_inference returns (clipwise_output, embedding)
+                clipwise_output, embedding = out
+            elif isinstance(out, dict):
+                embedding = out.get("embedding") or out.get("frame_embedding") or next(iter(out.values()))
+            else:
+                raise TypeError(f"Unexpected output type from pann_model.inference: {type(out)}")
+
+            emb = _to_numpy(embedding)
+            feats.append(emb)
+        
+        # Stack to (N, D)
+        E = np.stack(feats, axis=0).astype(np.float32)    
+    else:
+        E = _segments_embeddings(wav, sr)          # (N, D)
+        if E.shape[0] == 0:
+            return "another", {c: 0.0 for c in R.classes}
+
+    # choose classifier: prefer preloaded 'sk_pipeline' if provided
+    clf = sk_pipeline if sk_pipeline is not None else R.head
+
+    # Predict probabilities per window: shape (N, C)
+    per_window_probs = clf.predict_proba(E)      # shape (N, C)
     per_window_probs = np.asarray(per_window_probs, dtype=np.float32)
 
     # aggregate to clip-level
@@ -217,12 +277,17 @@ def classify_file(path: str) -> Tuple[str, Dict[str, float]]:
     probs = {cls: float(p) for cls, p in zip(R.classes, agg)}
     return final_label, probs
 
-def run_classification_job(*, s3_bucket: str, s3_key: str) -> Dict[str, object]:
+def run_classification_job(
+    *,
+    s3_bucket: str,
+    s3_key: str,
+    pann_model: Optional[AudioTagging] = None,  
+    sk_pipeline: Optional[Any] = None            
+) -> Dict[str, object]:
     """
     Download from MinIO → classify_file → (optional) write DB → (optional) Kafka alert.
     Returns a dict with 'label' and 'probs'.
     """
-    # basic allowlist + head load here to fail fast
     _load_head_once()
     if ALLOWED_BUCKETS and s3_bucket not in ALLOWED_BUCKETS:
         raise RuntimeError(f"Bucket '{s3_bucket}' is not allowed")
@@ -250,8 +315,7 @@ def run_classification_job(*, s3_bucket: str, s3_key: str) -> Dict[str, object]:
     try:
         client.fget_object(s3_bucket, s3_key, tmp_path)
 
-        # classify
-        label, probs = classify_file(tmp_path)
+        label, probs = classify_file(tmp_path, pann_model=pann_model, sk_pipeline=sk_pipeline)
 
         # optional DB write
         if WRITE_DB and DB_URL:
