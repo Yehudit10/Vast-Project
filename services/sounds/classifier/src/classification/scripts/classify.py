@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 from pathlib import Path
+import time
 from typing import Dict, List, Optional, Tuple, Any
 from panns_inference import AudioTagging
-
 import numpy as np
 import joblib
 
@@ -178,103 +179,64 @@ def _aggregate_probs(per_window_probs: np.ndarray) -> np.ndarray:
 # -----------------------------
 # Public API for service
 # -----------------------------
+
+# Create a dedicated logger for performance metrics
+perf_logger = logging.getLogger("audio_cls.perf")
+perf_logger.setLevel(logging.INFO)
+if not perf_logger.handlers:
+    h = logging.StreamHandler()
+    fmt = logging.Formatter("[%(asctime)s] [PERF] %(message)s", "%Y-%m-%d %H:%M:%S")
+    h.setFormatter(fmt)
+    perf_logger.addHandler(h)
+
 def classify_file(
     path: str,
-    pann_model: Optional[AudioTagging] = None,  # kept for API-compatibility; not used here
-    sk_pipeline: Optional[Any] = None           # actively used when provided
+    pann_model: Optional[AudioTagging] = None,
+    sk_pipeline: Optional[Any] = None
 ) -> Tuple[str, Dict[str, float]]:
-    """
-    Run full classification for a local audio file:
-      - load waveform @ SAMPLE_RATE
-      - per-window embedding with CNN14
-      - predict_proba per window with sklearn head
-      - aggregate to clip-level
-      - apply unknown threshold → return "another" if top-1 prob < UNKNOWN_THRESHOLD
-    Returns (label, probs_dict)
-    """
+    start_time = time.perf_counter()
+
     _load_head_once()
     if pann_model is None:
         _load_backbone_once()
 
-    wav = load_audio(path, SAMPLE_RATE).astype(np.float32)        # returns 1-D float32 mono
+    wav = load_audio(path, SAMPLE_RATE).astype(np.float32)
     sr = SAMPLE_RATE
 
-    def _extract_embedding_from_panns_output(out):
-        """
-        Support both tuple and dict outputs from panns_inference.
-        Returns np.ndarray embedding.
-        """
-        import numpy as np
-
-        if isinstance(out, dict):
-            # Newer versions: dict with 'embedding' or 'frame_embedding' keys
-            for k in ("embedding", "frame_embedding", "embedding_mean", "clipwise_output"):
-                if k in out and out[k] is not None:
-                    return np.asarray(out[k], dtype=np.float32)
-            # fallback
-            return np.asarray(next(iter(out.values())), dtype=np.float32)
-
-        elif isinstance(out, (list, tuple)):
-            # Older versions: tuple (clipwise_output, embedding)
-            if len(out) >= 2:
-                return np.asarray(out[1], dtype=np.float32)
-            return np.asarray(out[0], dtype=np.float32)
-
-        else:
-            # Unexpected case
-            raise TypeError(f"Unsupported PANN output type: {type(out)}")
-
-        
     if pann_model is not None:
-        segments = segment_waveform(wav, sr)  # returns List[np.ndarray]
-        if not segments:
-            return "another", {c: 0.0 for c in R.classes}
-        
-        feats: List[np.ndarray] = []
+        segments = segment_waveform(wav, sr)
+        feats = []
         for seg in segments:
             seg = np.asarray(seg, dtype=np.float32)
             if seg.ndim == 1:
-                seg = seg[None, :]  # shape (1, T)
-                
+                seg = seg[None, :]
             out = pann_model.inference(seg)
-
-            # handle tuple or dict automatically
             if isinstance(out, (list, tuple)):
-                # panns_inference returns (clipwise_output, embedding)
-                clipwise_output, embedding = out
+                _, embedding = out
             elif isinstance(out, dict):
-                embedding = out.get("embedding") or out.get("frame_embedding") or next(iter(out.values()))
+                embedding = out.get("embedding") or next(iter(out.values()))
             else:
-                raise TypeError(f"Unexpected output type from pann_model.inference: {type(out)}")
-
-            emb = _to_numpy(embedding)
+                raise TypeError(f"Unexpected output type: {type(out)}")
+            emb = np.asarray(embedding, dtype=np.float32).reshape(-1)
             feats.append(emb)
-        
-        # Stack to (N, D)
-        E = np.stack(feats, axis=0).astype(np.float32)    
+        E = np.stack(feats, axis=0)
     else:
-        E = _segments_embeddings(wav, sr)          # (N, D)
+        E = _segments_embeddings(wav, sr)
         if E.shape[0] == 0:
             return "another", {c: 0.0 for c in R.classes}
 
-    # choose classifier: prefer preloaded 'sk_pipeline' if provided
     clf = sk_pipeline if sk_pipeline is not None else R.head
-
-    # Predict probabilities per window: shape (N, C)
-    per_window_probs = clf.predict_proba(E)      # shape (N, C)
-    per_window_probs = np.asarray(per_window_probs, dtype=np.float32)
-
-    # aggregate to clip-level
-    agg = _aggregate_probs(per_window_probs)     # (C,)
-
-    # pick top-1 and threshold to 'another'
+    per_window_probs = np.asarray(clf.predict_proba(E), dtype=np.float32)
+    agg = _aggregate_probs(per_window_probs)
     k = int(np.argmax(agg))
     top_prob = float(agg[k])
     top_label = R.classes[k]
     final_label = top_label if top_prob >= UNKNOWN_THRESHOLD else "another"
-
-    # build probs dict with real class names
     probs = {cls: float(p) for cls, p in zip(R.classes, agg)}
+
+    elapsed = (time.perf_counter() - start_time) * 1000.0  # milliseconds
+    perf_logger.info(f"{Path(path).name} classified as '{final_label}' in {elapsed:.2f} ms")
+
     return final_label, probs
 
 def run_classification_job(
