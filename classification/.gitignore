@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+.venv/
+venv/
+
+# Audio/model artifacts
+models/
+model_bundle/
+data/
+*.pth
+*.pt
+*.onnx
+*.wav
+*.flac
+
+# OS / tooling
+.DS_Store
+Thumbs.db
+
+# caches
+*.log
+*.tmp
+.cache/
+.pytorch/
+.huggingface/
+
