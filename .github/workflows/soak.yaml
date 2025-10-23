@@ -51,15 +51,9 @@ jobs:
             kafka:
               image: kafka-single:local
               env_file:
-                - mqtt_and_kafka/kafka/kafka-files/kafka.env.example
+                - ./mqtt_and_kafka/kafka/kafka-files/kafka.env.example   # או הנתיב שבו באמת נמצא הקובץ
               environment:
-                - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-                - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-                - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
-                - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-                - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-                - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
-                - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+                - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092   # שורת המפתח!
               ports:
                 - "9092:9092"
                 - "29092:9094"
@@ -67,7 +61,8 @@ jobs:
                 test: ["CMD", "/opt/bitnami/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
                 interval: 10s
                 timeout: 5s
-                retries: 40
+                retries: 60
+                start_period: 30s
 
             mosquitto:
               image: eclipse-mosquitto:2.0
@@ -279,7 +274,6 @@ jobs:
 
           echo "Waiting for bridge to be ready..."
           for i in $(seq 1 60); do
-            # הימנעי מאימוג'י; בדקי טקסט פשוט מהלוגים
             if docker compose logs mqtt-kafka-bridge 2>/dev/null | grep -qE "Bridge is ready and running|Bridge status - MQTT received"; then
               echo "Bridge is ready!"
               break
