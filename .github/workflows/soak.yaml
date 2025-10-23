@@ -225,8 +225,16 @@ jobs:
           docker --version || true
           docker compose version || docker-compose --version || true
 
-      - name: Start stack
-        run: docker compose up -d
+      - name: Start stack (with inline logs on failure)
+        run: |
+          set -e
+          if ! docker compose up -d; then
+            echo "=== docker compose up failed — dumping quick diagnostics ==="
+            docker compose ps || true
+            docker compose logs kafka --tail=200 || true
+            docker compose logs mqtt-kafka-bridge --tail=100 || true
+            exit 1
+          fi
 
       # - name: Wait for services to be ready
       #   run: |
