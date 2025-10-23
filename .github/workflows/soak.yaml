@@ -498,7 +498,6 @@
 #         run: docker compose down -v || true
 
 
-
 name: Soak Test (Real MQTT→Kafka)
 
 on:
@@ -514,24 +513,34 @@ on:
       LOSS_THRESHOLD_PCT: { description: "Max loss % to pass", required: true, default: "1.0" }
       KAFKA_SECURITY_PROTOCOL: { description: "PLAINTEXT / SASL_PLAINTEXT / SASL_SSL / SSL", required: false, default: "" }
       KAFKA_AUTH_JSON: { description: "JSON: {\"mechanism\":\"PLAIN\",\"username\":\"u\",\"password\":\"p\",\"ca_b64\":\"...\"}", required: false, default: "" }
-    push:
-      branches: [ "main", "sounds-ruth", "ruthhermelin/soak" ]
+  push:
+    branches: [ "main", "sounds-ruth", "ruthhermelin/soak" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soak-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   soak:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
+    # ברירות־מחדל שיעבדו גם ב-push (כשאין inputs)
     env:
       ARTIFACT_DIR: artifacts
-      MQTT_HOST: ${{ inputs.MQTT_HOST }}
-      MQTT_PORT: ${{ inputs.MQTT_PORT }}
-      MQTT_TOPIC: ${{ inputs.MQTT_TOPIC }}
-      KAFKA_BOOTSTRAP: ${{ inputs.KAFKA_BOOTSTRAP }}
-      KAFKA_TOPIC: ${{ inputs.KAFKA_TOPIC }}
-      SOAK_DURATION_SEC: ${{ inputs.DURATION_SEC }}
-      SOAK_RATE_PER_SEC: ${{ inputs.RATE_PER_SEC }}
-      LOSS_THRESHOLD_PCT: ${{ inputs.LOSS_THRESHOLD_PCT }}
-      KAFKA_SECURITY_PROTOCOL: ${{ inputs.KAFKA_SECURITY_PROTOCOL }}
-      KAFKA_AUTH_JSON: ${{ inputs.KAFKA_AUTH_JSON }}
+      MQTT_HOST:           ${{ github.event.inputs.MQTT_HOST           || 'mqtt.example.com' }}
+      MQTT_PORT:           ${{ github.event.inputs.MQTT_PORT           || '1883' }}
+      MQTT_TOPIC:          ${{ github.event.inputs.MQTT_TOPIC          || 'soak/test' }}
+      KAFKA_BOOTSTRAP:     ${{ github.event.inputs.KAFKA_BOOTSTRAP     || 'kafka.example.com:9092' }}
+      KAFKA_TOPIC:         ${{ github.event.inputs.KAFKA_TOPIC         || 'dev-robot-telemetry-raw' }}
+      SOAK_DURATION_SEC:   ${{ github.event.inputs.DURATION_SEC        || '150' }}
+      SOAK_RATE_PER_SEC:   ${{ github.event.inputs.RATE_PER_SEC        || '1000' }}
+      LOSS_THRESHOLD_PCT:  ${{ github.event.inputs.LOSS_THRESHOLD_PCT  || '1.0' }}
+      KAFKA_SECURITY_PROTOCOL: ${{ github.event.inputs.KAFKA_SECURITY_PROTOCOL || '' }}
+      KAFKA_AUTH_JSON:     ${{ github.event.inputs.KAFKA_AUTH_JSON     || '' }}
 
     steps:
       - name: Prepare
@@ -540,7 +549,8 @@ jobs:
       - name: Install tools (mosquitto-clients, kcat, jq)
         run: |
           sudo apt-get update
-          sudo apt-get install -y mosquitto-clients kcat jq coreutils gawk
+          sudo apt-get install -y mosquitto-clients jq coreutils gawk
+          sudo apt-get install -y kcat || sudo apt-get install -y kafkacat || true
 
       - name: Parse Kafka auth JSON (optional) & write CA
         id: auth
@@ -624,12 +634,12 @@ jobs:
           echo "{\"component\":\"mqtt-to-kafka\",\"sent\":$SENT,\"received\":$RECEIVED,\"loss\":$LOSS,\"loss_pct\":$LOSS_PCT}" \
             | tee "${ARTIFACT_DIR}/bridge.json"
 
-      - name: Generate JUnit & upload artifacts
+      - name: Generate JUnit
         if: always()
         run: |
           mkdir -p "$ARTIFACT_DIR"
           python - <<'PY'
-          import json, os, sys, xml.etree.ElementTree as ET
+          import json, os, xml.etree.ElementTree as ET
           loss_threshold = float(os.getenv("LOSS_THRESHOLD_PCT","1.0"))
           art = os.getenv("ARTIFACT_DIR","artifacts")
           p = os.path.join(art, "bridge.json")
@@ -638,16 +648,12 @@ jobs:
             with open(p) as f: r = json.load(f)
           ts = ET.Element("testsuite", name="mqtt-kafka-soak", tests="1")
           tc = ET.SubElement(ts, "testcase", classname="soak", name="mqtt-to-kafka")
-          if float(r.get("loss_pct",100.0)) > loss_threshold or r.get("error"):
-            ET.SubElement(tc, "failure", message=str(r)).text = json.dumps(r)
-            failures = 1
-          else:
-            failures = 0
-          ts.set("failures", str(failures))
+          fails = 1 if float(r.get("loss_pct",100.0)) > loss_threshold or r.get("error") else 0
+          if fails: ET.SubElement(tc, "failure", message=str(r)).text = json.dumps(r)
+          ts.set("failures", str(fails))
           ET.ElementTree(ts).write(os.path.join(art, "junit.xml"), encoding="utf-8", xml_declaration=True)
-          with open(os.path.join(art, "failures.txt"), "w") as f:
-            f.write(str(failures))
-          print("failures:", failures)
+          with open(os.path.join(art, "failures.txt"), "w") as f: f.write(str(fails))
+          print("failures:", fails)
           PY
 
       - name: Upload artifacts
@@ -664,4 +670,3 @@ jobs:
           F=$(cat "$ARTIFACT_DIR/failures.txt" 2>/dev/null || echo 0)
           echo "Failures reported: $F"
           [ "$F" -gt 0 ] && exit 1 || echo "All good"
-
