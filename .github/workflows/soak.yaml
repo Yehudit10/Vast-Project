@@ -497,163 +497,191 @@
 #         if: always()
 #         run: docker compose down -v || true
 
-
-name: Soak Test (Real MQTT→Kafka)
+name: Soak Test (Real MQTT→Kafka via Compose)
 
 on:
   workflow_dispatch:
-    inputs:
-      MQTT_HOST: { description: "MQTT host", required: true, default: "mqtt.example.com" }
-      MQTT_PORT: { description: "MQTT port", required: true, default: "1883" }
-      MQTT_TOPIC: { description: "MQTT topic to publish", required: true, default: "soak/test" }
-      KAFKA_BOOTSTRAP: { description: "Kafka bootstrap (host:port)", required: true, default: "kafka.example.com:9092" }
-      KAFKA_TOPIC: { description: "Kafka topic to read", required: true, default: "dev-robot-telemetry-raw" }
-      DURATION_SEC: { description: "Test duration (sec)", required: true, default: "150" }
-      RATE_PER_SEC: { description: "Msgs/sec", required: true, default: "1000" }
-      LOSS_THRESHOLD_PCT: { description: "Max loss % to pass", required: true, default: "1.0" }
-      KAFKA_SECURITY_PROTOCOL: { description: "PLAINTEXT / SASL_PLAINTEXT / SASL_SSL / SSL", required: false, default: "" }
-      KAFKA_AUTH_JSON: { description: "JSON: {\"mechanism\":\"PLAIN\",\"username\":\"u\",\"password\":\"p\",\"ca_b64\":\"...\"}", required: false, default: "" }
   push:
     branches: [ "main", "sounds-ruth", "ruthhermelin/soak" ]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: soak-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   soak:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-
-    # ברירות־מחדל שיעבדו גם ב-push (כשאין inputs)
     env:
       ARTIFACT_DIR: artifacts
-      MQTT_HOST:           ${{ github.event.inputs.MQTT_HOST           || 'mqtt.example.com' }}
-      MQTT_PORT:           ${{ github.event.inputs.MQTT_PORT           || '1883' }}
-      MQTT_TOPIC:          ${{ github.event.inputs.MQTT_TOPIC          || 'soak/test' }}
-      KAFKA_BOOTSTRAP:     ${{ github.event.inputs.KAFKA_BOOTSTRAP     || 'kafka.example.com:9092' }}
-      KAFKA_TOPIC:         ${{ github.event.inputs.KAFKA_TOPIC         || 'dev-robot-telemetry-raw' }}
-      SOAK_DURATION_SEC:   ${{ github.event.inputs.DURATION_SEC        || '150' }}
-      SOAK_RATE_PER_SEC:   ${{ github.event.inputs.RATE_PER_SEC        || '1000' }}
-      LOSS_THRESHOLD_PCT:  ${{ github.event.inputs.LOSS_THRESHOLD_PCT  || '1.0' }}
-      KAFKA_SECURITY_PROTOCOL: ${{ github.event.inputs.KAFKA_SECURITY_PROTOCOL || '' }}
-      KAFKA_AUTH_JSON:     ${{ github.event.inputs.KAFKA_AUTH_JSON     || '' }}
-
+      # פרמטרים לעומס (אפשר לערוך כאן)
+      SOAK_DURATION_SEC: "120"   # זמן שניות
+      SOAK_RATE_PER_SEC: "1000"  # הודעות לשנייה
+      MQTT_TOPIC: "mqtt/soak"    # חייב להתחיל ב-mqtt/ כדי שה-connector יקלוט
+      KAFKA_TOPIC: "dev-robot-alerts"
     steps:
-      - name: Prepare
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare artifacts dir
         run: mkdir -p "$ARTIFACT_DIR"
 
-      - name: Install tools (mosquitto-clients, kcat, jq)
+      - name: Show Docker versions
         run: |
-          sudo apt-get update
-          sudo apt-get install -y mosquitto-clients jq coreutils gawk
-          sudo apt-get install -y kcat || sudo apt-get install -y kafkacat || true
+          docker --version || true
+          docker compose version || true
 
-      - name: Parse Kafka auth JSON (optional) & write CA
-        id: auth
+      # מרימים רק את Kafka/Mosquitto/Connect (לא כל הסטאק)
+      - name: Start core stack
+        run: docker compose up -d kafka mosquitto connect
+
+      - name: Wait for Kafka & Mosquitto & Connect
         run: |
           set -e
-          if [ -n "$KAFKA_AUTH_JSON" ]; then
-            echo "$KAFKA_AUTH_JSON" | jq -e . >/dev/null 2>&1 || { echo "Bad KAFKA_AUTH_JSON"; exit 1; }
-            MECH=$(echo "$KAFKA_AUTH_JSON" | jq -r '.mechanism // empty')
-            USER=$(echo "$KAFKA_AUTH_JSON" | jq -r '.username // empty')
-            PASS=$(echo "$KAFKA_AUTH_JSON" | jq -r '.password // empty')
-            CA64=$(echo "$KAFKA_AUTH_JSON" | jq -r '.ca_b64 // empty')
-            echo "mechanism=$MECH" >> $GITHUB_OUTPUT
-            echo "username=$USER"  >> $GITHUB_OUTPUT
-            echo "password=$PASS"  >> $GITHUB_OUTPUT
-            if [ -n "$CA64" ] && [ "$CA64" != "null" ]; then
-              echo "$CA64" | base64 -d > ca.pem
-              echo "ca=ca.pem" >> $GITHUB_OUTPUT
-            fi
-          fi
+          echo "== Wait Kafka =="
+          for i in $(seq 1 60); do
+            s=$(docker inspect -f '{{.State.Health.Status}}' kafka || echo unknown)
+            [ "$s" = "healthy" ] && break
+            echo "Kafka: $s ($i/60)"; sleep 3
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' kafka)" = "healthy" ] || { echo "Kafka not healthy"; exit 1; }
 
-      - name: Quick connectivity checks
+          echo "== Wait Mosquitto =="
+          for i in $(seq 1 40); do
+            # בדיקת התחברות מה-host לתוך הקונטיינר דרך רשת docker הפנימית אינה אפשרית;
+            # נבדוק health של הקונטיינר:
+            s=$(docker inspect -f '{{.State.Health.Status}}' mosquitto || echo unknown)
+            [ "$s" = "healthy" ] && break
+            echo "Mosquitto: $s ($i/40)"; sleep 3
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' mosquitto)" = "healthy" ] || { echo "Mosquitto not healthy"; exit 1; }
+
+          echo "== Wait Connect REST =="
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8083/connectors >/dev/null; then break; fi
+            echo "Connect REST not ready ($i/60)"; sleep 3
+          done
+
+      - name: Create Kafka topic if missing
         run: |
-          echo "== MQTT check =="
-          mosquitto_pub -h "$MQTT_HOST" -p "$MQTT_PORT" -t "${MQTT_TOPIC}" -m "hello" -q 0 || echo "MQTT publish failed (will continue)"
-          echo "== Kafka metadata =="
-          KCAT_OPTS="-b $KAFKA_BOOTSTRAP"
-          [ -n "$KAFKA_SECURITY_PROTOCOL" ] && KCAT_OPTS="$KCAT_OPTS -X security.protocol=$KAFKA_SECURITY_PROTOCOL"
-          [ -n "${{ steps.auth.outputs.mechanism }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.mechanisms=${{ steps.auth.outputs.mechanism }}"
-          [ -n "${{ steps.auth.outputs.username }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.username=${{ steps.auth.outputs.username }}"
-          [ -n "${{ steps.auth.outputs.password }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.password=${{ steps.auth.outputs.password }}"
-          [ -n "${{ steps.auth.outputs.ca }}" ] && KCAT_OPTS="$KCAT_OPTS -X ssl.ca.location=${{ steps.auth.outputs.ca }}"
-          kcat $KCAT_OPTS -L || true
+          set -e
+          docker compose exec -T kafka bash -lc "\
+            /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep -qx '${KAFKA_TOPIC}' \
+            || /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic '${KAFKA_TOPIC}' --partitions 1 --replication-factor 1"
 
-      - name: Run MQTT→Kafka soak
+      - name: Ensure MQTT source connector exists (points mosquitto -> ${KAFKA_TOPIC})
+        run: |
+          set -e
+          # נבנה גוף בקשה לפי הקובץ שסיפקת (עם mqtt/# וכתיבה ל-${KAFKA_TOPIC})
+          cat > mqtt-source.json <<'JSON'
+          {
+            "name": "mqtt-source",
+            "config": {
+              "connector.class": "io.confluent.connect.mqtt.MqttSourceConnector",
+              "tasks.max": "1",
+              "mqtt.server.uri": "tcp://mosquitto:1883",
+              "mqtt.topics": "mqtt/#",
+              "mqtt.qos": "0",
+              "clean.session": "true",
+              "kafka.topic": "dev-robot-alerts",
+              "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+              "key.converter.schemas.enable": "false",
+              "value.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
+              "value.converter.schemas.enable": "false",
+              "errors.tolerance": "all",
+              "errors.log.enable": "true",
+              "topic.creation.enable": "false",
+              "topic.creation.default.replication.factor": "1",
+              "topic.creation.default.partitions": "1",
+              "confluent.topic.bootstrap.servers": "kafka:9092",
+              "confluent.topic.replication.factor": "1",
+              "producer.override.bootstrap.servers": "kafka:9092"
+            }
+          }
+          JSON
+          # מעדיפים לא לשכתב אם קיים; אם לא קיים — ניצור
+          if ! curl -sf http://localhost:8083/connectors/mqtt-source >/dev/null; then
+            curl -sS -X POST -H 'Content-Type: application/json' --data @mqtt-source.json http://localhost:8083/connectors \
+              || { echo "Connector create failed"; curl -s http://localhost:8083/connectors; exit 1; }
+          fi
+          # בדוק סטטוס
+          curl -sSf http://localhost:8083/connectors/mqtt-source/status || true
+
+      - name: Determine compose network name
+        id: net
+        run: |
+          NET=$(docker network ls --format '{{.Name}}' | grep '_ag_cloud$' | head -1)
+          echo "net=$NET" >> $GITHUB_OUTPUT
+          echo "Using network: $NET"
+
+      - name: Start Kafka consumer (kcat) on compose network
+        run: |
+          set -e
+          NET="${{ steps.net.outputs.net }}"
+          # נתחיל מצרכן מקצה הלוג (לא מההיסטוריה) כדי למדוד רק את מה שנשלח עכשיו
+          docker run --rm --name soak-kcat -i --network "$NET" edenhill/kcat:1.7.1 \
+            -b kafka:9092 -t "${KAFKA_TOPIC}" -C -o end -q \
+            > "${ARTIFACT_DIR}/kafka-received.log" 2> "${ARTIFACT_DIR}/kafka-consumer.err" &
+          echo $! > kcat.pid
+          sleep 3
+
+      - name: Publish load to MQTT on compose network
         run: |
           set -euo pipefail
+          NET="${{ steps.net.outputs.net }}"
           D=${SOAK_DURATION_SEC}
           RATE=${SOAK_RATE_PER_SEC}
-          SENT=$((D*RATE))
-          mkdir -p "${ARTIFACT_DIR}"
+          TOPIC=${MQTT_TOPIC}
 
-          KCAT_OPTS="-b $KAFKA_BOOTSTRAP -t $KAFKA_TOPIC -C -o beginning -q"
-          [ -n "$KAFKA_SECURITY_PROTOCOL" ] && KCAT_OPTS="$KCAT_OPTS -X security.protocol=$KAFKA_SECURITY_PROTOCOL"
-          [ -n "${{ steps.auth.outputs.mechanism }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.mechanisms=${{ steps.auth.outputs.mechanism }}"
-          [ -n "${{ steps.auth.outputs.username }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.username=${{ steps.auth.outputs.username }}"
-          [ -n "${{ steps.auth.outputs.password }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.password=${{ steps.auth.outputs.password }}"
-          [ -n "${{ steps.auth.outputs.ca }}" ] && KCAT_OPTS="$KCAT_OPTS -X ssl.ca.location=${{ steps.auth.outputs.ca }}"
-
-          echo "=== Start Kafka consumer to file ==="
-          timeout $((D+120))s sh -c "kcat $KCAT_OPTS > '${ARTIFACT_DIR}/kafka-received.log'" \
-            2> "${ARTIFACT_DIR}/kafka-consumer.err" &
-          CONS_PID=$!
-
-          sleep 3
-          echo "=== Start sending to MQTT ==="
-          HOST="$MQTT_HOST"; PORT="$MQTT_PORT"; TOPIC="$MQTT_TOPIC"
-          START_TIME=$(date +%s)
-
+          echo "Publishing D=$D sec, RATE=$RATE msg/s to $TOPIC"
+          # נריץ קונטיינר זמני עם mosquitto-clients
           for sec in $(seq 1 "$D"); do
-            ELAPSED=$(( $(date +%s) - START_TIME ))
-            echo "[$ELAPSED/${D}s] Publishing ${RATE} msgs on ${TOPIC}"
-            awk -v n="${RATE}" -v batch="$sec" 'BEGIN{ for(i=0;i<n;i++) printf "msg_%d_%d_%d\n", batch, i, systime() }' \
-              | mosquitto_pub -h "$HOST" -p "$PORT" -t "$TOPIC" -l -q 0 || echo "WARN: publish batch $sec failed"
+            echo "[$sec/$D] batch $sec"
+            docker run --rm --network "$NET" alpine:3.20 \
+              sh -lc "apk add --no-cache mosquitto-clients >/dev/null \
+                && awk -v n=$RATE -v b=$sec 'BEGIN{for(i=0;i<n;i++)printf \"msg_%d_%d_%d\\n\", b, i, systime()}' \
+                | mosquitto_pub -h mosquitto -p 1883 -t '$TOPIC' -l -q 0" \
+              || echo "WARN: batch $sec failed"
             sleep 1
           done
 
-          echo "=== Finished sending, waiting drain ==="
-          sleep 30
-          kill $CONS_PID 2>/dev/null || true
-          wait $CONS_PID 2>/dev/null || true
+      - name: Stop consumer and compute results
+        run: |
+          set -e
+          # אפשר לתת עוד זמן ניקוז ל-Connect
+          sleep 20
+          # אין מה להרוג — הקונטיינר נסגר כי לא קיבל קלט; אבל למקרה:
+          pkill -f soak-kcat || true
 
+          D=${SOAK_DURATION_SEC}
+          RATE=${SOAK_RATE_PER_SEC}
+          SENT=$((D*RATE))
           RECEIVED=$(wc -l < "${ARTIFACT_DIR}/kafka-received.log" 2>/dev/null || echo 0)
           LOSS=$((SENT-RECEIVED))
           LOSS_PCT=$(awk -v s="$SENT" -v r="$RECEIVED" 'BEGIN{ if(s>0){printf "%.2f", (s-r)*100.0/s}else{printf "0.0"} }')
-
-          echo "=== SOAK RESULTS ==="
-          echo "Sent:      $SENT"
-          echo "Received:  $RECEIVED"
-          echo "Lost:      $LOSS ($LOSS_PCT%)"
-
+          echo "Sent: $SENT"
+          echo "Received: $RECEIVED"
+          echo "Lost: $LOSS ($LOSS_PCT%)"
           echo "{\"component\":\"mqtt-to-kafka\",\"sent\":$SENT,\"received\":$RECEIVED,\"loss\":$LOSS,\"loss_pct\":$LOSS_PCT}" \
             | tee "${ARTIFACT_DIR}/bridge.json"
 
       - name: Generate JUnit
-        if: always()
         run: |
-          mkdir -p "$ARTIFACT_DIR"
           python - <<'PY'
           import json, os, xml.etree.ElementTree as ET
-          loss_threshold = float(os.getenv("LOSS_THRESHOLD_PCT","1.0"))
           art = os.getenv("ARTIFACT_DIR","artifacts")
+          thr = float(os.getenv("LOSS_THRESHOLD_PCT","1.0"))
+          r = {"loss_pct":100.0}
           p = os.path.join(art, "bridge.json")
-          r = {"component":"mqtt-to-kafka","sent":0,"received":0,"loss":0,"loss_pct":100.0,"error":"missing_result"}
           if os.path.exists(p):
             with open(p) as f: r = json.load(f)
           ts = ET.Element("testsuite", name="mqtt-kafka-soak", tests="1")
-          tc = ET.SubElement(ts, "testcase", classname="soak", name="mqtt-to-kafka")
-          fails = 1 if float(r.get("loss_pct",100.0)) > loss_threshold or r.get("error") else 0
-          if fails: ET.SubElement(tc, "failure", message=str(r)).text = json.dumps(r)
-          ts.set("failures", str(fails))
+          tc = ET.SubElement(ts, "testcase", classname="soak", name="mqtt->kafka")
+          if float(r.get("loss_pct",100.0)) > thr:
+            ET.SubElement(tc, "failure", message=str(r)).text = json.dumps(r)
+            failures = 1
+          else:
+            failures = 0
+          ts.set("failures", str(failures))
+          os.makedirs(art, exist_ok=True)
           ET.ElementTree(ts).write(os.path.join(art, "junit.xml"), encoding="utf-8", xml_declaration=True)
-          with open(os.path.join(art, "failures.txt"), "w") as f: f.write(str(fails))
-          print("failures:", fails)
+          with open(os.path.join(art, "failures.txt"), "w") as f: f.write(str(failures))
           PY
 
       - name: Upload artifacts
@@ -664,9 +692,10 @@ jobs:
           path: ${{ env.ARTIFACT_DIR }}
           retention-days: 7
 
-      - name: Fail job if tests failed
+      - name: Fail if tests failed
         if: always()
         run: |
           F=$(cat "$ARTIFACT_DIR/failures.txt" 2>/dev/null || echo 0)
           echo "Failures reported: $F"
           [ "$F" -gt 0 ] && exit 1 || echo "All good"
+
