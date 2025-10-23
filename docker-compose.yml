@@ -1,4 +1,3 @@
-
 # ==========================
 # Docker Compose - AG Cloud
 # ==========================
@@ -22,10 +21,11 @@ volumes:
   gui_data:
   minio-hot-data: {}
   minio-cold-data: {}
+  mc-data:
 
-# ==========================
-# Services
-# ==========================
+    # ==========================
+    # Services
+    # ==========================
 services:
 
   # --------------------------
@@ -52,7 +52,7 @@ services:
       - wal_archive:/var/lib/postgresql/wal_archive
       - backups:/var/lib/postgresql/backups
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "missions_user", "-d", "missions_db"]
+      test: [ "CMD", "pg_isready", "-U", "missions_user", "-d", "missions_db" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -80,7 +80,7 @@ services:
   # MQTT / Kafka / Connect
   # --------------------------
   kafka:
-    build: 
+    build:
       context: ./mqtt_and_kafka/kafka
       dockerfile: dockerfile
     container_name: kafka
@@ -105,10 +105,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD-SHELL", "echo 'Checking Kafka...' && \
-        /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || \
-        /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9094 --list >/dev/null 2>&1 || \
-        exit 1"]
+      test: [ "CMD-SHELL", "echo 'Checking Kafka...' && /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9094 --list >/dev/null 2>&1 || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -116,7 +113,7 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2.0
     container_name: mosquitto
-    command: ["mosquitto", "-c", "/mqtt_and_kafka/mosquitto/config/mosquitto.conf"]
+    command: [ "mosquitto", "-c", "/mqtt_and_kafka/mosquitto/config/mosquitto.conf" ]
     ports:
       - "1883:1883"
     volumes:
@@ -127,7 +124,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD", "mosquitto_sub", "-h", "localhost", "-p", "1883", "-t", "$$SYS/#", "-C", "1", "-W", "15"]
+      test: [ "CMD", "mosquitto_sub", "-h", "localhost", "-p", "1883", "-t", "$$SYS/#", "-C", "1", "-W", "15" ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -161,7 +158,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8083/connectors"]
+      test: [ "CMD", "curl", "-sf", "http://localhost:8083/connectors" ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -286,13 +283,12 @@ services:
       - "5900:5900"
       - "8080:8080"
     depends_on:
-      - db_api_service 
+      - db_api_service
     volumes:
-        - ./GUI/src/vast:/app/src/vast
+      - ./GUI/src/vast:/app/src/vast
     networks:
       - ag_cloud
     restart: unless-stopped
-
 
   # --------------------------
   # Large Mosquitto
@@ -319,12 +315,19 @@ services:
       MINIO_PROMETHEUS_AUTH_TYPE: public
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
+      # ====== MinIO→Kafka built-in notifications ======
+      MINIO_NOTIFY_KAFKA_ENABLE_primary: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_primary: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_primary: "sound.new"
+      MINIO_NOTIFY_KAFKA_ENABLE_images: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_images: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_images: "image.new"
     ports:
-      - "9001:9000"   # HOT S3
-      - "9002:9001"   # HOT Console
-    networks: [ag_cloud]
+      - "9001:9000" # HOT S3
+      - "9002:9001" # HOT Console
+    networks: [ ag_cloud ]
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready"]
+      test: [ "CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready" ]
       interval: 3s
       timeout: 2s
       retries: 40
@@ -340,11 +343,11 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
     ports:
-      - "9101:9000"   # COLD S3
-      - "9102:9001"   # COLD Console
-    networks: [ag_cloud]
+      - "9101:9000" # COLD S3
+      - "9102:9001" # COLD Console
+    networks: [ ag_cloud ]
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready"]
+      test: [ "CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready" ]
       interval: 3s
       timeout: 2s
       retries: 40
@@ -357,12 +360,13 @@ services:
     volumes:
       - ./storage_with_mqtt/storage/combined_minio_setup/config:/config:ro
       - ./storage_with_mqtt/data/config:/config
+      - mc-data:/root/.mc
     depends_on:
       minio-hot:
         condition: service_healthy
       minio-cold:
         condition: service_healthy
-    command: ["/bin/bash","-lc","/entrypoint/init.sh; tail -f /dev/null"]
+    command: [ "/bin/bash", "-lc", "/entrypoint/init.sh; tail -f /dev/null" ]
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
@@ -372,7 +376,7 @@ services:
       MC_ALIAS_COLD: cold
       BUCKET_IMAGERY: imagery
       BUCKET_TELEMETRY: telemetry
-    networks: [ag_cloud]
+    networks: [ ag_cloud ]
     restart: unless-stopped
 
   # --------------------------
@@ -399,6 +403,8 @@ services:
       DB_API_AUTH_MODE: service
       DB_API_SERVICE_NAME: mqtt_ingest
       INGEST_WORKERS: 8
+      CAMERA_PREFIX: camera
+      MICROPHONE_PREFIX: microphone
     volumes:
       - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
     depends_on:
