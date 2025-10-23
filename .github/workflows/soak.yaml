@@ -528,6 +528,14 @@ jobs:
           docker compose version || true
 
       # מרימים רק את Kafka/Mosquitto/Connect (לא כל הסטאק)
+      - name: Create dummy MinIO env file (for CI)
+        run: |
+          mkdir -p storage_with_mqtt/storage/combined_minio_setup
+          cat > storage_with_mqtt/storage/combined_minio_setup/.env <<'EOF'
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=minioadmin123
+          EOF
+
       - name: Start core stack
         run: docker compose up -d kafka mosquitto connect
 
