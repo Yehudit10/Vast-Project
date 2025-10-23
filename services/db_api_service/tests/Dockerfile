@@ -26,5 +26,3 @@ ENV DB_DSN=sqlite+pysqlite:///:memory:
 ENV PYTHONDONTWRITEBYTECODE=1
 
 CMD ["pytest", "-q", "tests"]
-
-

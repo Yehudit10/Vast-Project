@@ -53,6 +53,12 @@ INGEST_WORKERS = cfg.INGEST_WORKERS
 # ---------- MQTT SUBSCRIBE TOPIC ----------
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "MQTT/imagery/#")
 
+# Add at the top with other ENV variables:
+
+# ---------- Media Prefixes ----------
+CAMERA_PREFIX = os.getenv("CAMERA_PREFIX", "camera")
+MICROPHONE_PREFIX = os.getenv("MICROPHONE_PREFIX", "microphone")
+
 # ---------- S3 ----------
 s3 = boto3.client(
     "s3",
@@ -117,6 +123,7 @@ def parse_topic(topic: str) -> dict:
         "publish_ts_ms": now,
         "content_type": "application/octet-stream",
         "filename": f"{now}.bin",
+        "media_type": "image",
     }
 
     try:
@@ -145,14 +152,62 @@ def parse_topic(topic: str) -> dict:
             result["filename"] = parts[i + 4]
 
     result["content_type"] = normalize_content_type(result["content_type"], result["filename"])
+    
+    # Detect media_type from content_type
+    ctype = result["content_type"].lower()
+    if ctype.startswith("image/"):
+        result["media_type"] = "image"
+    elif ctype.startswith("video/"):
+        result["media_type"] = "image"  # או "video" אם רוצה להפריד
+    elif ctype.startswith("audio/") or "sound" in ctype or "wav" in ctype or "mp3" in ctype:
+        result["media_type"] = "sound"
+    else:
+        # Fallback: check filename extension
+        ext = result["filename"].lower().split(".")[-1]
+        if ext in ("jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp"):
+            result["media_type"] = "image"
+        elif ext in ("wav", "mp3", "ogg", "flac", "aac", "m4a"):
+            result["media_type"] = "sound"
+        else:
+            result["media_type"] = "image"  # default
+    
+    # Build key with media_type prefix and appropriate device naming
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
-    key = f"{result['camera']}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    
+    # Extract device ID from camera field
+    device_id = result["camera"]
+    
+    # Determine device prefix based on media type
+    if result["media_type"] == "sound":
+        # For sound files, use microphone- prefix
+        if device_id.startswith(f"{CAMERA_PREFIX}-"):
+            # Replace camera- with microphone-
+            device_name = device_id.replace(f"{CAMERA_PREFIX}-", f"{MICROPHONE_PREFIX}-", 1)
+        elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
+            # Already has microphone prefix
+            device_name = device_id
+        else:
+            # No recognized prefix, add microphone-
+            device_name = f"{MICROPHONE_PREFIX}-{device_id}"
+    else:
+        # For image/video files, ensure camera- prefix
+        if device_id.startswith(f"{CAMERA_PREFIX}-"):
+            # Already has camera prefix
+            device_name = device_id
+        elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
+            # Replace microphone- with camera-
+            device_name = device_id.replace(f"{MICROPHONE_PREFIX}-", f"{CAMERA_PREFIX}-", 1)
+        else:
+            # No recognized prefix, add camera-
+            device_name = f"{CAMERA_PREFIX}-{device_id}"
+    
+    key = f"{result['media_type']}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    
     result["key"] = key
-    result["device_id"] = result["camera"]
+    result["device_id"] = device_name  # Use the renamed device
     result["image_id"] = stem(result["filename"]) or uuid.uuid4().hex
     result["capture_ts_iso"] = iso_utc(result["publish_ts_ms"])
     return result
-
 
 # ---------- Uploader ----------
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
