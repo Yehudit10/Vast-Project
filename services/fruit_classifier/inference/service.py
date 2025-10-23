@@ -15,13 +15,13 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTEN
 from dotenv import load_dotenv
 load_dotenv()
 
-# --- מדדים ---
+# --- Metrics ---
 REQS = Counter("inference_requests_total", "Total inference requests")
 ERRS = Counter("inference_errors_total", "Total inference errors")
 LATENCY = Histogram("inference_latency_seconds", "Inference latency per image (seconds)")
 LOADED = Gauge("model_loaded", "Model loaded (1=yes)")
 
-# --- קונפיג/מודל/טרנספורמציות נטענים פעם אחת ---
+# --- Config/Model/Transforms are loaded once ---
 from inference.utils_infer import build_infer_transforms, load_model
 from metrics_db.db import insert_inference_log
 
@@ -30,7 +30,7 @@ app = FastAPI()
 MODEL = None
 LABELS = None
 TFMS = None
-CFG = None  # ייטען מה-YAML של הקונפיג
+CFG = None  # will be loaded from YAML config
 
 def _load_labels(labels_path: str):
     with open(labels_path, "r", encoding="utf-8") as f:
@@ -114,7 +114,7 @@ async def infer(file: UploadFile = File(...)):
         latency_ms = (time.time() - start) * 1000.0
         LATENCY.observe(latency_ms / 1000.0)
 
-        # נסה לכתוב ל-DB, לא להפיל את ה-API אם נכשלים
+        # Try to write to DB, but don’t crash the API if it fails
         try:
             insert_inference_log(
                 model_backbone=CFG.get("backbone", "mobilenet_v3_small"),
