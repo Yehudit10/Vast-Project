@@ -512,12 +512,8 @@ on:
       DURATION_SEC: { description: "Test duration (sec)", required: true, default: "150" }
       RATE_PER_SEC: { description: "Msgs/sec", required: true, default: "1000" }
       LOSS_THRESHOLD_PCT: { description: "Max loss % to pass", required: true, default: "1.0" }
-      # לאבטחה אופציונלי ל-Kafka (SASL/SSL):
       KAFKA_SECURITY_PROTOCOL: { description: "PLAINTEXT / SASL_PLAINTEXT / SASL_SSL / SSL", required: false, default: "" }
-      KAFKA_SASL_MECHANISM: { description: "PLAIN / SCRAM-SHA-256 / SCRAM-SHA-512", required: false, default: "" }
-      KAFKA_SASL_USERNAME: { description: "SASL username", required: false, default: "" }
-      KAFKA_SASL_PASSWORD: { description: "SASL password (secret)", required: false, default: "" }
-      KAFKA_CA_B64: { description: "Base64 of CA cert (if SSL)", required: false, default: "" }
+      KAFKA_AUTH_JSON: { description: "JSON: {\"mechanism\":\"PLAIN\",\"username\":\"u\",\"password\":\"p\",\"ca_b64\":\"...\"}", required: false, default: "" }
 
 jobs:
   soak:
@@ -534,24 +530,34 @@ jobs:
       SOAK_RATE_PER_SEC: ${{ inputs.RATE_PER_SEC }}
       LOSS_THRESHOLD_PCT: ${{ inputs.LOSS_THRESHOLD_PCT }}
       KAFKA_SECURITY_PROTOCOL: ${{ inputs.KAFKA_SECURITY_PROTOCOL }}
-      KAFKA_SASL_MECHANISM: ${{ inputs.KAFKA_SASL_MECHANISM }}
-      KAFKA_SASL_USERNAME: ${{ inputs.KAFKA_SASL_USERNAME }}
-      KAFKA_SASL_PASSWORD: ${{ inputs.KAFKA_SASL_PASSWORD }}
-      KAFKA_CA_B64: ${{ inputs.KAFKA_CA_B64 }}
+      KAFKA_AUTH_JSON: ${{ inputs.KAFKA_AUTH_JSON }}
 
     steps:
       - name: Prepare
         run: mkdir -p "$ARTIFACT_DIR"
 
-      - name: Install tools (mosquitto-clients, kcat)
+      - name: Install tools (mosquitto-clients, kcat, jq)
         run: |
           sudo apt-get update
           sudo apt-get install -y mosquitto-clients kcat jq coreutils gawk
 
-      - name: (Optional) Write Kafka CA file
+      - name: Parse Kafka auth JSON (optional) & write CA
+        id: auth
         run: |
-          if [ -n "$KAFKA_CA_B64" ]; then
-            echo "$KAFKA_CA_B64" | base64 -d > ca.pem
+          set -e
+          if [ -n "$KAFKA_AUTH_JSON" ]; then
+            echo "$KAFKA_AUTH_JSON" | jq -e . >/dev/null 2>&1 || { echo "Bad KAFKA_AUTH_JSON"; exit 1; }
+            MECH=$(echo "$KAFKA_AUTH_JSON" | jq -r '.mechanism // empty')
+            USER=$(echo "$KAFKA_AUTH_JSON" | jq -r '.username // empty')
+            PASS=$(echo "$KAFKA_AUTH_JSON" | jq -r '.password // empty')
+            CA64=$(echo "$KAFKA_AUTH_JSON" | jq -r '.ca_b64 // empty')
+            echo "mechanism=$MECH" >> $GITHUB_OUTPUT
+            echo "username=$USER"  >> $GITHUB_OUTPUT
+            echo "password=$PASS"  >> $GITHUB_OUTPUT
+            if [ -n "$CA64" ] && [ "$CA64" != "null" ]; then
+              echo "$CA64" | base64 -d > ca.pem
+              echo "ca=ca.pem" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Quick connectivity checks
@@ -561,10 +567,10 @@ jobs:
           echo "== Kafka metadata =="
           KCAT_OPTS="-b $KAFKA_BOOTSTRAP"
           [ -n "$KAFKA_SECURITY_PROTOCOL" ] && KCAT_OPTS="$KCAT_OPTS -X security.protocol=$KAFKA_SECURITY_PROTOCOL"
-          [ -n "$KAFKA_SASL_MECHANISM" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.mechanisms=$KAFKA_SASL_MECHANISM"
-          [ -n "$KAFKA_SASL_USERNAME" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.username=$KAFKA_SASL_USERNAME"
-          [ -n "$KAFKA_SASL_PASSWORD" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.password=$KAFKA_SASL_PASSWORD"
-          [ -f ca.pem ] && KCAT_OPTS="$KCAT_OPTS -X ssl.ca.location=./ca.pem"
+          [ -n "${{ steps.auth.outputs.mechanism }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.mechanisms=${{ steps.auth.outputs.mechanism }}"
+          [ -n "${{ steps.auth.outputs.username }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.username=${{ steps.auth.outputs.username }}"
+          [ -n "${{ steps.auth.outputs.password }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.password=${{ steps.auth.outputs.password }}"
+          [ -n "${{ steps.auth.outputs.ca }}" ] && KCAT_OPTS="$KCAT_OPTS -X ssl.ca.location=${{ steps.auth.outputs.ca }}"
           kcat $KCAT_OPTS -L || true
 
       - name: Run MQTT→Kafka soak
@@ -575,13 +581,12 @@ jobs:
           SENT=$((D*RATE))
           mkdir -p "${ARTIFACT_DIR}"
 
-          # Build kcat options for consumer
           KCAT_OPTS="-b $KAFKA_BOOTSTRAP -t $KAFKA_TOPIC -C -o beginning -q"
           [ -n "$KAFKA_SECURITY_PROTOCOL" ] && KCAT_OPTS="$KCAT_OPTS -X security.protocol=$KAFKA_SECURITY_PROTOCOL"
-          [ -n "$KAFKA_SASL_MECHANISM" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.mechanisms=$KAFKA_SASL_MECHANISM"
-          [ -n "$KAFKA_SASL_USERNAME" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.username=$KAFKA_SASL_USERNAME"
-          [ -n "$KAFKA_SASL_PASSWORD" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.password=$KAFKA_SASL_PASSWORD"
-          [ -f ca.pem ] && KCAT_OPTS="$KCAT_OPTS -X ssl.ca.location=./ca.pem"
+          [ -n "${{ steps.auth.outputs.mechanism }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.mechanisms=${{ steps.auth.outputs.mechanism }}"
+          [ -n "${{ steps.auth.outputs.username }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.username=${{ steps.auth.outputs.username }}"
+          [ -n "${{ steps.auth.outputs.password }}" ] && KCAT_OPTS="$KCAT_OPTS -X sasl.password=${{ steps.auth.outputs.password }}"
+          [ -n "${{ steps.auth.outputs.ca }}" ] && KCAT_OPTS="$KCAT_OPTS -X ssl.ca.location=${{ steps.auth.outputs.ca }}"
 
           echo "=== Start Kafka consumer to file ==="
           timeout $((D+120))s sh -c "kcat $KCAT_OPTS > '${ARTIFACT_DIR}/kafka-received.log'" \
@@ -596,7 +601,6 @@ jobs:
           for sec in $(seq 1 "$D"); do
             ELAPSED=$(( $(date +%s) - START_TIME ))
             echo "[$ELAPSED/${D}s] Publishing ${RATE} msgs on ${TOPIC}"
-            # יוצרים RATE שורות ומזינים ב־stdin ל־mosquitto_pub עם -l
             awk -v n="${RATE}" -v batch="$sec" 'BEGIN{ for(i=0;i<n;i++) printf "msg_%d_%d_%d\n", batch, i, systime() }' \
               | mosquitto_pub -h "$HOST" -p "$PORT" -t "$TOPIC" -l -q 0 || echo "WARN: publish batch $sec failed"
             sleep 1
@@ -658,6 +662,4 @@ jobs:
         run: |
           F=$(cat "$ARTIFACT_DIR/failures.txt" 2>/dev/null || echo 0)
           echo "Failures reported: $F"
-          if [ "$F" -gt 0 ]; then
-            exit 1
-          fi
+          [ "$F" -gt 0 ] && exit 1 || echo "All good"
