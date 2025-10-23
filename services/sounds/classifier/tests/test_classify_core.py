@@ -212,7 +212,7 @@ def test_run_classification_job_adds_wav_suffix_when_missing(monkeypatch):
             observed["ext"] = Path(dst).suffix
             Path(dst).write_bytes(b"RIFF")
     monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
-    monkeypatch.setattr(c, "classify_file", lambda p: ("another", {"car": 0.0, "dog": 0.0}), raising=True)
+    monkeypatch.setattr(c, "classify_file", lambda p, **_: ("another", {"car": 0.0, "dog": 0.0}), raising=True)
     monkeypatch.setattr(c.os, "remove", lambda p: None, raising=True)
 
     out = c.run_classification_job(s3_bucket="ok", s3_key="noext")
