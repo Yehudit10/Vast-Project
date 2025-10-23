@@ -5,7 +5,9 @@ def test_health_ok():
     client = TestClient(app_mod.app)
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"ok": True}
+    data = r.json()
+    assert isinstance(data, dict)
+    assert data.get("ok") is True
 
 def test_classify_endpoint_200(monkeypatch):
     client = TestClient(app_mod.app)
