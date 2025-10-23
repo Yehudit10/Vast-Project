@@ -510,10 +510,9 @@ jobs:
     timeout-minutes: 45
     env:
       ARTIFACT_DIR: artifacts
-      # פרמטרים לעומס (אפשר לערוך כאן)
-      SOAK_DURATION_SEC: "120"   # זמן שניות
-      SOAK_RATE_PER_SEC: "1000"  # הודעות לשנייה
-      MQTT_TOPIC: "mqtt/soak"    # חייב להתחיל ב-mqtt/ כדי שה-connector יקלוט
+      SOAK_DURATION_SEC: "120"  
+      SOAK_RATE_PER_SEC: "1000"  
+      MQTT_TOPIC: "mqtt/soak"   
       KAFKA_TOPIC: "dev-robot-alerts"
     steps:
       - name: Checkout
@@ -527,7 +526,6 @@ jobs:
           docker --version || true
           docker compose version || true
 
-      # מרימים רק את Kafka/Mosquitto/Connect (לא כל הסטאק)
       - name: Create dummy MinIO env file (for CI)
         run: |
           mkdir -p storage_with_mqtt/storage/combined_minio_setup
@@ -552,8 +550,6 @@ jobs:
 
           echo "== Wait Mosquitto =="
           for i in $(seq 1 40); do
-            # בדיקת התחברות מה-host לתוך הקונטיינר דרך רשת docker הפנימית אינה אפשרית;
-            # נבדוק health של הקונטיינר:
             s=$(docker inspect -f '{{.State.Health.Status}}' mosquitto || echo unknown)
             [ "$s" = "healthy" ] && break
             echo "Mosquitto: $s ($i/40)"; sleep 3
@@ -576,7 +572,6 @@ jobs:
       - name: Ensure MQTT source connector exists (points mosquitto -> ${KAFKA_TOPIC})
         run: |
           set -e
-          # נבנה גוף בקשה לפי הקובץ שסיפקת (עם mqtt/# וכתיבה ל-${KAFKA_TOPIC})
           cat > mqtt-source.json <<'JSON'
           {
             "name": "mqtt-source",
@@ -603,12 +598,10 @@ jobs:
             }
           }
           JSON
-          # מעדיפים לא לשכתב אם קיים; אם לא קיים — ניצור
           if ! curl -sf http://localhost:8083/connectors/mqtt-source >/dev/null; then
             curl -sS -X POST -H 'Content-Type: application/json' --data @mqtt-source.json http://localhost:8083/connectors \
               || { echo "Connector create failed"; curl -s http://localhost:8083/connectors; exit 1; }
           fi
-          # בדוק סטטוס
           curl -sSf http://localhost:8083/connectors/mqtt-source/status || true
 
       - name: Determine compose network name
@@ -622,7 +615,6 @@ jobs:
         run: |
           set -e
           NET="${{ steps.net.outputs.net }}"
-          # נתחיל מצרכן מקצה הלוג (לא מההיסטוריה) כדי למדוד רק את מה שנשלח עכשיו
           docker run --rm --name soak-kcat -i --network "$NET" edenhill/kcat:1.7.1 \
             -b kafka:9092 -t "${KAFKA_TOPIC}" -C -o end -q \
             > "${ARTIFACT_DIR}/kafka-received.log" 2> "${ARTIFACT_DIR}/kafka-consumer.err" &
@@ -638,7 +630,6 @@ jobs:
           TOPIC=${MQTT_TOPIC}
 
           echo "Publishing D=$D sec, RATE=$RATE msg/s to $TOPIC"
-          # נריץ קונטיינר זמני עם mosquitto-clients
           for sec in $(seq 1 "$D"); do
             echo "[$sec/$D] batch $sec"
             docker run --rm --network "$NET" alpine:3.20 \
@@ -652,9 +643,7 @@ jobs:
       - name: Stop consumer and compute results
         run: |
           set -e
-          # אפשר לתת עוד זמן ניקוז ל-Connect
           sleep 20
-          # אין מה להרוג — הקונטיינר נסגר כי לא קיבל קלט; אבל למקרה:
           pkill -f soak-kcat || true
 
           D=${SOAK_DURATION_SEC}
