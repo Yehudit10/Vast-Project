@@ -514,7 +514,8 @@ on:
       LOSS_THRESHOLD_PCT: { description: "Max loss % to pass", required: true, default: "1.0" }
       KAFKA_SECURITY_PROTOCOL: { description: "PLAINTEXT / SASL_PLAINTEXT / SASL_SSL / SSL", required: false, default: "" }
       KAFKA_AUTH_JSON: { description: "JSON: {\"mechanism\":\"PLAIN\",\"username\":\"u\",\"password\":\"p\",\"ca_b64\":\"...\"}", required: false, default: "" }
-
+    push:
+      branches: [ "main", "sounds-ruth", "ruthhermelin/soak" ]
 jobs:
   soak:
     runs-on: ubuntu-latest
@@ -663,4 +664,4 @@ jobs:
           F=$(cat "$ARTIFACT_DIR/failures.txt" 2>/dev/null || echo 0)
           echo "Failures reported: $F"
           [ "$F" -gt 0 ] && exit 1 || echo "All good"
-          
+
