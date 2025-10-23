@@ -11,10 +11,12 @@ jobs:
     timeout-minutes: 45
     env:
       ARTIFACT_DIR: artifacts
-      SOAK_DURATION_SEC: "120"  
-      SOAK_RATE_PER_SEC: "1000"  
-      MQTT_TOPIC: "mqtt/soak"   
+      SOAK_DURATION_SEC: "120"
+      SOAK_RATE_PER_SEC: "1000"
+      MQTT_TOPIC: "mqtt/soak"
       KAFKA_TOPIC: "dev-robot-alerts"
+      LOSS_THRESHOLD_PCT: "1.0"   # סף כשל: % אובדן מותר (שני לפי הצורך)
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,7 +42,8 @@ jobs:
 
       - name: Wait for Kafka & Mosquitto & Connect
         run: |
-          set -e
+          set -euo pipefail
+
           echo "== Wait Kafka =="
           for i in $(seq 1 60); do
             s=$(docker inspect -f '{{.State.Health.Status}}' kafka || echo unknown)
@@ -58,22 +61,32 @@ jobs:
           [ "$(docker inspect -f '{{.State.Health.Status}}' mosquitto)" = "healthy" ] || { echo "Mosquitto not healthy"; exit 1; }
 
           echo "== Wait Connect REST =="
+          READY=0
           for i in $(seq 1 60); do
-            if curl -sf http://localhost:8083/connectors >/dev/null; then break; fi
+            if curl -sf http://localhost:8083/connectors >/dev/null; then
+              echo "Connect REST is ready!"
+              READY=1
+              break
+            fi
             echo "Connect REST not ready ($i/60)"; sleep 3
           done
+          if [ "$READY" -ne 1 ]; then
+            echo "ERROR: Connect REST not ready after timeout"
+            docker compose logs connect --tail=200 || true
+            exit 1
+          fi
 
       - name: Create Kafka topic if missing
         run: |
-          set -e
+          set -euo pipefail
           docker compose exec -T kafka bash -lc "\
             /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep -qx '${KAFKA_TOPIC}' \
             || /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic '${KAFKA_TOPIC}' --partitions 1 --replication-factor 1"
 
-      - name: Ensure MQTT source connector exists (points mosquitto -> ${KAFKA_TOPIC})
+      - name: Ensure MQTT source connector exists (mosquitto -> ${KAFKA_TOPIC})
         run: |
-          set -e
-          cat > mqtt-source.json <<'JSON'
+          set -euo pipefail
+          cat > mqtt-source.json <<JSON
           {
             "name": "mqtt-source",
             "config": {
@@ -83,7 +96,7 @@ jobs:
               "mqtt.topics": "mqtt/#",
               "mqtt.qos": "0",
               "clean.session": "true",
-              "kafka.topic": "dev-robot-alerts",
+              "kafka.topic": "${KAFKA_TOPIC}",
               "key.converter": "org.apache.kafka.connect.storage.StringConverter",
               "key.converter.schemas.enable": "false",
               "value.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
@@ -99,22 +112,25 @@ jobs:
             }
           }
           JSON
+
           if ! curl -sf http://localhost:8083/connectors/mqtt-source >/dev/null; then
             curl -sS -X POST -H 'Content-Type: application/json' --data @mqtt-source.json http://localhost:8083/connectors \
               || { echo "Connector create failed"; curl -s http://localhost:8083/connectors; exit 1; }
           fi
+          echo "MQTT connector status:"
           curl -sSf http://localhost:8083/connectors/mqtt-source/status || true
 
       - name: Determine compose network name
         id: net
         run: |
+          set -euo pipefail
           NET=$(docker network ls --format '{{.Name}}' | grep '_ag_cloud$' | head -1)
           echo "net=$NET" >> $GITHUB_OUTPUT
           echo "Using network: $NET"
 
       - name: Start Kafka consumer (kcat) on compose network
         run: |
-          set -e
+          set -euo pipefail
           NET="${{ steps.net.outputs.net }}"
           docker run --rm --name soak-kcat -i --network "$NET" edenhill/kcat:1.7.1 \
             -b kafka:9092 -t "${KAFKA_TOPIC}" -C -o end -q \
@@ -143,9 +159,9 @@ jobs:
 
       - name: Stop consumer and compute results
         run: |
-          set -e
+          set -euo pipefail
           sleep 20
-          pkill -f soak-kcat || true
+          if [ -f kcat.pid ]; then kill -9 "$(cat kcat.pid)" 2>/dev/null || true; fi
 
           D=${SOAK_DURATION_SEC}
           RATE=${SOAK_RATE_PER_SEC}
@@ -193,7 +209,24 @@ jobs:
       - name: Fail if tests failed
         if: always()
         run: |
+          set -euo pipefail
           F=$(cat "$ARTIFACT_DIR/failures.txt" 2>/dev/null || echo 0)
           echo "Failures reported: $F"
-          [ "$F" -gt 0 ] && exit 1 || echo "All good"
+          if [ "$F" -gt 0 ]; then
+            echo ":x: Tests failed!"
+            exit 1
+          else
+            echo ":white_check_mark: All tests passed!"
+          fi
 
+      - name: Cleanup (containers & volumes)
+        if: always()
+        run: |
+          set -euo pipefail
+          # ודא שהצרכן נעצר
+          if [ -f kcat.pid ]; then kill -9 "$(cat kcat.pid)" 2>/dev/null || true; fi
+          # נקה את סביבת ה-compose
+          docker compose down -v || true
+          # ניקוי נוסף למקרה של שאריות
+          docker ps -aq | xargs -r docker rm -f || true
+          docker network prune -f || true
