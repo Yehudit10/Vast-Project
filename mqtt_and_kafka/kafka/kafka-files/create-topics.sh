@@ -34,7 +34,7 @@ TOPICS=(
   sensor-telemetry
   sensor-anomalies
   dev-robot-telemetry-anomalies
-  dev-robot-images-keys
+  dev-aerial-images-keys
 )
 
 # Idempotent creation with retention.ms
