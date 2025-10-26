@@ -21,9 +21,6 @@ from classification.core.model_io import (
     aggregate_matrix,
 )
 from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embedding
-
-# Optional DB + Kafka (used if enabled)
-from classification.core import db_io_pg as dbio
 from classification.scripts import alerts
 
 # -----------------------------
@@ -56,10 +53,6 @@ ALLOWED_CONTENT_TYPES: List[str] = [t.strip() for t in os.getenv(
     "audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4"
 ).split(",") if t.strip()]
 MAX_BYTES = int(os.getenv("MAX_BYTES", str(50 * 1024 * 1024)))
-
-WRITE_DB = os.getenv("WRITE_DB", "false").strip().lower() in ("1", "true", "yes", "on")
-DB_URL = os.getenv("DB_URL", "")
-DB_SCHEMA = os.getenv("DB_SCHEMA", "audio_cls")
 
 KAFKA_BROKERS = os.getenv("KAFKA_BROKERS", "kafka:9092")
 ALERTS_TOPIC = os.getenv("ALERTS_TOPIC", "dev-robot-alerts")
@@ -193,8 +186,8 @@ def classify_file(
     path: str,
     pann_model: Optional[AudioTagging] = None,
     sk_pipeline: Optional[Any] = None
-) -> Tuple[str, Dict[str, float]]:
-    start_time = time.perf_counter()
+) -> Dict[str, object]:
+    t0 = time.perf_counter()
 
     _load_head_once()
     if pann_model is None:
@@ -203,10 +196,29 @@ def classify_file(
     wav = load_audio(path, SAMPLE_RATE).astype(np.float32)
     sr = SAMPLE_RATE
 
+    # Segment once; reuse for both paths
+    windows: List[np.ndarray] = segment_waveform(
+        wav, sr, window_sec=WINDOW_SEC, hop_sec=HOP_SEC, pad_last=PAD_LAST
+    )
+    num_windows = len(windows)
+    if num_windows == 0:
+        # Return a safe default
+        result = {
+            "label": "another",
+            "probs": {c: 0.0 for c in R.classes},
+            "pred_prob": 0.0,
+            "unknown_threshold": UNKNOWN_THRESHOLD,
+            "is_another": True,
+            "num_windows": 0,
+            "agg_mode": AGG,
+            "processing_ms": int((time.perf_counter() - t0) * 1000.0),
+        }
+        return result
+
+    # Compute per-window embeddings
+    feats: List[np.ndarray] = []
     if pann_model is not None:
-        segments = segment_waveform(wav, sr)
-        feats = []
-        for seg in segments:
+        for seg in windows:
             seg = np.asarray(seg, dtype=np.float32)
             if seg.ndim == 1:
                 seg = seg[None, :]
@@ -219,25 +231,40 @@ def classify_file(
                 raise TypeError(f"Unexpected output type: {type(out)}")
             emb = np.asarray(embedding, dtype=np.float32).reshape(-1)
             feats.append(emb)
-        E = np.stack(feats, axis=0)
+        E = np.stack(feats, axis=0).astype(np.float32)
     else:
-        E = _segments_embeddings(wav, sr)
-        if E.shape[0] == 0:
-            return "another", {c: 0.0 for c in R.classes}
+        # CNN14 backbone path
+        embs: List[np.ndarray] = []
+        for seg in windows:
+            e = run_cnn14_embedding(R.model, seg)
+            e = np.asarray(e, dtype=np.float32).reshape(-1)
+            embs.append(e)
+        E = np.stack(embs, axis=0).astype(np.float32)
 
+    # Head predict_proba
     clf = sk_pipeline if sk_pipeline is not None else R.head
     per_window_probs = np.asarray(clf.predict_proba(E), dtype=np.float32)
-    agg = _aggregate_probs(per_window_probs)
-    k = int(np.argmax(agg))
-    top_prob = float(agg[k])
+
+    # Aggregate
+    agg_vec = _aggregate_probs(per_window_probs)
+    k = int(np.argmax(agg_vec))
+    top_prob = float(agg_vec[k])
     top_label = R.classes[k]
     final_label = top_label if top_prob >= UNKNOWN_THRESHOLD else "another"
-    probs = {cls: float(p) for cls, p in zip(R.classes, agg)}
+    probs = {cls: float(p) for cls, p in zip(R.classes, agg_vec)}
 
-    elapsed = (time.perf_counter() - start_time) * 1000.0  # milliseconds
-    perf_logger.info(f"{Path(path).name} classified as '{final_label}' in {elapsed:.2f} ms")
+    processing_ms = int((time.perf_counter() - t0) * 1000.0)
 
-    return final_label, probs
+    return {
+        "label": final_label,
+        "probs": probs,
+        "pred_prob": top_prob,
+        "unknown_threshold": UNKNOWN_THRESHOLD,
+        "is_another": (final_label == "another"),
+        "num_windows": num_windows,
+        "agg_mode": AGG,
+        "processing_ms": processing_ms,
+    }
 
 def run_classification_job(
     *,
@@ -277,31 +304,19 @@ def run_classification_job(
     try:
         client.fget_object(s3_bucket, s3_key, tmp_path)
 
-        label, probs = classify_file(tmp_path, pann_model=pann_model, sk_pipeline=sk_pipeline)
-
-        # optional DB write
-        if WRITE_DB and DB_URL:
-            conn = None
-            try:
-                conn = dbio.open_db(DB_URL, schema=DB_SCHEMA)
-                conn.commit()
-            finally:
-                if conn:
-                    conn.rollback()
-                    conn.close()
-
-        # optional Kafka alert (only for known labels)
-        if label != "another" and KAFKA_BROKERS and ALERTS_TOPIC:
+        result = classify_file(tmp_path, pann_model=pann_model, sk_pipeline=sk_pipeline)
+        
+        if result["label"] != "another" and KAFKA_BROKERS and ALERTS_TOPIC:
             alerts.send_alert(
                 brokers=KAFKA_BROKERS,
                 topic=ALERTS_TOPIC,
-                label=label,
-                probs=probs,
+                label=str(result["label"]),
+                probs=dict(result["probs"]),
                 meta={"bucket": s3_bucket, "key": s3_key},
             )
 
-        return {"label": label, "probs": probs}
-
+        return result
+    
     finally:
         try:
             os.remove(tmp_path)
