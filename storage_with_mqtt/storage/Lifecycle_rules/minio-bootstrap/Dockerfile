@@ -1,10 +1,7 @@
 FROM alpine:3.19
 # ===== Deps & Binaries =====
 RUN apk add --no-cache bash curl ca-certificates supervisor && \
-  update-ca-certificates && \
-  curl -k -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && \
-  curl -k -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && \
-  chmod +x /usr/local/bin/minio /usr/local/bin/mc
+  update-ca-certificates
 
 # Download MinIO binaries with retry logic
 RUN for i in 1 2 3 4 5; do \

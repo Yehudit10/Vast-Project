@@ -158,7 +158,7 @@ def parse_topic(topic: str) -> dict:
     if ctype.startswith("image/"):
         result["media_type"] = "image"
     elif ctype.startswith("video/"):
-        result["media_type"] = "image"  # או "video" אם רוצה להפריד
+        result["media_type"] = "image"  
     elif ctype.startswith("audio/") or "sound" in ctype or "wav" in ctype or "mp3" in ctype:
         result["media_type"] = "sound"
     else:
