@@ -65,7 +65,7 @@ def publish_image(image_path):
     # Generate new image name + update timestamp
     new_image_name = generate_new_name()
     meta_data["image_name"] = new_image_name
-    # meta_data["drone_id"] = CAMERA_ID
+    meta_data["drone_id"] = CAMERA_ID
     meta_data["capture_time"] = iso_utc()
 
     # Load image bytes
