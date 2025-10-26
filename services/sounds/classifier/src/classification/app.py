@@ -10,12 +10,17 @@ import joblib
 from panns_inference import AudioTagging
 from classification.core.model_io import SAMPLE_RATE
 from classification.scripts import classify as cls_script
+from classification.core.db_utils import ensure_run, open_db, resolve_file_id
+from classification.core.db_io_pg import upsert_file_aggregate
 
 app = FastAPI(title="Audio Classifier API", version="2.0.0")
 
 # --- Globals (singletons) ---
 PANN_MODEL: Optional[AudioTagging] = None
 SK_PIPELINE = None  # type: ignore
+DB_CONN = None
+DB_RUN_ID = os.getenv("DB_RUN_ID", "api-default")
+DB_SCHEMA = os.getenv("DB_SCHEMA", "agcloud_audio")
 
 CHECKPOINT_PATH = os.getenv(
     "CHECKPOINT",
@@ -29,6 +34,7 @@ SK_PIPELINE_PATH = os.getenv(
 class ClassifyIn(BaseModel):
     s3_bucket: str
     s3_key: str
+    return_probs: bool = False
 
 class ClassifyOut(BaseModel):
     label: str
@@ -38,14 +44,12 @@ class ClassifyOut(BaseModel):
 @app.on_event("startup")
 def load_models_on_startup() -> None:
     """
-    Load heavy models once and perform a short warm-up to avoid cold-start
-    on the first request.
-    """
-    global PANN_MODEL, SK_PIPELINE
+    Load heavy models once and perform a short warm-up to avoid cold-start.
+    Also open DB connection and ensure run row exists.    """
+    global PANN_MODEL, SK_PIPELINE, DB_CONN
     logger = logging.getLogger("uvicorn.error")
 
     logger.info("Loading models into memory...")
-    # Initialize models
     PANN_MODEL = AudioTagging(checkpoint_path=CHECKPOINT_PATH)
     SK_PIPELINE = None
     try:
@@ -64,10 +68,33 @@ def load_models_on_startup() -> None:
         logger.info("✅ PANN model warm-up complete.")
     except Exception as e:
         logger.warning(f"PANN warm-up skipped ({e})")
-        
+    
+    # DB connect + ensure run
+    try:
+        DB_CONN = open_db()
+        ensure_run(DB_CONN, DB_RUN_ID)
+        logger.info(f"✅ DB connected; run '{DB_RUN_ID}' ensured in schema '{DB_SCHEMA}'.")
+    except Exception as e:
+        logger.error(f"DB init failed: {e}")
+        raise
+    
     logger.info("✅ All models loaded and ready.")
 
-# create a dedicated API perf logger
+@app.on_event("shutdown")
+def close_db_on_shutdown() -> None:
+    """
+    Cleanly close the global DB connection on shutdown.
+    """
+    global DB_CONN
+    try: 
+        if DB_CONN is not None:
+            DB_CONN.close()
+    except Exception:
+        pass
+    finally:
+        DB_CONN = None
+        
+# dedicated API perf logger
 api_logger = logging.getLogger("audio_cls.api")
 api_logger.setLevel(logging.INFO)
 if not api_logger.handlers:
@@ -79,24 +106,52 @@ if not api_logger.handlers:
 def classify(body: ClassifyIn):
     """
     Run the full classification pipeline:
+    Run the full classification pipeline:
     - Download from MinIO (s3_bucket + s3_key)
     - Model inference with open-set threshold
-    - Optional DB write
-    - Optional Kafka alert (for known labels)
+    - DB upsert into agcloud_audio.file_aggregates
     """
     start = time.perf_counter()
     status_code = 200
     try:
+        # 1) Resolve file_id from public.files (no insert)
+        try:
+            file_id = resolve_file_id(DB_CONN, bucket=body.s3_bucket, object_key=body.s3_key)
+        except ValueError as e:
+            # file not found in public.files
+            raise HTTPException(status_code=404, detail=str(e))
+        
+        # 2) Run classification 
         result = cls_script.run_classification_job(
             s3_bucket=body.s3_bucket,
             s3_key=body.s3_key,
             pann_model=PANN_MODEL,
             sk_pipeline=SK_PIPELINE 
         )
-        return ClassifyOut(label=result["label"], probs=result["probs"])
+        
+        # 3) Upsert aggregate to DB (JSONB)
+        upsert_file_aggregate(DB_CONN, {
+            "run_id": DB_RUN_ID,
+            "file_id": file_id,
+            "head_probs_json": result.get("probs", {}),
+            "head_pred_label": result.get("label"),
+            "head_pred_prob": result.get("pred_prob"),
+            "head_unknown_threshold": result.get("unknown_threshold"),
+            "head_is_another": result.get("is_another"),
+            "num_windows": result.get("num_windows"),
+            "agg_mode": result.get("agg_mode"),
+            "processing_ms": result.get("processing_ms"),
+        })
+
+        # 4) Build API response
+        out = {"label": result.get("label", ""), "probs": result.get("probs", {})}
+        if not body.return_probs:
+            out["probs"] = {}
+        return ClassifyOut(**out)
+
     except HTTPException as e:
         status_code = e.status_code
-        raise  
+        raise
     except Exception as e:
         status_code = 500
         raise HTTPException(status_code=500, detail=str(e))

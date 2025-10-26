@@ -66,35 +66,35 @@ def finish_run(conn: PGConnection, run_id: str) -> None:
         LOGGER.exception("finish_run failed: %s", run_id)
         raise
 
-def upsert_file(
-    conn: PGConnection,
-    path: str,
-    duration_s: Optional[float],
-    sample_rate: Optional[int],
-    size_bytes: Optional[int] = None,
-) -> int:
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO files(path, duration_s, sample_rate, size_bytes)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (path) DO UPDATE SET
-                  duration_s = EXCLUDED.duration_s,
-                  sample_rate = EXCLUDED.sample_rate,
-                  size_bytes = EXCLUDED.size_bytes
-                RETURNING file_id
-                """,
-                (path, duration_s, sample_rate, size_bytes),
-            )
-            file_id = cur.fetchone()[0]
-        conn.commit()
-        LOGGER.debug("upsert_file: %s -> %d", path, file_id)
-        return int(file_id)
-    except Exception:
-        conn.rollback()
-        LOGGER.exception("upsert_file failed: %s", path)
-        raise
+# def upsert_file(
+#     conn: PGConnection,
+#     path: str,
+#     duration_s: Optional[float],
+#     sample_rate: Optional[int],
+#     size_bytes: Optional[int] = None,
+# ) -> int:
+#     try:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 """
+#                 INSERT INTO files(path, duration_s, sample_rate, size_bytes)
+#                 VALUES (%s, %s, %s, %s)
+#                 ON CONFLICT (path) DO UPDATE SET
+#                   duration_s = EXCLUDED.duration_s,
+#                   sample_rate = EXCLUDED.sample_rate,
+#                   size_bytes = EXCLUDED.size_bytes
+#                 RETURNING file_id
+#                 """,
+#                 (path, duration_s, sample_rate, size_bytes),
+#             )
+#             file_id = cur.fetchone()[0]
+#         conn.commit()
+#         LOGGER.debug("upsert_file: %s -> %d", path, file_id)
+#         return int(file_id)
+#     except Exception:
+#         conn.rollback()
+#         LOGGER.exception("upsert_file failed: %s", path)
+#         raise
 
 def _jsonify(v: Any) -> psycopg2.extras.Json:
     if isinstance(v, str):

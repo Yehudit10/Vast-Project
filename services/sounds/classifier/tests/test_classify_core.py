@@ -17,6 +17,13 @@ class DummyHead:
 def _reset_runtime():
     c.R = c._Runtime()
 
+def _to_dict_result(res):
+    """Normalize classifier outputs to a dict {label, probs} for tests."""
+    if isinstance(res, tuple):
+        label, probs = res
+        return {"label": label, "probs": probs}
+    return res
+
 
 # ---- Core classification flow & validations ----
 def test_classify_file_unknown_threshold(monkeypatch):
@@ -31,9 +38,9 @@ def test_classify_file_unknown_threshold(monkeypatch):
     monkeypatch.setattr(c, "segment_waveform", lambda *a, **k: [np.ones(16000, dtype=np.float32)], raising=True)
     monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
 
-    label, probs = c.classify_file("dummy.wav")
-    assert label in ("car", "another")
-    assert set(probs.keys()) == {"car", "dog"}
+    result = _to_dict_result(c.classify_file("dummy.wav"))
+    assert result["label"] in ("car", "another")
+    assert set(result["probs"].keys()) == {"car", "dog"}
 
 
 def test__aggregate_probs_rejects_bad_ndim():
@@ -65,9 +72,9 @@ def test_classify_file_returns_another_when_no_segments(monkeypatch):
     monkeypatch.setattr(c, "segment_waveform", lambda *a, **k: [], raising=True)
     monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
 
-    label, probs = c.classify_file("dummy.wav")
-    assert label == "another"
-    assert set(probs.keys()) == {"car", "dog"}
+    result = _to_dict_result(c.classify_file("dummy.wav"))
+    assert result["label"] == "another"
+    assert set(result["probs"].keys()) == {"car", "dog"}
 
 
 def test_classify_file_with_agg_max(monkeypatch):
@@ -84,14 +91,17 @@ def test_classify_file_with_agg_max(monkeypatch):
         c.R.classes = ["a", "b"]
 
         monkeypatch.setattr(c, "load_audio", lambda p, sr: np.ones(2 * 16000, dtype=np.float32), raising=True)
-        monkeypatch.setattr(c, "segment_waveform",
-                            lambda *a, **k: [np.ones(16000, dtype=np.float32), np.ones(16000, dtype=np.float32)],
-                            raising=True)
+        monkeypatch.setattr(
+            c,
+            "segment_waveform",
+            lambda *a, **k: [np.ones(16000, dtype=np.float32), np.ones(16000, dtype=np.float32)],
+            raising=True
+        )
         monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
 
-        label, probs = c.classify_file("x.wav")
-        assert set(probs.keys()) == {"a", "b"}
-        assert np.isclose(probs["a"], 0.6) or np.isclose(probs["b"], 0.8)
+        result = _to_dict_result(c.classify_file("x.wav"))
+        assert set(result["probs"].keys()) == {"a", "b"}
+        assert np.isclose(result["probs"]["a"], 0.6) or np.isclose(result["probs"]["b"], 0.8)
     finally:
         c.AGG = old_agg
 
@@ -117,7 +127,7 @@ def test_run_classification_job_happy_path(monkeypatch, tmp_path):
     monkeypatch.setattr(c, "segment_waveform", lambda *a, **k: [np.ones(16000, dtype=np.float32)], raising=True)
     monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
 
-    out = c.run_classification_job(s3_bucket="b", s3_key="k.wav")
+    out = _to_dict_result(c.run_classification_job(s3_bucket="b", s3_key="k.wav"))
     assert out["label"] in ("car", "another")
     assert "probs" in out and isinstance(out["probs"], dict)
 
@@ -129,7 +139,7 @@ def test_run_classification_job_bucket_not_allowed():
     c.ALLOWED_BUCKETS = ["only-this-bucket"]
     try:
         try:
-            c.run_classification_job(s3_bucket="not-allowed", s3_key="a.wav")
+            _ = c.run_classification_job(s3_bucket="not-allowed", s3_key="a.wav")
             assert False, "Expected RuntimeError for disallowed bucket"
         except RuntimeError as e:
             assert "not allowed" in str(e)
@@ -151,7 +161,7 @@ def test_run_classification_job_rejects_content_type(monkeypatch):
     monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
 
     try:
-        c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
+        _ = c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
         assert False, "Expected RuntimeError for unsupported content-type"
     except RuntimeError as e:
         assert "Unsupported content-type" in str(e)
@@ -171,7 +181,7 @@ def test_run_classification_job_rejects_size(monkeypatch):
     monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
 
     try:
-        c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
+        _ = c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
         assert False, "Expected RuntimeError for object too large"
     except RuntimeError as e:
         assert "Object too large" in str(e)
@@ -192,7 +202,7 @@ def test_run_classification_job_s3error_fails_fast(monkeypatch):
     monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
 
     try:
-        c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
+        _ = c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
         assert False, "Expected RuntimeError wrapping S3 failure"
     except RuntimeError as e:
         assert "S3 stat failed" in str(e)
@@ -212,9 +222,9 @@ def test_run_classification_job_adds_wav_suffix_when_missing(monkeypatch):
             observed["ext"] = Path(dst).suffix
             Path(dst).write_bytes(b"RIFF")
     monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
-    monkeypatch.setattr(c, "classify_file", lambda p, **_: ("another", {"car": 0.0, "dog": 0.0}), raising=True)
+    monkeypatch.setattr(c, "classify_file", lambda p, **_: {"label": "another", "probs": {"car": 0.0, "dog": 0.0}}, raising=True)
     monkeypatch.setattr(c.os, "remove", lambda p: None, raising=True)
 
-    out = c.run_classification_job(s3_bucket="ok", s3_key="noext")
+    out = _to_dict_result(c.run_classification_job(s3_bucket="ok", s3_key="noext"))
     assert out["label"] in ("another", "car", "dog")
     assert observed["ext"] == ".wav"
