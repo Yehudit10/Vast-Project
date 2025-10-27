@@ -81,5 +81,4 @@ Produces `outputs/fruit_cls_best.ts`. Inference auto-uses it if present.
 /**/train/
 /**/val/
 /**/test/
-/**/*_masks/
 ```

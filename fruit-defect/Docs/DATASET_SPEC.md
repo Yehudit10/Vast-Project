@@ -42,7 +42,7 @@ test/
   - Recall: **98.71%**  
   - F1: **98.96%**  
 - **Latency (CPU)**:  
-  - TorchScript + 192 px → **p95 = 86.80 ms**  
+  - TorchScript + 192 px → **p95 = 15.72 ms**  
   
 - **Segmentation**: *not implemented*  
   - The dataset provides only **binary health labels**, without **lesion masks**.  
