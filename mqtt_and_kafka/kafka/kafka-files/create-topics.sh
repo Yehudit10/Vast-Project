@@ -34,6 +34,9 @@ TOPICS=(
   sensor-telemetry
   sensor-anomalies
   dev-robot-telemetry-anomalies
+  sound.new
+  image.new
+  summaries.5m
 )
 
 # Idempotent creation with retention.ms
