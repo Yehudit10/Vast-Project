@@ -1,0 +1,75 @@
+# =========================
+# Stage 1: Build Python wheels
+# =========================
+FROM python:3.11-slim AS builder
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG TORCH_INDEX_URL="https://download.pytorch.org/whl/cpu"
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    TZ=UTC
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# <<< Add: Organization CA certificate >>>
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN update-ca-certificates
+
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+COPY requirements.txt .
+
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir --index-url ${TORCH_INDEX_URL} \
+    torch==2.3.1 torchvision==0.18.1
+
+# Exclude torch and torchvision from the second requirements installation
+RUN grep -viE '^(torch|torchvision)=' requirements.txt > req-no-torch.txt && \
+    pip wheel --no-cache-dir --wheel-dir=/wheels -r req-no-torch.txt
+
+
+# =========================
+# Stage 2: Runtime environment
+# =========================
+FROM python:3.11-slim
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    TZ=UTC \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# <<< Add: Same CA certificate in runtime stage >>>
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN update-ca-certificates
+
+# Install dependencies from Stage 1 (including torch) + wheels
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
+
+# Copy project files
+COPY . /app
+
+# Create non-root user
+RUN useradd -m appuser
+USER appuser
+
+# Default command: run the batch inference
+CMD ["python", "-m", "inference.infer_minio_batch"]
