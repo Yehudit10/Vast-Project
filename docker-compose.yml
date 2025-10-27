@@ -75,6 +75,23 @@ services:
       - "9187:9187"
     networks:
       - ag_cloud
+  sound_metrics:
+    build: ./services/sound_metrics
+    container_name: sound_metrics
+    environment:
+      - AUDIO_DIR=/data/audio
+      - ADDR=0.0.0.0
+      - PORT=8001
+      - WINDOW_MIN=5
+      - FRAME_SEC=0.1
+      - THRESHOLD=0.01
+      - STABLE_SEC=5
+      - USE_UTC=true        # אם את רוצה חלונות לפי UTC
+    volumes:
+      - ./audio_samples:/data/audio:ro   # או נתיב משותף מהסרוויסים שאוספים אודיו
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
 
   plant_stress:
     build: ./services/plant_stress
