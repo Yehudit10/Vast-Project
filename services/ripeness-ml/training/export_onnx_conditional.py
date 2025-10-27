@@ -1,20 +1,25 @@
-import torch, yaml
+import torch, yaml, os
 from models.mobilenet_v3_large_head import build_conditional
 
 if __name__ == "__main__":
     cfg = yaml.safe_load(open("configs/config.yaml"))
-    model = build_conditional(num_ripeness=len(cfg["ripeness"]), num_fruits=len(cfg["fruits"]))
-    model.load_state_dict(torch.load(cfg["checkpoint_dir"]+"/best_conditional.pt", map_location="cpu"))
+    fruits = cfg["fruits"]
+    ripeness = cfg["ripeness"]
+
+    model = build_conditional(num_ripeness=len(ripeness), num_fruits=len(fruits))
+    ckpt_path = os.path.join(cfg["checkpoint_dir"], "best_conditional.pt")
+    model.load_state_dict(torch.load(ckpt_path, map_location="cpu"))
     model.eval()
 
-    dummy_img  = torch.randn(1,3,cfg["img_size"],cfg["img_size"])
-    dummy_fidx = torch.zeros(1, dtype=torch.long)  # fruit idx
+    dummy_x = torch.randn(1, 3, cfg["img_size"], cfg["img_size"])
+    dummy_f = torch.zeros(1, dtype=torch.long)  # example fruit index
     torch.onnx.export(
-        model, (dummy_img, dummy_fidx),
+        model, (dummy_x, dummy_f),
         "ripeness_conditional.onnx",
-        input_names=["images","fruit_idx"],
+        input_names=["image", "fruit_idx"],
         output_names=["ripeness_logits"],
-        opset_version=17,
-        dynamic_axes={"images":{0:"batch"}, "fruit_idx":{0:"batch"}, "ripeness_logits":{0:"batch"}}
+        dynamic_axes={"image": {0: "batch"}, "ripeness_logits": {0: "batch"}},
+        opset_version=13
     )
-    print("Exported ripeness_conditional.onnx")
+
+    print("✅ Exported: ripeness_conditional.onnx")
