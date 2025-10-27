@@ -17,7 +17,7 @@ app = FastAPI(title="Audio Classifier API", version="2.0.0")
 
 # --- Globals (singletons) ---
 PANN_MODEL: Optional[AudioTagging] = None
-SK_PIPELINE = None  # type: ignore
+SK_PIPELINE = None 
 DB_CONN = None
 DB_RUN_ID = os.getenv("DB_RUN_ID", "api-default")
 DB_SCHEMA = os.getenv("DB_SCHEMA", "agcloud_audio")

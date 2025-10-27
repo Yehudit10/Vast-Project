@@ -14,7 +14,7 @@ import os
 try:
     import torch
 except Exception:
-    torch = None  # type: ignore
+    torch = None 
 
 LOGGER = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ def ensure_checkpoint(checkpoint_path: str, checkpoint_url: Optional[str]) -> st
         return str(p)
     if not checkpoint_url:
         raise FileNotFoundError(f"No checkpoint at {p}. Provide --checkpoint or --checkpoint-url.")
-    urllib.request.urlretrieve(checkpoint_url, p)  # nosec
+    urllib.request.urlretrieve(checkpoint_url, p)  
     LOGGER.info("downloaded checkpoint to %s", p)
     return str(p)
 
@@ -105,13 +105,11 @@ def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
     # Uncompressed / common wavs
     try:
         y, sr = sf.read(path, always_2d=False)
-        # to mono if needed
         if hasattr(y, "ndim") and y.ndim > 1:
             y = np.mean(y, axis=1)
 
-        y = ensure_numpy_1d(y)  # guarantees float32 1-D
+        y = ensure_numpy_1d(y)  
         if int(sr) != int(target_sr):
-            # librosa.resample may return float64; coerce afterwards
             y = librosa.resample(y, orig_sr=int(sr), target_sr=int(target_sr))
             y = ensure_numpy_1d(y)
 
