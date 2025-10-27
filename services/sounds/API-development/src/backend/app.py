@@ -1,11 +1,26 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import psycopg2
 import datetime
 from psycopg2 import sql
+import os
 
-app = Flask(__name__)
-CORS(app)
+app = Flask(__name__, 
+            static_folder='../window-client', 
+            static_url_path='')
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+@app.route('/')
+def index():
+    return send_from_directory('../window-client', 'notification-popup.html')
+
+@app.route('/script.js')
+def script():
+    return send_from_directory('../window-client', 'script.js')
+
+@app.route('/styles.css')
+def styles():
+    return send_from_directory('../window-client', 'styles.css')
 
 # define the connect to the DB
 def get_db_connection():
@@ -13,22 +28,20 @@ def get_db_connection():
         dbname="missions_db", 
         user="missions_user", 
         password="pg123", 
-        host="localhost", 
+        host="postgres",
         port="5432"
     )
     return conn
 
-@app.route('/schedules', methods=['GET'])
+@app.route('/api/schedules', methods=['GET'])
 def get_schedules():
     client_id = request.args.get('client_id')
     
-    # connect to the database
     conn = get_db_connection()
     cur = conn.cursor()
     
     try:
         if client_id:
-            # Get schedules for specific client
             cur.execute("""
                 SELECT schedule_id, client_id, team, cron_expr, active_days, time_window, last_updated
                 FROM clients 
@@ -36,7 +49,6 @@ def get_schedules():
                 ORDER BY last_updated DESC
             """, (client_id,))
         else:
-            # Get all schedules
             cur.execute("""
                 SELECT schedule_id, client_id, team, cron_expr, active_days, time_window, last_updated
                 FROM clients 
@@ -45,7 +57,6 @@ def get_schedules():
         
         schedules = cur.fetchall()
         
-        # Convert to list of dictionaries
         schedule_list = []
         for schedule in schedules:
             schedule_list.append({
@@ -66,9 +77,8 @@ def get_schedules():
         cur.close()
         conn.close()
 
-@app.route('/schedule/<int:schedule_id>', methods=['GET'])
+@app.route('/api/schedule/<int:schedule_id>', methods=['GET'])
 def get_schedule(schedule_id):
-    # connect to the database
     conn = get_db_connection()
     cur = conn.cursor()
     
@@ -84,7 +94,6 @@ def get_schedule(schedule_id):
         if not schedule:
             return jsonify({"error": "Schedule not found"}), 404
         
-        # Convert to dictionary
         schedule_data = {
             'schedule_id': schedule[0],
             'client_id': schedule[1],
@@ -103,9 +112,8 @@ def get_schedule(schedule_id):
         cur.close()
         conn.close()
 
-@app.route('/schedule', methods=['POST'])
+@app.route('/api/schedule', methods=['POST'])
 def add_schedule():
-    
     data = request.json
     client_id = data.get('client_id')
     team = data.get('team')
@@ -113,11 +121,9 @@ def add_schedule():
     active_days = data.get('active_days')
     time_window = data.get('time_window')
 
-    # connect to the database
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # insert the new schedule into the database
     query = sql.SQL("""
         INSERT INTO clients (client_id, team, cron_expr, active_days, time_window, last_updated)
         VALUES (%s, %s, %s, %s, %s, now())
@@ -143,11 +149,10 @@ def add_schedule():
         cur.close()
         conn.close()
 
-@app.route('/schedule/<int:schedule_id>', methods=['PUT'])
+@app.route('/api/schedule/<int:schedule_id>', methods=['PUT'])
 def update_schedule(schedule_id):
     data = request.get_json()
     
-    # connect to the database
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -176,9 +181,8 @@ def update_schedule(schedule_id):
         cur.close()
         conn.close()
 
-@app.route('/schedule/<int:schedule_id>', methods=['DELETE'])
+@app.route('/api/schedule/<int:schedule_id>', methods=['DELETE'])
 def delete_schedule(schedule_id):
-    # connect to the database
     conn = get_db_connection()
     cur = conn.cursor()
     
@@ -194,10 +198,6 @@ def delete_schedule(schedule_id):
         cur.close()
         conn.close()
 
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
