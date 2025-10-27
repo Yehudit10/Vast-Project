@@ -1,8 +1,6 @@
--- English-only comments
--- Source: MinIO notifications (Kafka)
 CREATE TABLE imagery_new (
   bucket STRING,
-  key STRING,
+  `key` STRING,
   size BIGINT,
   etag STRING,
   ts TIMESTAMP(3),
@@ -10,24 +8,23 @@ CREATE TABLE imagery_new (
 ) WITH (
   'connector' = 'kafka',
   'topic' = 'imagery.new',
-  'properties.bootstrap.servers' = '${kafka.bootstrap}',
+  'properties.bootstrap.servers' = 'kafka:9092',
   'format' = 'json',
   'scan.startup.mode' = 'latest-offset'
 );
 
--- Sink: inference task queue (Kafka)
 CREATE TABLE infer_tasks (
   bucket STRING,
-  key STRING,
+  `key` STRING,
   ts TIMESTAMP(3)
 ) WITH (
   'connector' = 'kafka',
   'topic' = 'fruit.infer.tasks',
-  'properties.bootstrap.servers' = '${kafka.bootstrap}',
+  'properties.bootstrap.servers' = 'kafka:9092',
   'format' = 'json'
 );
 
--- MVP pass-through (add dedup later if needed)
+-- The job simply passes each image event to the inference tasks topic
 INSERT INTO infer_tasks
-SELECT bucket, key, ts
+SELECT bucket, `key`, ts
 FROM imagery_new;
