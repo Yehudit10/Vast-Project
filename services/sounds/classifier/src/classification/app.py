@@ -110,7 +110,6 @@ if not api_logger.handlers:
 def classify(body: ClassifyIn):
     """
     Run the full classification pipeline:
-    Run the full classification pipeline:
     - Download from MinIO (s3_bucket + s3_key)
     - Model inference with open-set threshold
     - DB upsert into agcloud_audio.file_aggregates
@@ -118,23 +117,21 @@ def classify(body: ClassifyIn):
     start = time.perf_counter()
     status_code = 200
     try:
-        # 1) Resolve file_id from public.files (no insert)
+        # 1) Require the file to already exist in public.files → else 404
         try:
             file_id = resolve_file_id(DB_CONN, bucket=body.s3_bucket, object_key=body.s3_key)
         except ValueError as e:
-            # file not found in public.files
+            # file not found in public.files → return 404 (do NOT create)
             raise HTTPException(status_code=404, detail=str(e))
-        
-        # 2) Run classification 
+
+        # 2) Run classification
         result = cls_script.run_classification_job(
             s3_bucket=body.s3_bucket,
             s3_key=body.s3_key,
             pann_model=PANN_MODEL,
-            sk_pipeline=SK_PIPELINE 
+            sk_pipeline=SK_PIPELINE
         )
-        
-        file_id = resolve_file_id(DB_CONN, bucket=body.s3_bucket, object_key=body.s3_key)
-        
+
         # 3) Upsert aggregate to DB (JSONB)
         upsert_file_aggregate(DB_CONN, {
             "run_id": DB_RUN_ID,

@@ -1,13 +1,16 @@
-# File: classification/core/db_utils.py
+# classification/core/db_utils.py
 import os
 import psycopg2
 from psycopg2 import sql
 from typing import Optional
 
+FILES_SCHEMA = os.getenv("FILES_SCHEMA", "public")
+FILES_TABLE  = os.getenv("FILES_TABLE", "files")
+
+def _files_table_ql() -> sql.SQL:
+    return sql.SQL("{}.{}").format(sql.Identifier(FILES_SCHEMA), sql.Identifier(FILES_TABLE))
+
 def open_db():
-    """
-    Open a PostgreSQL connection using env vars and set search_path to DB_SCHEMA,public.
-    """
     host = os.getenv("DB_HOST", "postgres")
     port = int(os.getenv("DB_PORT", "5432"))
     db   = os.getenv("DB_NAME", "missions_db")
@@ -15,13 +18,43 @@ def open_db():
     pwd  = os.getenv("DB_PASSWORD", "pg123")
     schema = os.getenv("DB_SCHEMA", "agcloud_audio")
 
-    conn = psycopg2.connect(
-        host=host, port=port, dbname=db, user=user, password=pwd
-    )
+    conn = psycopg2.connect(host=host, port=port, dbname=db, user=user, password=pwd)
     conn.autocommit = False
     with conn.cursor() as cur:
         cur.execute(sql.SQL("SET search_path TO {}, public;").format(sql.Identifier(schema)))
     return conn
+
+def ensure_file(conn, *, bucket: str, object_key: str,
+                size_bytes: Optional[int] = None,
+                sample_rate: Optional[int] = None,
+                duration_s: Optional[float] = None) -> int:
+    """Idempotent ensure in public.files by (bucket, object_key)."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL("SELECT file_id FROM {} WHERE bucket = %s AND object_key = %s")
+                   .format(_files_table_ql()),
+                (bucket, object_key),
+            )
+            row = cur.fetchone()
+            if row:
+                return int(row[0])
+
+            cur.execute(
+                sql.SQL("""
+                    INSERT INTO {} (bucket, object_key, size_bytes, sample_rate, duration_s)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING file_id
+                """).format(_files_table_ql()),
+                (bucket, object_key, size_bytes, sample_rate, duration_s),
+            )
+            new_id = cur.fetchone()[0]
+
+        conn.commit()
+        return int(new_id)
+    except Exception:
+        conn.rollback()
+        raise
 
 def ensure_run(conn, run_id: str):
     """
@@ -30,6 +63,7 @@ def ensure_run(conn, run_id: str):
     IMPORTANT: runs table has NOT NULL constraints on several fields.
     Adjust values if your runtime config differs.
     """
+    import os
     window_sec = float(os.getenv("WINDOW_SEC", "2.0"))
     hop_sec    = float(os.getenv("HOP_SEC", "0.5"))
     pad_last   = os.getenv("PAD_LAST", "true").lower() in ("1", "true", "yes", "on")
@@ -63,59 +97,29 @@ def ensure_run(conn, run_id: str):
         })
     conn.commit()
 
-def _file_path_from_bucket_key(bucket: str, object_key: str) -> str:
-    """
-    Build normalized path used in agcloud_audio.files.
-    """
-    key = object_key.lstrip("/")
-    return f"s3://{bucket}/{key}"
-
-def ensure_file(conn, *, bucket: str, object_key: str,
-                size_bytes: Optional[int] = None,
-                sample_rate: Optional[int] = None,
-                duration_s: Optional[float] = None) -> int:
-    """
-    Ensure a row exists in agcloud_audio.files and return file_id.
-    Uses UNIQUE(path) for idempotency.
-    """
-    path = _file_path_from_bucket_key(bucket, object_key)
-    with conn.cursor() as cur:
-        # Try select first
-        cur.execute("SELECT file_id FROM files WHERE path = %s", (path,))
-        row = cur.fetchone()
-        if row:
-            return int(row[0])
-
-        # Insert if missing
-        cur.execute(
-            """
-            INSERT INTO files (path, duration_s, sample_rate, size_bytes)
-            VALUES (%s, %s, %s, %s)
-            RETURNING file_id
-            """,
-            (path, duration_s, sample_rate, size_bytes)
-        )
-        new_id = cur.fetchone()[0]
-    conn.commit()
-    return int(new_id)
-
 def resolve_file_id(conn, *, file_id: Optional[int] = None,
                     bucket: Optional[str] = None, object_key: Optional[str] = None) -> int:
-    """
-    Resolve an existing file_id in public.files (NO insertion).
-    Prefer file_id; else use (bucket, object_key).
-    Raises ValueError if not found.
-    """
+    """Select-only (NO insert). Raises ValueError if not found."""
     with conn.cursor() as cur:
         if file_id is not None:
-            cur.execute("SELECT file_id FROM public.files WHERE file_id = %s", (file_id,))
+            cur.execute(
+                sql.SQL("SELECT file_id FROM {} WHERE file_id = %s").format(_files_table_ql()),
+                (file_id,),
+            )
             row = cur.fetchone()
             if row:
                 return int(row[0])
-            raise ValueError(f"file_id {file_id} not found in public.files")
+            raise ValueError(f"file_id {file_id} not found in {FILES_SCHEMA}.{FILES_TABLE}")
 
         if bucket is not None and object_key is not None:
-            # On-demand ensure; minimal info (size/duration can be updated later)
-            return ensure_file(conn, bucket=bucket, object_key=object_key)
+            cur.execute(
+                sql.SQL("SELECT file_id FROM {} WHERE bucket = %s AND object_key = %s")
+                   .format(_files_table_ql()),
+                (bucket, object_key),
+            )
+            row = cur.fetchone()
+            if row:
+                return int(row[0])
+            raise ValueError(f"File s3://{bucket}/{object_key} not found in {FILES_SCHEMA}.{FILES_TABLE}")
 
         raise ValueError("Must provide file_id or (bucket, object_key)")
