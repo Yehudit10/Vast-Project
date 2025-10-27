@@ -30,6 +30,10 @@ def ensure_run(conn, run_id: str):
     IMPORTANT: runs table has NOT NULL constraints on several fields.
     Adjust values if your runtime config differs.
     """
+    window_sec = float(os.getenv("WINDOW_SEC", "2.0"))
+    hop_sec    = float(os.getenv("HOP_SEC", "0.5"))
+    pad_last   = os.getenv("PAD_LAST", "true").lower() in ("1", "true", "yes", "on")
+
     with conn.cursor() as cur:
         cur.execute("""
             INSERT INTO runs (
@@ -59,6 +63,42 @@ def ensure_run(conn, run_id: str):
         })
     conn.commit()
 
+def _file_path_from_bucket_key(bucket: str, object_key: str) -> str:
+    """
+    Build normalized path used in agcloud_audio.files.
+    """
+    key = object_key.lstrip("/")
+    return f"s3://{bucket}/{key}"
+
+def ensure_file(conn, *, bucket: str, object_key: str,
+                size_bytes: Optional[int] = None,
+                sample_rate: Optional[int] = None,
+                duration_s: Optional[float] = None) -> int:
+    """
+    Ensure a row exists in agcloud_audio.files and return file_id.
+    Uses UNIQUE(path) for idempotency.
+    """
+    path = _file_path_from_bucket_key(bucket, object_key)
+    with conn.cursor() as cur:
+        # Try select first
+        cur.execute("SELECT file_id FROM files WHERE path = %s", (path,))
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+
+        # Insert if missing
+        cur.execute(
+            """
+            INSERT INTO files (path, duration_s, sample_rate, size_bytes)
+            VALUES (%s, %s, %s, %s)
+            RETURNING file_id
+            """,
+            (path, duration_s, sample_rate, size_bytes)
+        )
+        new_id = cur.fetchone()[0]
+    conn.commit()
+    return int(new_id)
+
 def resolve_file_id(conn, *, file_id: Optional[int] = None,
                     bucket: Optional[str] = None, object_key: Optional[str] = None) -> int:
     """
@@ -75,13 +115,7 @@ def resolve_file_id(conn, *, file_id: Optional[int] = None,
             raise ValueError(f"file_id {file_id} not found in public.files")
 
         if bucket is not None and object_key is not None:
-            cur.execute("""
-                SELECT file_id FROM public.files
-                WHERE bucket = %s AND object_key = %s
-            """, (bucket, object_key))
-            row = cur.fetchone()
-            if row:
-                return int(row[0])
-            raise ValueError(f"(bucket, object_key)=({bucket}, {object_key}) not found in public.files")
+            # On-demand ensure; minimal info (size/duration can be updated later)
+            return ensure_file(conn, bucket=bucket, object_key=object_key)
 
         raise ValueError("Must provide file_id or (bucket, object_key)")
