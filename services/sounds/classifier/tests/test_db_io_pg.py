@@ -111,40 +111,6 @@ def test_finish_run_rollback_on_exception():
     assert conn._rollbacks == 1
     assert conn._commits == 0
 
-
-# -------------------------
-# upsert_file
-# -------------------------
-
-# def test_upsert_file_success(monkeypatch):
-#     # make fetchone() return a specific id
-#     class RetCursor(DummyCursor):
-#         def fetchone(self):
-#             return (777,)
-#     class RetConn(DummyConn):
-#         def cursor(self):
-#             c = RetCursor()
-#             self.cursors.append(c)
-#             return c
-
-#     conn = RetConn()
-#     file_id = dbpg.upsert_file(conn, "/tmp/a.wav", 1.23, 32000, 42)
-#     assert file_id == 777
-#     assert conn._commits == 1
-#     assert conn._rollbacks == 0
-
-# def test_upsert_file_rollback_on_exception():
-#     conn = DummyConn(raise_on_execute=True)
-#     with pytest.raises(RuntimeError):
-#         dbpg.upsert_file(conn, "/tmp/a.wav", 1.23, 32000, 42)
-#     assert conn._rollbacks == 1
-#     assert conn._commits == 0
-
-
-# -------------------------
-# _jsonify and upsert_file_aggregate
-# -------------------------
-
 def test__jsonify_variants(monkeypatch):
     # Wrap psycopg2.extras.Json to observe value passed in
     captured = {"value": None}

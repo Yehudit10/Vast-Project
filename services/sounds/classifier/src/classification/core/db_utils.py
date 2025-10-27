@@ -1,4 +1,3 @@
-# classification/core/db_utils.py
 import os
 import psycopg2
 from psycopg2 import sql

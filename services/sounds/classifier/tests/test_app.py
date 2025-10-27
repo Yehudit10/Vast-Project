@@ -1,4 +1,3 @@
-# File: tests/test_app.py
 from fastapi.testclient import TestClient
 import classification.app as app_mod
 
