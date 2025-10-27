@@ -1,0 +1,38 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# system deps + CA
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl ca-certificates git \
+  && rm -rf /var/lib/apt/lists/*
+
+# add your local CA (same as working Dockerfile)
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# copy project (use bind-mount at runtime for fast iteration)
+COPY . /app
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# install dev deps if available, otherwise fallback to requirements.txt + pytest.
+# use trusted-host flags to avoid SSL issues in constrained networks (matches your Dockerfile approach)
+RUN bash -lc '\
+  if [ -f requirements-dev.txt ]; then \
+    pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements-dev.txt; \
+  elif [ -f requirements.txt ]; then \
+    pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt pytest; \
+  else \
+    pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org pytest fastapi sqlalchemy jsonschema httpx; \
+  fi'
+
+ENV PYTHONPATH=/app
+CMD ["bash", "-lc", "pytest -q test"]

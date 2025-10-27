@@ -25,9 +25,7 @@ The service now includes a Generic API layer that automatically exposes CRUD end
 
 To enable a table:
 
-1. Open the config file app/config.py.
-
-2. Add the table name under the ALLOWED_TABLES list.
+Add the table name under the ALLOWED_TABLES list in the ENV file
 
 ## Authentication
 

@@ -12,4 +12,5 @@ pydantic>=2.7
 pydantic-settings>=2.0
 pathlib
 jsonschema
+httpx
 

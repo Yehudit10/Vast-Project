@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "devices",
+  "type": "object",
+  "properties": {
+    "device_id": {
+      "type": "string",
+      "x-sortable": true,
+      "x-queryable": true
+    },
+    "model": {
+      "type": "string",
+      "x-sortable": true,
+      "x-queryable": true
+    },
+    "owner": {
+      "type": "string",
+      "x-sortable": true,
+      "x-queryable": true
+    },
+    "active": {
+      "type": "boolean",
+      "x-sortable": true,
+      "x-queryable": true
+    }
+  },
+  "required": [
+    "device_id"
+  ],
+  "readOnly": [
+    "active"
+  ],
+  "x-keyFields": [
+    "device_id"
+  ]
+}

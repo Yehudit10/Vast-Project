@@ -3,10 +3,11 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.exc import NoSuchTableError
 
 from app.config import settings
 
@@ -32,7 +33,7 @@ def _normalize_type_name(col_type: Any) -> str:
 
 # Map a database column type to a JSON Schema `type` and optional `format`.
 # Returns a tuple (json_type, json_format_or_None).
-def map_json_type_and_format(col_type: Any) -> Tuple[str, str | None]:
+def map_json_type_and_format(col_type: Any) -> Tuple[str, Optional[str]]:
     """
     Map a DB column type to (json_type, json_format?).
     - integer-like -> ("integer", None)
@@ -44,7 +45,7 @@ def map_json_type_and_format(col_type: Any) -> Tuple[str, str | None]:
     """
     t = _normalize_type_name(col_type)
 
-    if "json" in t:               
+    if "json" in t:
         return "object", None
 
     if any(k in t for k in ("int", "serial", "bigint", "smallint")):
@@ -69,7 +70,7 @@ def map_json_type_and_format(col_type: Any) -> Tuple[str, str | None]:
 
 # Inspect the database for primary key constraint and return primary key column names.
 # Returns an empty list if no PK could be determined.
-def _infer_key_fields(ins: Inspector, table: str, schema: str | None = None) -> List[str]:
+def _infer_key_fields(ins: Inspector, table: str, schema: Optional[str] = None) -> List[str]:
     """
     Return primary key column names if available; empty list otherwise.
     """
@@ -83,7 +84,7 @@ def _infer_key_fields(ins: Inspector, table: str, schema: str | None = None) -> 
 
 # Build a JSON Schema (Draft 2020-12) for the given DB table by introspecting its columns.
 # Adds helpful extensions (x-keyFields, x-sortable, x-queryable) and a legacy readOnly list.
-def build_schema_for_table(ins: Inspector, table: str, schema: str | None = None) -> Dict[str, Any]:
+def build_schema_for_table(ins: Inspector, table: str, schema: Optional[str] = None) -> Dict[str, Any]:
     """
     Build a JSON Schema (Draft 2020-12) for a DB table, enriched with:
       - "x-keyFields": primary key column names (if found)
@@ -91,8 +92,20 @@ def build_schema_for_table(ins: Inspector, table: str, schema: str | None = None
       - "x-queryable": true (per property, defaults; can be edited later)
       - "format": "date" / "date-time" where applicable
     Also exposes legacy root-level "readOnly" (list of column names) for compatibility.
+
+    Raises:
+        ValueError: if the table does not exist or cannot be inspected.
     """
-    cols = ins.get_columns(table, schema=schema)  # List[dict]
+    try:
+        cols = ins.get_columns(table, schema=schema)  # List[dict]
+    except NoSuchTableError as e:
+        raise ValueError(f"table '{table}' not found in database") from e
+    except Exception as e:
+        raise ValueError(f"failed to inspect table '{table}': {e}") from e
+
+    if not cols:
+        raise ValueError(f"no columns returned for table '{table}'")
+
     props: Dict[str, Any] = {}
     required: List[str] = []
     read_only: List[str] = []
@@ -117,20 +130,15 @@ def build_schema_for_table(ins: Inspector, table: str, schema: str | None = None
         autoinc = bool(c.get("autoincrement"))
         has_default = c.get("default") is not None
         server_default = c.get("server_default") is not None
-        identity = bool(c.get("identity"))        
-        computed = bool(c.get("computed"))        
-        generated = bool(c.get("generated"))       
+        identity = bool(c.get("identity"))
+        computed = bool(c.get("computed"))
+        generated = bool(c.get("generated"))
 
         is_read_only = autoinc or has_default or server_default or identity or computed or generated
         if is_read_only:
             read_only.append(name)        
-
         if is_required and not is_read_only:
             required.append(name)
-
-        # mark read-only if auto-increment or server/default exists
-        if c.get("autoincrement") or c.get("default") is not None or c.get("server_default") is not None:
-            read_only.append(name)
 
     # Key fields (primary key) for returning="keys"
     key_fields = _infer_key_fields(ins, table, schema=schema)
@@ -163,7 +171,17 @@ def main() -> None:
     generated_files: List[str] = []
 
     for table in ALLOWED:
-        schema_json = build_schema_for_table(ins, table)
+        try:
+            schema_json = build_schema_for_table(ins, table)
+        except ValueError as e:
+            # זורקים שגיאה ללוג עבור הטבלה הספציפית, אבל לא מפילים את כל התהליך
+            print(f"[contracts-gen][ERROR] {e}; skipping '{table}'")
+            continue
+        except Exception as e:
+            # כל כשל לא צפוי — מדווחים וממשיכים
+            print(f"[contracts-gen][ERROR] unexpected error for '{table}': {e}; skipping")
+            continue
+
         out_path = outdir / f"{table}.json"
         out_path.write_text(
             json.dumps(schema_json, ensure_ascii=False, indent=2),
