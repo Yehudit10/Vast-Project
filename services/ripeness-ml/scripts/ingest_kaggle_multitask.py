@@ -1,25 +1,19 @@
-# -*- coding: utf-8 -*-
-# יוצר קבצי CSV: data_mt/train.csv, val.csv, test.csv
-# עם עמודות: path, fruit, ripeness  (ללא העתקת קבצים)
 
 import argparse, csv, random
 from pathlib import Path
 
 IMG_EXT = {".jpg",".jpeg",".png",".bmp",".tif",".tiff",".webp"}
 
-# מיפוי מילות מפתח -> רמת בשלות
 RIPENESS_MAP = {
     "unripe": "unripe",
-    "fresh":  "ripe",   # בקגל 'fresh' = ripe
+    "fresh":  "ripe",   
     "ripe":   "ripe",
     "rotten": "overripe",
 }
 
-# זיהוי פירות מהנתיב (עם/בלי רווחים/קו תחתון)
 FRUIT_KEYS = ["apple", "banana", "orange", "pineapple"]
 
 def detect_from_path(p: Path):
-    """ מחלץ (fruit, ripeness) משמות התיקיות לאורך הנתיב """
     names = [pp.name.lower().replace(" ", "").replace("_","") for pp in [p] + list(p.parents)]
     fruit = None
     ripeness = None
@@ -35,7 +29,7 @@ def detect_from_path(p: Path):
                 break
         if fruit and ripeness:
             return fruit, ripeness
-    return fruit, ripeness  # יכול להחזיר None אם לא נמצא
+    return fruit, ripeness 
 
 def gather(root: Path):
     rows = []  # (path, fruit, ripeness)
