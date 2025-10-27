@@ -11,7 +11,7 @@ from panns_inference import AudioTagging
 from classification.core.model_io import SAMPLE_RATE
 from classification.scripts import classify as cls_script
 from classification.core.db_utils import ensure_run, open_db, resolve_file_id
-from classification.core.db_io_pg import upsert_file_aggregate
+from classification.core.db_io_pg import finish_run, upsert_file_aggregate
 
 app = FastAPI(title="Audio Classifier API", version="2.0.0")
 
@@ -34,7 +34,7 @@ SK_PIPELINE_PATH = os.getenv(
 class ClassifyIn(BaseModel):
     s3_bucket: str
     s3_key: str
-    return_probs: bool = False
+    return_probs: bool = True
 
 class ClassifyOut(BaseModel):
     label: str
@@ -88,6 +88,10 @@ def close_db_on_shutdown() -> None:
     global DB_CONN
     try: 
         if DB_CONN is not None:
+            try:
+                finish_run(DB_CONN, DB_RUN_ID)
+            except Exception:
+                pass
             DB_CONN.close()
     except Exception:
         pass
@@ -129,6 +133,8 @@ def classify(body: ClassifyIn):
             sk_pipeline=SK_PIPELINE 
         )
         
+        file_id = resolve_file_id(DB_CONN, bucket=body.s3_bucket, object_key=body.s3_key)
+        
         # 3) Upsert aggregate to DB (JSONB)
         upsert_file_aggregate(DB_CONN, {
             "run_id": DB_RUN_ID,
@@ -169,7 +175,6 @@ def health():
         "pann_loaded": PANN_MODEL is not None,
         "sk_pipeline_loaded": SK_PIPELINE is not None
     }
-
 
 @app.middleware("http")
 async def timing_middleware(request, call_next):

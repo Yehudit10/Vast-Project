@@ -136,24 +136,24 @@ def _load_head_once() -> None:
 # -----------------------------
 # Embedding/inference helpers
 # -----------------------------
-def _segments_embeddings(wav: np.ndarray, sr: int) -> np.ndarray:
-    """
-    Split the waveform to windows, compute CNN14 embedding per window,
-    return matrix shape (num_windows, emb_dim).
-    """
-    windows: List[np.ndarray] = segment_waveform(
-        wav, sr, window_sec=WINDOW_SEC, hop_sec=HOP_SEC, pad_last=PAD_LAST
-    )
-    if not windows:
-        return np.zeros((0, 2048), dtype=np.float32)
+# def _segments_embeddings(wav: np.ndarray, sr: int) -> np.ndarray:
+#     """
+#     Split the waveform to windows, compute CNN14 embedding per window,
+#     return matrix shape (num_windows, emb_dim).
+#     """
+#     windows: List[np.ndarray] = segment_waveform(
+#         wav, sr, window_sec=WINDOW_SEC, hop_sec=HOP_SEC, pad_last=PAD_LAST
+#     )
+#     if not windows:
+#         return np.zeros((0, 2048), dtype=np.float32)
 
-    embs: List[np.ndarray] = []
-    for seg in windows:
-        e = run_cnn14_embedding(R.model, seg)
-        e = np.asarray(e, dtype=np.float32).reshape(-1)
-        embs.append(e)
-    E = np.stack(embs, axis=0).astype(np.float32)
-    return E
+#     embs: List[np.ndarray] = []
+#     for seg in windows:
+#         e = run_cnn14_embedding(R.model, seg)
+#         e = np.asarray(e, dtype=np.float32).reshape(-1)
+#         embs.append(e)
+#     E = np.stack(embs, axis=0).astype(np.float32)
+#     return E
 
 def _aggregate_probs(per_window_probs: np.ndarray) -> np.ndarray:
     """
