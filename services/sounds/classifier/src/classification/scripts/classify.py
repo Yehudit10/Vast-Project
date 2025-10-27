@@ -17,10 +17,11 @@ from classification.core.model_io import (
     SAMPLE_RATE,
     _to_numpy,
     load_audio,           # returns 1-D float32 mono @ SAMPLE_RATE
-    segment_waveform,     # returns List[np.ndarray] after our fix
+    # segment_waveform,     # returns List[np.ndarray] after our fix
+    segment_waveform_2d_view,
     aggregate_matrix,
 )
-from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embedding
+from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embedding, run_cnn14_embeddings_batch
 from classification.scripts import alerts
 
 # -----------------------------
@@ -66,6 +67,16 @@ class _Runtime:
     classes: List[str] = []  # class names aligned to head output
 
 R = _Runtime()
+
+_MINIO_CLIENT = None
+
+def _get_minio():
+    global _MINIO_CLIENT
+    if _MINIO_CLIENT is None:
+        _MINIO_CLIENT = Minio(
+            MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE
+        )
+    return _MINIO_CLIENT
 
 def _load_backbone_once() -> None:
     if R.model is not None:
@@ -136,24 +147,6 @@ def _load_head_once() -> None:
 # -----------------------------
 # Embedding/inference helpers
 # -----------------------------
-# def _segments_embeddings(wav: np.ndarray, sr: int) -> np.ndarray:
-#     """
-#     Split the waveform to windows, compute CNN14 embedding per window,
-#     return matrix shape (num_windows, emb_dim).
-#     """
-#     windows: List[np.ndarray] = segment_waveform(
-#         wav, sr, window_sec=WINDOW_SEC, hop_sec=HOP_SEC, pad_last=PAD_LAST
-#     )
-#     if not windows:
-#         return np.zeros((0, 2048), dtype=np.float32)
-
-#     embs: List[np.ndarray] = []
-#     for seg in windows:
-#         e = run_cnn14_embedding(R.model, seg)
-#         e = np.asarray(e, dtype=np.float32).reshape(-1)
-#         embs.append(e)
-#     E = np.stack(embs, axis=0).astype(np.float32)
-#     return E
 
 def _aggregate_probs(per_window_probs: np.ndarray) -> np.ndarray:
     """
@@ -193,16 +186,13 @@ def classify_file(
     if pann_model is None:
         _load_backbone_once()
 
-    wav = load_audio(path, SAMPLE_RATE).astype(np.float32)
-    sr = SAMPLE_RATE
-
-    # Segment once; reuse for both paths
-    windows: List[np.ndarray] = segment_waveform(
-        wav, sr, window_sec=WINDOW_SEC, hop_sec=HOP_SEC, pad_last=PAD_LAST
+    wav = np.array(load_audio(path, SAMPLE_RATE), dtype=np.float32, copy=True, order="C")
+    windows_2d = segment_waveform_2d_view(
+        wav, SAMPLE_RATE, window_sec=WINDOW_SEC, hop_sec=HOP_SEC, pad_last=PAD_LAST
     )
-    num_windows = len(windows)
+    
+    num_windows = int(windows_2d.shape[0])
     if num_windows == 0:
-        # Return a safe default
         result = {
             "label": "another",
             "probs": {c: 0.0 for c in R.classes},
@@ -215,37 +205,26 @@ def classify_file(
         }
         return result
 
-    # Compute per-window embeddings
-    feats: List[np.ndarray] = []
+    # Batch embeddings
     if pann_model is not None:
-        for seg in windows:
-            seg = np.asarray(seg, dtype=np.float32)
-            if seg.ndim == 1:
-                seg = seg[None, :]
-            out = pann_model.inference(seg)
-            if isinstance(out, (list, tuple)):
-                _, embedding = out
-            elif isinstance(out, dict):
-                embedding = out.get("embedding") or next(iter(out.values()))
-            else:
-                raise TypeError(f"Unexpected output type: {type(out)}")
-            emb = np.asarray(embedding, dtype=np.float32).reshape(-1)
-            feats.append(emb)
-        E = np.stack(feats, axis=0).astype(np.float32)
+        win = np.array(windows_2d, dtype=np.float32, copy=True, order="C")
+        seg = pann_model.inference(win)
+        if isinstance(seg, dict):
+            seg = seg.get("embedding")
+        elif isinstance(seg, tuple) and len(seg) >= 2:
+            seg = seg[1]
+        seg = np.asarray(seg, dtype=np.float32)
+        if seg.ndim == 1:
+            seg = seg[None, :]
     else:
-        # CNN14 backbone path
-        embs: List[np.ndarray] = []
-        for seg in windows:
-            e = run_cnn14_embedding(R.model, seg)
-            e = np.asarray(e, dtype=np.float32).reshape(-1)
-            embs.append(e)
-        E = np.stack(embs, axis=0).astype(np.float32)
+        win = np.array(windows_2d, dtype=np.float32, copy=True, order="C")
+        seg = run_cnn14_embeddings_batch(R.model, win, batch_size=32)
 
     # Head predict_proba
     clf = sk_pipeline if sk_pipeline is not None else R.head
-    per_window_probs = np.asarray(clf.predict_proba(E), dtype=np.float32)
+    per_window_probs = np.asarray(clf.predict_proba(seg), dtype=np.float32)
 
-    # Aggregate
+    # Aggregate and finalize
     agg_vec = _aggregate_probs(per_window_probs)
     k = int(np.argmax(agg_vec))
     top_prob = float(agg_vec[k])
@@ -281,9 +260,7 @@ def run_classification_job(
     if ALLOWED_BUCKETS and s3_bucket not in ALLOWED_BUCKETS:
         raise RuntimeError(f"Bucket '{s3_bucket}' is not allowed")
 
-    client = Minio(
-        MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE
-    )
+    client = _get_minio()
 
     # stat & validate
     try:

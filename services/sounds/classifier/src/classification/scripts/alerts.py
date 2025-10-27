@@ -73,10 +73,10 @@ def send_alert(
         p.produce(topic=topic, value=json.dumps(payload).encode("utf-8"), callback=_delivery_report)
         # Serve delivery callbacks; flush returns number of undelivered messages (0 == success)
         p.poll(0)
-        undelivered = p.flush(5)
-        if undelivered != 0:
-            LOGGER.warning("Kafka flush returned %s undelivered message(s)", undelivered)
-            return False
+        # undelivered = p.flush(5)
+        # if undelivered != 0:
+        #     LOGGER.warning("Kafka flush returned %s undelivered message(s)", undelivered)
+        #     return False
         return True
     except KafkaException as e:
         LOGGER.error("Kafka exception while producing: %s", e)

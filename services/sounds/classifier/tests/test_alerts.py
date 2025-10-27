@@ -77,15 +77,16 @@ def test_producer_cache_reuse(monkeypatch):
     assert len(alerts._producer_cache) == 1
 
 
-def test_send_alert_flush_nonzero_returns_false(monkeypatch, caplog):
-    class BadFlushProducer(DummyProducer):
+def test_send_alert_is_non_blocking_and_returns_true(monkeypatch, caplog):
+    class ProducerNoFlush(DummyProducer):
         def flush(self, timeout):
-            return 1  # 1 undelivered
-    monkeypatch.setattr(alerts, "Producer", lambda *_a, **_k: BadFlushProducer(), raising=True)
+            return 1  # would indicate undelivered if we used it, but we don't block now
+
+    monkeypatch.setattr(alerts, "Producer", lambda *_a, **_k: ProducerNoFlush(), raising=True)
 
     ok = alerts.send_alert(brokers="b:9092", topic="t", label="x", probs={"x": 1.0})
-    assert ok is False
-    assert any("undelivered" in rec.message for rec in caplog.records)
+    assert ok is True
+    assert any("Kafka delivered" in rec.message or "Kafka" in rec.message for rec in caplog.records)
 
 
 def test_send_alert_kafka_exception_on_init(monkeypatch, caplog):

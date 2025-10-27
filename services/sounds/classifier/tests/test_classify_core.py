@@ -30,14 +30,21 @@ def test_classify_file_unknown_threshold(monkeypatch):
     _reset_runtime()
     c.R.model = object()
     head = DummyHead(classes=["car", "dog"])
-    head.set_out(np.array([0.51, 0.49], dtype=np.float32))  # may fall under UNKNOWN_THRESHOLD
+    head.set_out(np.array([0.51, 0.49], dtype=np.float32))
     c.R.head = head
     c.R.classes = head.classes_
 
     monkeypatch.setattr(c, "load_audio", lambda p, sr: np.ones(16000, dtype=np.float32), raising=True)
-    monkeypatch.setattr(c, "segment_waveform", lambda *a, **k: [np.ones(16000, dtype=np.float32)], raising=True)
-    monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
-
+    # one window: shape (1, 16000)
+    monkeypatch.setattr(c, "segment_waveform_2d_view",
+                        lambda *a, **k: np.ones((1, 16000), dtype=np.float32),
+                        raising=True)
+    monkeypatch.setattr(
+        c,
+        "run_cnn14_embeddings_batch",
+        lambda _model, windows, batch_size=32: np.tile(np.array([[1, 2, 3, 4]], dtype=np.float32), (windows.shape[0], 1)),
+        raising=True,
+    )
     result = _to_dict_result(c.classify_file("dummy.wav"))
     assert result["label"] in ("car", "another")
     assert set(result["probs"].keys()) == {"car", "dog"}
@@ -62,15 +69,19 @@ def test__aggregate_probs_empty_windows_returns_zeros():
 def test_classify_file_returns_another_when_no_segments(monkeypatch):
     _reset_runtime()
     c.R.model = object()
+
     class Head:
         def __init__(self): self.classes_ = ["car", "dog"]
         def predict_proba(self, X): return np.zeros((X.shape[0], 2), dtype=np.float32)
+
     c.R.head = Head()
     c.R.classes = ["car", "dog"]
 
     monkeypatch.setattr(c, "load_audio", lambda p, sr: np.ones(16000, dtype=np.float32), raising=True)
-    monkeypatch.setattr(c, "segment_waveform", lambda *a, **k: [], raising=True)
-    monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
+    # zero windows: shape (0, 16000)
+    monkeypatch.setattr(c, "segment_waveform_2d_view",
+                        lambda *a, **k: np.zeros((0, 16000), dtype=np.float32),
+                        raising=True)
 
     result = _to_dict_result(c.classify_file("dummy.wav"))
     assert result["label"] == "another"
@@ -83,22 +94,27 @@ def test_classify_file_with_agg_max(monkeypatch):
     c.AGG = "max"
     try:
         c.R.model = object()
+
         class Head:
             def __init__(self): self.classes_ = ["a", "b"]
             def predict_proba(self, X):
+                # pretend we got two windows → choose element-wise max
                 return np.array([[0.2, 0.8], [0.6, 0.4]], dtype=np.float32)
+
         c.R.head = Head()
         c.R.classes = ["a", "b"]
 
         monkeypatch.setattr(c, "load_audio", lambda p, sr: np.ones(2 * 16000, dtype=np.float32), raising=True)
+        # two windows: shape (2, 16000)
+        monkeypatch.setattr(c, "segment_waveform_2d_view",
+                            lambda *a, **k: np.ones((2, 16000), dtype=np.float32),
+                            raising=True)
         monkeypatch.setattr(
             c,
-            "segment_waveform",
-            lambda *a, **k: [np.ones(16000, dtype=np.float32), np.ones(16000, dtype=np.float32)],
-            raising=True
+            "run_cnn14_embeddings_batch",
+            lambda _model, windows, batch_size=32: np.tile(np.array([[1, 2, 3, 4]], dtype=np.float32), (windows.shape[0], 1)),
+            raising=True,
         )
-        monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
-
         result = _to_dict_result(c.classify_file("x.wav"))
         assert set(result["probs"].keys()) == {"a", "b"}
         assert np.isclose(result["probs"]["a"], 0.6) or np.isclose(result["probs"]["b"], 0.8)
@@ -108,14 +124,14 @@ def test_classify_file_with_agg_max(monkeypatch):
 
 def test_run_classification_job_happy_path(monkeypatch, tmp_path):
     _reset_runtime()
-    # MinIO client mock
+
     class Stat: size = 10; content_type = "audio/wav"
     class Client:
         def stat_object(self, b, k): return Stat()
         def fget_object(self, b, k, dst): Path(dst).write_bytes(b"RIFF")
-    monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
 
-    c.WRITE_DB, c.DB_URL = False, ""
+    monkeypatch.setattr(c, "_get_minio", lambda: Client(), raising=True)
+
     c.KAFKA_BROKERS, c.ALERTS_TOPIC = "", "dev-robot-alerts"
     monkeypatch.setattr(c.alerts, "send_alert", lambda **kw: None, raising=True)
 
@@ -124,8 +140,15 @@ def test_run_classification_job_happy_path(monkeypatch, tmp_path):
     c.R.head = head; c.R.classes = head.classes_
 
     monkeypatch.setattr(c, "load_audio", lambda p, sr: np.ones(16000, dtype=np.float32), raising=True)
-    monkeypatch.setattr(c, "segment_waveform", lambda *a, **k: [np.ones(16000, dtype=np.float32)], raising=True)
-    monkeypatch.setattr(c, "run_cnn14_embedding", lambda m, w: np.array([1, 2, 3, 4], dtype=np.float32), raising=True)
+    monkeypatch.setattr(c, "segment_waveform_2d_view",
+                        lambda *a, **k: np.ones((1, 16000), dtype=np.float32),
+                        raising=True)
+    monkeypatch.setattr(
+        c,
+        "run_cnn14_embeddings_batch",
+        lambda _model, windows, batch_size=32: np.tile(np.array([[1, 2, 3, 4]], dtype=np.float32), (windows.shape[0], 1)),
+        raising=True,
+    )
 
     out = _to_dict_result(c.run_classification_job(s3_bucket="b", s3_key="k.wav"))
     assert out["label"] in ("car", "another")
@@ -158,7 +181,8 @@ def test_run_classification_job_rejects_content_type(monkeypatch):
     class Client:
         def stat_object(self, b, k): return Stat()
         def fget_object(self, b, k, dst): Path(dst).write_bytes(b"RIFF")
-    monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
+
+    monkeypatch.setattr(c, "_get_minio", lambda: Client(), raising=True)
 
     try:
         _ = c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
@@ -174,11 +198,13 @@ def test_run_classification_job_rejects_size(monkeypatch):
     c.R.head = object()
     c.ALLOWED_BUCKETS = []
     old_max = c.MAX_BYTES; c.MAX_BYTES = 10
+
     class Stat: size = 11; content_type = "audio/wav"
     class Client:
         def stat_object(self, b, k): return Stat()
         def fget_object(self, b, k, dst): Path(dst).write_bytes(b"RIFF")
-    monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
+
+    monkeypatch.setattr(c, "_get_minio", lambda: Client(), raising=True)
 
     try:
         _ = c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
@@ -196,10 +222,12 @@ def test_run_classification_job_s3error_fails_fast(monkeypatch):
 
     class S3Err(Exception): pass
     monkeypatch.setattr(c, "S3Error", S3Err, raising=True)
+
     class Client:
         def stat_object(self, b, k): raise S3Err("boom")
         def fget_object(self, b, k, dst): raise AssertionError("should not be called")
-    monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
+
+    monkeypatch.setattr(c, "_get_minio", lambda: Client(), raising=True)
 
     try:
         _ = c.run_classification_job(s3_bucket="ok", s3_key="a.wav")
@@ -216,13 +244,17 @@ def test_run_classification_job_adds_wav_suffix_when_missing(monkeypatch):
 
     class Stat: size = 100; content_type = "audio/wav"
     observed = {"ext": None}
+
     class Client:
         def stat_object(self, b, k): return Stat()
         def fget_object(self, b, k, dst):
             observed["ext"] = Path(dst).suffix
             Path(dst).write_bytes(b"RIFF")
-    monkeypatch.setattr(c, "Minio", lambda *a, **k: Client(), raising=True)
-    monkeypatch.setattr(c, "classify_file", lambda p, **_: {"label": "another", "probs": {"car": 0.0, "dog": 0.0}}, raising=True)
+
+    monkeypatch.setattr(c, "_get_minio", lambda: Client(), raising=True)
+    monkeypatch.setattr(c, "classify_file",
+                        lambda p, **_: {"label": "another", "probs": {"car": 0.0, "dog": 0.0}},
+                        raising=True)
     monkeypatch.setattr(c.os, "remove", lambda p: None, raising=True)
 
     out = _to_dict_result(c.run_classification_job(s3_bucket="ok", s3_key="noext"))

@@ -10,6 +10,7 @@ import soundfile as sf
 import librosa
 import logging
 import os
+from numpy.lib.stride_tricks import sliding_window_view
 
 try:
     import torch
@@ -78,6 +79,7 @@ def ensure_checkpoint(checkpoint_path: str, checkpoint_url: Optional[str]) -> st
     urllib.request.urlretrieve(checkpoint_url, p)  
     LOGGER.info("downloaded checkpoint to %s", p)
     return str(p)
+
 
 def load_audio(path: str, target_sr: int = SAMPLE_RATE) -> np.ndarray:
     ext = pathlib.Path(path).suffix.lower()
@@ -184,6 +186,42 @@ def segment_waveform(
 
     # ensure all are 1D np.float32 arrays
     return [np.asarray(seg, dtype=np.float32).flatten() for seg in segments]
+
+
+def segment_waveform_2d_view(
+    wav: np.ndarray,
+    sr: int = SAMPLE_RATE,
+    window_sec: float = 2.0,
+    hop_sec: float = 0.5,
+    pad_last: bool = True,
+) -> np.ndarray:
+    """
+    Return a 2D view of windows with shape (N, win) float32, minimizing copies.
+    The last window is padded if pad_last=True and needed (that one will copy).
+    """
+    wav = np.asarray(wav, dtype=np.float32).reshape(-1)
+    win = max(1, int(round(window_sec * sr)))
+    hop = max(1, int(round(hop_sec * sr)))
+    n = wav.size
+    if n == 0:
+        return np.zeros((0, win), dtype=np.float32)
+
+    if n >= win:
+        # sliding view for all full windows (no copy)
+        sw = sliding_window_view(wav, win)[::hop]  # shape (N_full, win), view
+        if pad_last and ((n - win) % hop != 0):
+            tail_start = (sw.shape[0] * hop)
+            tail = wav[tail_start:]
+            pad = np.zeros(win - tail.size, dtype=np.float32)
+            last = np.concatenate([tail, pad], axis=0)[None, :]
+            return np.vstack([sw.astype(np.float32, copy=False), last.astype(np.float32, copy=False)])
+        return sw.astype(np.float32, copy=False)
+
+    # n < win
+    if pad_last:
+        pad = np.zeros(win - n, dtype=np.float32)
+        return np.concatenate([wav, pad], axis=0)[None, :]
+    return np.zeros((0, win), dtype=np.float32)
 
 
 def aggregate_matrix(mat: np.ndarray, mode: Literal["mean", "max"] = "mean") -> np.ndarray:
