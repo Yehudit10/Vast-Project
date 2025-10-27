@@ -12,7 +12,7 @@ from PIL import Image
 from dotenv import load_dotenv
 from minio import Minio
 from minio.deleteobjects import DeleteObject
-from time import perf_counter  # למעלה עם ה-imports
+from time import perf_counter  
 
 
 from inference.utils_infer import build_infer_transforms, load_model
@@ -171,7 +171,7 @@ def main():
                         image_size=cfg.get("image_size", 224),
                         fruit_type=str(cls),
                         score=float(score),
-                        latency_ms=float(t_ms),              # <<< לא None
+                        latency_ms=float(t_ms),            
                         client_ip=f"minio-batch:{run_date.isoformat()}",
                         error=None,
                         image_url=image_url,

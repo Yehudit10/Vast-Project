@@ -76,9 +76,31 @@ services:
     networks:
       - ag_cloud
 
-  # --------------------------
-  # MQTT / Kafka / Connect
-  # --------------------------
+  plant_stress:
+    build: ./services/plant_stress
+    environment:
+      - INPUT_DIR=/data/inbox
+      - MODEL_DIR=/models
+      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
+      - CONFIDENCE_THRESHOLD=0.6
+      # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
+    volumes:
+      - "./services/plant_stress/models:/models:ro"
+      - "./services/plant_stress/samples:/data/inbox:ro"
+
+    depends_on:
+      - postgres
+    command: ["python", "-u", "/app/app.py"]
+    networks:
+      - ag_cloud
+
+
+ 
+
+  # -------------------------
+  # MQTT + Kafka + Connect + Init
+  # -------------------------
   kafka:
     build: 
       context: ./mqtt_and_kafka/kafka
@@ -282,11 +304,13 @@ services:
       - NO_VNC_PORT=8080
       - DISPLAY=host.docker.internal:0.0
       - GATEWAY_URL=http://sensors_metrics:8000
+      - NOTIFICATION_API_URL=http://notification_api:5000
     ports:
       - "5900:5900"
       - "8080:8080"
     depends_on:
-      - db_api_service 
+      - db_api_service
+      - notification_api
     volumes:
         - ./GUI/src/vast:/app/src/vast
     networks:
@@ -457,3 +481,18 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
+
+  notification_api:
+    build:
+      context: ./services/sounds/API-development/src
+      dockerfile: Dockerfile
+    container_name: notification_api
+    environment:
+      - FLASK_ENV=development
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    networks:
+      - ag_cloud
+    restart: unless-stopped
