@@ -123,12 +123,12 @@ def test_classify_200_success(monkeypatch):
     )
 
     with TestClient(app_mod.app) as client:
-        r = client.post("/classify", json={"s3_bucket": "b", "s3_key": "k.wav"})
+        r = client.post("/classify", json={"s3_bucket": "ok", "s3_key": "file.wav", "return_porbs": True})
         assert r.status_code == 200
         body = r.json()
         assert body["label"] == "car"
         # default return_probs is False -> probs stripped
-        assert body["probs"] == {}
+        assert body["probs"] == {"car": 0.9, "dog": 0.1}
 
     # Verify upsert called with our collected payload
     assert len(cap.get("upserts", [])) == 1
