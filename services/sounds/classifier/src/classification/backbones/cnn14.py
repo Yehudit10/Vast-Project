@@ -48,3 +48,33 @@ def run_cnn14_embedding(model: AudioTagging, wav: np.ndarray) -> np.ndarray:
     if wav.dtype != np.float32:
         wav = wav.astype(np.float32, copy=False)
     return run_embedding(model, wav)
+
+
+def run_cnn14_embeddings_batch(model: AudioTagging, windows: np.ndarray, batch_size: int = 32) -> np.ndarray:
+    """
+    Compute embeddings for a batch of windows in shape (N, samples).
+    Returns array (N, emb_dim) float32.
+    """
+    if windows.ndim != 2:
+        raise ValueError("windows must be 2D (N, samples)")
+    n = windows.shape[0]
+    embs = []
+    i = 0
+    while i < n:
+        j = min(i + batch_size, n)
+        chunk = np.array(windows[i:j], dtype=np.float32, copy=True, order="C")
+        # panns_inference supports batched input (N, samples)
+        res = model.inference(chunk)
+        if isinstance(res, dict):
+            emb = res.get("embedding")
+        elif isinstance(res, tuple) and len(res) >= 2:
+            emb = res[1]
+        else:
+            raise RuntimeError("Unexpected inference output")
+        e = _to_numpy(emb).astype(np.float32, copy=False)
+        if e.ndim == 1:
+            e = e[None, :]
+        embs.append(e)
+        i = j
+    E = np.concatenate(embs, axis=0).astype(np.float32, copy=False)
+    return E

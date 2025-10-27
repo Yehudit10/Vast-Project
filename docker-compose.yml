@@ -463,25 +463,24 @@ services:
   # ------------------------
   # Classifier - Sounds
   # ------------------------
-    classifier:
-      build:
-        context: ./services/sounds/classifier
-        dockerfile: Dockerfile.classifier-svc
-        args:
-          CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
-      container_name: classifier
-      restart: unless-stopped
-      env_file:
-        - ./services/sounds/classifier/src/classification/.env
-      depends_on:
-        - postgres
-        - kafka
-        - desktop_app
-        - minio-hot
-      ports:
-        - "8088:8088"
-      networks:
-        - ag_cloud
+  classifier:
+    build:
+      context: ./services/sounds/classifier
+      dockerfile: Dockerfile.classifier-svc
+      args:
+        CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
+    container_name: classifier
+    restart: unless-stopped
+    env_file:
+      - ./services/sounds/classifier/src/classification/.env
+    depends_on:
+      - postgres
+      - kafka
+      - minio-hot
+    ports:
+      - "8088:8088"
+    networks:
+      - ag_cloud
 
   # --------------------------
   # DB API Service
