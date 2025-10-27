@@ -55,7 +55,7 @@ services:
       context: .
       dockerfile: connect.Dockerfile
     image: local/connect-with-mqtt:1.0.0
-    container_name: connect-1
+    container_name: connect
     depends_on:
       kafka:
         condition: service_healthy
@@ -96,7 +96,7 @@ services:
     entrypoint: >
       sh -c "
         echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect-1:8083/connectors;
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
         echo '==> Done.';
       "
 
