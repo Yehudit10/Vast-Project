@@ -1,56 +1,102 @@
-from __future__ import annotations
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-import random
 
-@dataclass
-class Kpis:
-    sensors_total: int
-    sensors_active: int
-    sensors_inactive: int
-    alerts_last_6h: int
-    processing_jobs_running: int
-    predictions_available: int
-
-@dataclass
-class SensorRow:
-    sensor_id: str
-    name: str
-    state: str # "active" | "inactive" | "broken"
-    last_seen: datetime
+import json
+import time
+import pathlib
+import requests
+from urllib.parse import quote
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
+# ---------- CONFIG ----------
+DB_API_BASE = "http://host.docker.internal:8001" 
+DB_API_AUTH_MODE = "service"
+DB_API_TOKEN_FILE = "/app/secrets/db_api_token"
+DB_API_TOKEN = "auto"
+DB_API_SERVICE_NAME = "GUI_H"
+
+
+# ---------- TOKEN BOOTSTRAP ----------
+def _safe_join_url(base: str, path: str) -> str:
+    return f"{base.rstrip('/')}/{path.lstrip('/')}"
+
+def _read_token_from_file(path: str) -> str | None:
+    p = pathlib.Path(path)
+    if p.exists():
+        token = p.read_text(encoding="utf-8").strip()
+        return token or None
+    return None
+
+def _fetch_token_via_dev_bootstrap(base: str, retries: int = 3, backoff: float = 0.8) -> str | None:
+    url = _safe_join_url(base, "/auth/_dev_bootstrap")
+    payload = {"service_name": DB_API_SERVICE_NAME, "rotate_if_exists": True}
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.post(url, json=payload, timeout=10)
+            if r.status_code in (200, 201):
+                data = r.json()
+                raw = (data.get("service_account", {}) or {}).get("raw_token") \
+                    or (data.get("service_account", {}) or {}).get("token")
+                if raw and isinstance(raw, str) and "***" not in raw:
+                    return raw.strip()
+        except Exception:
+            time.sleep(backoff * attempt)
+    return None
+
+
+def get_or_bootstrap_token() -> str | None:
+    print(f"[DEBUG] Checking for existing token file at: {DB_API_TOKEN_FILE}", flush=True)
+
+    if DB_API_TOKEN and DB_API_TOKEN.lower() != "auto":
+        print(f"[DEBUG] Using static token from config", flush=True)
+        return DB_API_TOKEN
+
+    token = _read_token_from_file(DB_API_TOKEN_FILE)
+    if token:
+        print(f"[DEBUG] Loaded token from {DB_API_TOKEN_FILE}", flush=True)
+        return token
+
+    print(f"[DEBUG] No existing token found, bootstrapping via {DB_API_BASE}/auth/_dev_bootstrap", flush=True)
+    token = _fetch_token_via_dev_bootstrap(DB_API_BASE)
+    if token:
+        pathlib.Path(DB_API_TOKEN_FILE).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(DB_API_TOKEN_FILE).write_text(token, encoding="utf-8")
+        print(f"[BOOTSTRAP] wrote token to {DB_API_TOKEN_FILE}", flush=True)
+        return token
+
+    print("[BOOTSTRAP][ERROR] Failed to obtain token.", flush=True)
+    return None
+
+
+
+
+# ---------- API CLIENT ----------
 class DashboardApi:
-    """
-    Simulated API that returns KPIs and sensor lists.
-    Replace with real HTTP calls in production.
-    """
+    def __init__(self):
+        self.base = DB_API_BASE.rstrip("/")
+        self.http = requests.Session()
+        token = get_or_bootstrap_token()
+        if token:
+            if DB_API_AUTH_MODE == "service":
+                self.http.headers.update({"X-Service-Token": token})
+            else:
+                self.http.headers.update({"Authorization": f"Bearer {token}"})
+        self.http.headers.update({"Content-Type": "application/json"})
+        self.http.mount("http://",  HTTPAdapter(max_retries=Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])))
+        self.http.mount("https://", HTTPAdapter(max_retries=Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])))
 
-    def get_kpis(self) -> Kpis:
-        total = 120
-        active = random.randint(95, 110)
-        inactive = total - active
-        return Kpis(
-            sensors_total=total,
-            sensors_active=active,
-            sensors_inactive=inactive,
-            alerts_last_6h=random.randint(1, 20),
-            processing_jobs_running=random.randint(0, 5),
-            predictions_available=random.randint(0, 3),
-        )
+    # ---------- METHODS ----------
 
-
-    def get_inactive_sensors(self, limit: int = 20) -> list[SensorRow]:
-        rows: list[SensorRow] = []
-        n = random.randint(5, 15)
-        for i in range(min(n, limit)):
-            last_seen = datetime.now() - timedelta(minutes=random.randint(10, 240))
-            rows.append(
-                SensorRow(
-                    sensor_id=f"S{i:03d}",
-                    name=f"Sensor-{i:03d}",
-                    state=random.choice(["inactive", "broken"]),
-                    last_seen=last_seen,
-                )
-            )
-        return rows
+    def list_devices(self, model: str | None = None) -> list[dict]:
+        
+        url = f"{self.base}/api/devices"
+        if model:
+            url += f"?model={model}"
+        try:
+            r = self.http.get(url, timeout=10)
+            if r.status_code == 200:
+                return r.json()
+            print(f"[API ERROR] {r.status_code}: {r.text[:100]}")
+        except Exception as e:
+            print(f"[API FAIL] {e}")
+        return []

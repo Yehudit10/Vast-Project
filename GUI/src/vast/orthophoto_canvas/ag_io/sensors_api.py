@@ -8,7 +8,7 @@ try:
 except Exception as e:  
     raise RuntimeError("Please install 'requests' (pip install requests)") from e
 
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8000")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://gateway:8000")
 SENSORS_PATH = os.getenv("SENSORS_PATH", "")
 
 def _normalize(rows: t.Any) -> list[dict]:
