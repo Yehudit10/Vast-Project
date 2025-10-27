@@ -276,8 +276,6 @@ CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
 CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
     ON public.sensor_anomalies (sensor);
 
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_condition
-    ON public.sensor_anomalies (condition);
 
 CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
     ON public.sensor_zone_stats (zone, window_start, window_end);
