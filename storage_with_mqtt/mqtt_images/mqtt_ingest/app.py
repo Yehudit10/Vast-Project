@@ -27,7 +27,7 @@ AWS_ACCESS_KEY   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 AWS_SECRET_KEY   = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
 BUCKET           = os.getenv("S3_BUCKET", "imagery")
 
-MQTT_BROKER      = os.getenv("MQTT_BROKER", "mosquitto")
+MQTT_BROKER      = os.getenv("MQTT_BROKER", "large-mosquitto")
 CLIENT_ID        = os.getenv("MQTT_CLIENT_ID", "mqtt_ingest")
 DEFAULT_PREFIX   = os.getenv("DEFAULT_PREFIX", "camera-01")
 
@@ -39,7 +39,7 @@ DB_API_AUTH_MODE   = os.getenv("DB_API_AUTH_MODE", "service").lower()
 DB_API_TOKEN_FILE  = os.getenv("DB_API_TOKEN_FILE", "/app/secret/db_api_token")
 DB_API_SERVICE_NAME= os.getenv("DB_API_SERVICE_NAME", "mqtt_ingest").strip() or "mqtt_ingest"
 OUTBOX_DIR         = os.getenv("OUTBOX_DIR", "/app/outbox")
-DUMMY_DB           = os.getenv("DUMMY_DB", "1") == "1"
+DUMMY_DB           = os.getenv("DUMMY_DB", "0") == "1"
 
 INGEST_QUEUE_MAXSIZE = int(os.getenv("INGEST_QUEUE_MAXSIZE", "1000"))
 
@@ -52,6 +52,12 @@ INGEST_WORKERS = cfg.INGEST_WORKERS
 
 # ---------- MQTT SUBSCRIBE TOPIC ----------
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", "MQTT/imagery/#")
+
+# Add at the top with other ENV variables:
+
+# ---------- Media Prefixes ----------
+CAMERA_PREFIX = os.getenv("CAMERA_PREFIX", "camera")
+MICROPHONE_PREFIX = os.getenv("MICROPHONE_PREFIX", "microphone")
 
 # ---------- S3 ----------
 s3 = boto3.client(
@@ -117,6 +123,7 @@ def parse_topic(topic: str) -> dict:
         "publish_ts_ms": now,
         "content_type": "application/octet-stream",
         "filename": f"{now}.bin",
+        "media_type": "image",
     }
 
     try:
@@ -145,14 +152,62 @@ def parse_topic(topic: str) -> dict:
             result["filename"] = parts[i + 4]
 
     result["content_type"] = normalize_content_type(result["content_type"], result["filename"])
+    
+    # Detect media_type from content_type
+    ctype = result["content_type"].lower()
+    if ctype.startswith("image/"):
+        result["media_type"] = "image"
+    elif ctype.startswith("video/"):
+        result["media_type"] = "image"  
+    elif ctype.startswith("audio/") or "sound" in ctype or "wav" in ctype or "mp3" in ctype:
+        result["media_type"] = "sound"
+    else:
+        # Fallback: check filename extension
+        ext = result["filename"].lower().split(".")[-1]
+        if ext in ("jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp"):
+            result["media_type"] = "image"
+        elif ext in ("wav", "mp3", "ogg", "flac", "aac", "m4a"):
+            result["media_type"] = "sound"
+        else:
+            result["media_type"] = "image"  # default
+    
+    # Build key with media_type prefix and appropriate device naming
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
-    key = f"{result['camera']}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    
+    # Extract device ID from camera field
+    device_id = result["camera"]
+    
+    # Determine device prefix based on media type
+    if result["media_type"] == "sound":
+        # For sound files, use microphone- prefix
+        if device_id.startswith(f"{CAMERA_PREFIX}-"):
+            # Replace camera- with microphone-
+            device_name = device_id.replace(f"{CAMERA_PREFIX}-", f"{MICROPHONE_PREFIX}-", 1)
+        elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
+            # Already has microphone prefix
+            device_name = device_id
+        else:
+            # No recognized prefix, add microphone-
+            device_name = f"{MICROPHONE_PREFIX}-{device_id}"
+    else:
+        # For image/video files, ensure camera- prefix
+        if device_id.startswith(f"{CAMERA_PREFIX}-"):
+            # Already has camera prefix
+            device_name = device_id
+        elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
+            # Replace microphone- with camera-
+            device_name = device_id.replace(f"{MICROPHONE_PREFIX}-", f"{CAMERA_PREFIX}-", 1)
+        else:
+            # No recognized prefix, add camera-
+            device_name = f"{CAMERA_PREFIX}-{device_id}"
+    
+    key = f"{result['media_type']}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    
     result["key"] = key
-    result["device_id"] = result["camera"]
+    result["device_id"] = device_name  # Use the renamed device
     result["image_id"] = stem(result["filename"]) or uuid.uuid4().hex
     result["capture_ts_iso"] = iso_utc(result["publish_ts_ms"])
     return result
-
 
 # ---------- Uploader ----------
 def upload_bytes(key: str, data: bytes, content_type: str) -> str:
@@ -210,6 +265,7 @@ def _write_token_to_file(path: str, token: str) -> None:
     p.write_text(token, encoding="utf-8")
 
 def _fetch_token_via_dev_bootstrap(base: str, retries: int = 3, backoff: float = 0.8) -> str | None:
+    print(f"[BOOTSTRAP] fetching service token from {base}", flush=True)
     url = _safe_join_url(base, "/auth/_dev_bootstrap")
     payload = {"service_name": DB_API_SERVICE_NAME, "rotate_if_exists": True}
     for attempt in range(1, retries + 1):
@@ -229,12 +285,15 @@ def _fetch_token_via_dev_bootstrap(base: str, retries: int = 3, backoff: float =
 
 def get_or_bootstrap_token() -> str | None:
     if DB_API_TOKEN and DB_API_TOKEN.lower() != "auto":
+        print("[BOOTSTRAP] using DB_API_TOKEN from env", flush=True)
         return DB_API_TOKEN
     if not DB_API_BASE:
         print("[BOOTSTRAP][WARN] DB_API_BASE not set; cannot bootstrap token.", flush=True)
         return None
     token = _read_token_from_file(DB_API_TOKEN_FILE)
     if token:
+        print(f"[BOOTSTRAP] using service token from {DB_API_TOKEN_FILE}", flush=True)
+
         return token
     token = _fetch_token_via_dev_bootstrap(DB_API_BASE)
     if token:
@@ -247,6 +306,7 @@ def get_or_bootstrap_token() -> str | None:
 # ---------- Web Service client ----------
 _http = requests.Session()
 svc_token = get_or_bootstrap_token()
+
 if svc_token:
     if DB_API_AUTH_MODE == "service":
         _http.headers.update({"X-Service-Token": svc_token})
@@ -354,6 +414,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"[ERROR] MQTT connect reason_code={reason_code}", flush=True)
 
 def on_message(client, userdata, msg):
+    print(f"[MQTT] received message: {msg.topic}, {len(msg.payload)} bytes")
     q_in.put((msg.topic, msg.payload, 0))
 
 def on_disconnect(client, userdata, disconnect_flags, reason_code, properties):
