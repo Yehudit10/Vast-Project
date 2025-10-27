@@ -169,16 +169,15 @@ def main() -> None:
     ins = inspect(eng)
 
     generated_files: List[str] = []
-
     for table in ALLOWED:
         try:
             schema_json = build_schema_for_table(ins, table)
         except ValueError as e:
-            # זורקים שגיאה ללוג עבור הטבלה הספציפית, אבל לא מפילים את כל התהליך
+            # Log an error for this specific table, but do not abort the whole process
             print(f"[contracts-gen][ERROR] {e}; skipping '{table}'")
             continue
         except Exception as e:
-            # כל כשל לא צפוי — מדווחים וממשיכים
+            # Report any unexpected failure and continue with the next table
             print(f"[contracts-gen][ERROR] unexpected error for '{table}': {e}; skipping")
             continue
 
