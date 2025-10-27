@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from fastapi import APIRouter, HTTPException, Path, Query, Depends, Request, Body
 
 from app.auth import require_auth
@@ -77,7 +77,7 @@ def build_generic_router(contract_store) -> APIRouter:
     @tables_router.post("/{resource}", status_code=201)
     def create_row(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
-        body: Dict[str, Any] = Body(...),
+        body: Literal["keys", "full"] = Query("keys"),
         returning: str = Query("keys", enum=["keys", "full"]),
     ):
         try:
@@ -97,7 +97,7 @@ def build_generic_router(contract_store) -> APIRouter:
             handle_repo_exceptions(e)
 
     # Partial update (PATCH): body must include {"keys": {...}, "data": {...}}
-    @tables_router.patch("/{resource}/rows")
+    @tables_router.patch("/{resource}")
     def patch_row(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: Dict[str, Any] = Body(...),
@@ -112,7 +112,7 @@ def build_generic_router(contract_store) -> APIRouter:
             handle_repo_exceptions(e)
 
     # Full replace (PUT): body must include {"keys": {...}, "data": {...}} and does full validation
-    @tables_router.put("/{resource}/rows")
+    @tables_router.put("/{resource}")
     def put_row(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: Dict[str, Any] = Body(...),
@@ -127,7 +127,7 @@ def build_generic_router(contract_store) -> APIRouter:
             handle_repo_exceptions(e)
 
     # Delete row
-    @tables_router.delete("/{resource}/rows")
+    @tables_router.delete("/{resource}")
     def delete_row(
         resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: Dict[str, Any] = Body(...),
