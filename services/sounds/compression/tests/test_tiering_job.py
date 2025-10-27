@@ -6,7 +6,7 @@ import tempfile
 import shutil
 import os
 from unittest.mock import patch, MagicMock, mock_open, Mock
-from scripts.tiering_job import (
+from src.tiering_job import (
     is_older_than, encode, cleanup_compressed, get_age_seconds, main
 )
 
