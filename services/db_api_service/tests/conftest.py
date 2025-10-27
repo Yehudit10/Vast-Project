@@ -31,6 +31,7 @@ def client_overridden_auth():
     app.dependency_overrides[auth_mod.require_auth] = lambda: ("service", SimpleNamespace(name="tests"))
     try:
         with TestClient(app) as c:
+            # גם כאן נוודא מוכנות (ליתר בטחון)
             r0 = c.get("/ready")
             assert r0.status_code == 200 and r0.json().get("ready") is True
             yield c

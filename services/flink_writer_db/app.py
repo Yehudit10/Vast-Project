@@ -10,12 +10,12 @@ from urllib3.util.retry import Retry
 # ---------- ENV ----------
 DB_API_BASE = os.getenv("DB_API_BASE", "http://db_api_service:8001")
 DB_API_AUTH_MODE = os.getenv("DB_API_AUTH_MODE", "service")  
-DB_API_TOKEN_FILE = os.getenv("DB_API_TOKEN_FILE", "/app/secrets/db_api_token")
+DB_API_TOKEN_FILE = os.getenv("DB_API_TOKEN_FILE", "/opt/app/secrets/db_api_token")
 DB_API_SERVICE_NAME = os.getenv("DB_API_SERVICE_NAME", "flink-writer-db")
 DUMMY_DB = int(os.getenv("DUMMY_DB", "0")) == 1
 
 KAFKA_BROKERS = os.getenv("KAFKA_BROKERS", "kafka:9092")
-TOPICS = [t.strip() for t in os.getenv("TOPICS", "files").split(",") if t.strip()]
+TOPICS = [t.strip() for t in os.getenv("TOPICS", "sensor_anomalies").split(",") if t.strip()]
 
 
 # ---------- Token Bootstrap ----------
@@ -102,7 +102,7 @@ def write_to_db_api(table: str, payload: dict) -> bool:
 
     base = DB_API_BASE.rstrip("/")
     try:
-        r = _http.post(f"{base}/api/{table}", json=payload, timeout=10)
+        r = _http.post(f"{base}/api/tables/{table}", json=payload, timeout=10)
         if 200 <= r.status_code < 300:
             print(f"[DB] wrote to {table} ", flush=True)
             return True
