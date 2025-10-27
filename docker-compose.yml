@@ -4,7 +4,7 @@
 # ==========================
 
 version: "3.9"
-
+  
 # --------------------------
 # Networks
 # --------------------------
@@ -22,6 +22,7 @@ volumes:
   gui_data:
   minio-hot-data: {}
   minio-cold-data: {}
+  contracts: {}
 
 # ==========================
 # Services
@@ -38,7 +39,7 @@ services:
       POSTGRES_USER: missions_user
       POSTGRES_PASSWORD: pg123
       POSTGRES_DB: missions_db
-      PGHOST: 127.0.0.1
+      PGHOST: 0.0.0.0
       PGPORT: 5432
       PGDATA: /var/lib/postgresql/data
       WAL_DIR: /var/lib/postgresql/wal_archive
@@ -463,9 +464,34 @@ services:
   # --------------------------
   # DB API Service
   # --------------------------
+
+
+  
+  contracts-gen:
+    build:
+      context: ./services/db_api_service
+      dockerfile: app/contracts/Dockerfile
+    env_file:
+      - ./services/db_api_service/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - contracts:/app/app/contracts
+    networks:
+      - ag_cloud
+    restart: "no"
+
+
   db_api_service:
-    build: ./services/db_api_service
+    build:
+      context: ./services/db_api_service
+      dockerfile: Dockerfile
     container_name: db_api_service
+    env_file:
+      - ./services/db_api_service/.env
     environment:
       DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
       ENV: dev
@@ -476,11 +502,16 @@ services:
       DEV_SA_NAME: my-ingest-service
     ports:
       - "8001:8001"
+    volumes:
+      - contracts:/app/app/contracts
+    depends_on:
+      contracts-gen:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     networks:
       - ag_cloud
     restart: unless-stopped
-    depends_on:
-      - postgres
 
   notification_api:
     build:
@@ -496,3 +527,25 @@ services:
     networks:
       - ag_cloud
     restart: unless-stopped
+
+  flink_writer_db:
+    build:
+      context: ./services/flink_writer_db
+      dockerfile: Dockerfile.flink
+    container_name: flink_writer_db
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - TOPICS=sensor_zone_stats,sensor_anomalies
+      - DB_API_BASE=http://db_api_service:8001
+      - DB_API_AUTH_MODE=service
+      - DB_API_SERVICE_NAME=flink-writer-db
+      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+      - FLINK_PARALLELISM=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped  
