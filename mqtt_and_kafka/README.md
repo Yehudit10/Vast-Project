@@ -26,7 +26,7 @@ docker-compose.yml
 Bring up the stack:
 
 ```PowerShell
-docker compose up -d connect-1
+docker compose up -d connect
 ```
 
 Check that the plugin is registered:
