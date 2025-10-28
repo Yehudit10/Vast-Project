@@ -181,8 +181,8 @@ def classify_file(
     sk_pipeline: Optional[Any] = None
 ) -> Dict[str, object]:
     t0 = time.perf_counter()
-
-    _load_head_once()
+    if sk_pipeline is None:
+        _load_head_once()
     if pann_model is None:
         _load_backbone_once()
 

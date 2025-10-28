@@ -26,8 +26,8 @@ CHECKPOINT_PATH = os.getenv(
     "CHECKPOINT",
     "/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
 )
-SK_PIPELINE_PATH = os.getenv(
-    "SK_PIPELINE_PATH",
+HEAD_PATH = os.getenv(
+    "HEAD",
     "/app/classification/models/head/head_cnn14_rf.joblib"  # adapt if different
 )
 
@@ -53,13 +53,13 @@ def load_models_on_startup() -> None:
     PANN_MODEL = AudioTagging(checkpoint_path=CHECKPOINT_PATH)
     SK_PIPELINE = None
     try:
-        if os.path.exists(SK_PIPELINE_PATH):
-            SK_PIPELINE = joblib.load(SK_PIPELINE_PATH)
-            logger.info("✅ SK pipeline loaded.")
+        if os.path.exists(HEAD_PATH):
+            SK_PIPELINE = joblib.load(HEAD_PATH)
+            logger.info("✅ SK pipeline loaded from HEAD.")
         else:
-            logger.warning(f"SK pipeline not found at {SK_PIPELINE_PATH}; using built-in head.")
+            logger.warning(f"HEAD pipeline not found at {HEAD_PATH}; using built-in head.")
     except Exception as e:
-        logger.warning(f"SK pipeline load failed ({e}); using built-in head.")
+        logger.warning(f"HEAD pipeline load failed ({e}); using built-in head.")
 
     # 3) Warm-up forward pass with 1 second of silence
     dummy = np.zeros((1, SAMPLE_RATE * 10), dtype=np.float32)  # add batch dim

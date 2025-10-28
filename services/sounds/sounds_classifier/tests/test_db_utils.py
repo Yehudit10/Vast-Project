@@ -106,7 +106,7 @@ def test_ensure_run_inserts_and_commits(fake_conn, monkeypatch):
     # Provide env to fill NOT NULL columns
     monkeypatch.setenv("MODEL_NAME", "panns_cnn14")
     monkeypatch.setenv("CHECKPOINT", "ckpt.pth")
-    monkeypatch.setenv("SK_PIPELINE_PATH", "/tmp/head.joblib")
+    monkeypatch.setenv("HEAD", "/tmp/head.joblib")
     monkeypatch.setenv("LABELS_CSV", "")
     monkeypatch.setenv("WINDOW_SEC", "10")
     monkeypatch.setenv("HOP_SEC", "10")
