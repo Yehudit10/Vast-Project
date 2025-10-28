@@ -1,5 +1,7 @@
 version: "3.9"
 
+volumes:
+  contracts: {} 
 services:
   contracts-gen:
     build:
@@ -12,7 +14,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./app/contracts:/app/app/contracts
+      - contracts:/app/app/contracts
     networks: [airnet]
     restart: "no"
 
@@ -24,9 +26,9 @@ services:
     environment:
         DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
     volumes:
-      - ./app/contracts:/app/app/contracts
+      - contracts:/app/app/contracts
     ports:
-      - "8080:8080"
+      - "8001:8001"
     depends_on:
       contracts-gen:
         condition: service_completed_successfully

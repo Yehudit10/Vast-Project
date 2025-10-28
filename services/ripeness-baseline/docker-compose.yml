@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  ripeness:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    container_name: ripeness-baseline
+    env_file: ./.env
+    environment:
+      PGHOST: host.docker.internal
+      PGPORT: 5432
+      PGDATABASE: missions_db
+      PGUSER: missions_user
+      PGPASSWORD: pg123
+      SAMPLES_DIR: /app/samples
+      LOOKBACK_DAYS: ${LOOKBACK_DAYS:-7}
+    volumes:
+      - ./samples:/app/samples:ro
+      - ./eval:/app/eval
+      - ./thresholds.apple.json:/app/thresholds.apple.json:ro
+      - ./thresholds.banana.json:/app/thresholds.banana.json:ro
+      - ./thresholds.orange.json:/app/thresholds.orange.json:ro
+    restart: "no"
+    command: ["python", "-u", "/app/src/main.py"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

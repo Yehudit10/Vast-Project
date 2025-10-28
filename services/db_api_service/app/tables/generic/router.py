@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional, Literal
 from fastapi import APIRouter, HTTPException, Path, Query, Depends, Request, Body
 
 from app.auth import require_auth
@@ -37,7 +37,7 @@ def build_generic_router(contract_store) -> APIRouter:
     
     # Returns the JSON contract/schema for the resource from contract_store.
     @tables_router.get("/{resource}/schema")
-    def get_schema(resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$")):
+    def get_schema(resource: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$")):
         try:
             schema = contract_store.get(resource)
             if not schema:
@@ -54,7 +54,7 @@ def build_generic_router(contract_store) -> APIRouter:
         limit: int = Query(50, ge=1, le=500),
         offset: int = Query(0, ge=0),
         order_by: Optional[str] = Query(None),
-        order_dir: str = Query("desc", pattern="^(?i:asc|desc)$")
+        order_dir: str = Query("desc", regex="^(?i:asc|desc)$")
     ):
         try:
             # Extract user filters from query parameters (exclude pagination/order params).
@@ -76,19 +76,19 @@ def build_generic_router(contract_store) -> APIRouter:
     # Insert a single row into the resource after validation.
     @tables_router.post("/{resource}", status_code=201)
     def create_row(
-        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
-        body: Literal["keys", "full"] = Query("keys"),
-        returning: str = Query("keys", enum=["keys", "full"]),
+        resource: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        payload: Dict[str, Any] = Body(...),
+        returning: Literal["keys","full"] = Query("keys")
     ):
         try:
-            return repo.insert_row(resource, body, returning)
+            return repo.insert_row(resource, payload, returning)
         except Exception as e:
            handle_repo_exceptions(e)
 
     # Insert multiple rows (batch) into the resource, validating each entry.
     @tables_router.post("/{resource}/rows:batch")
     def create_rows_batch(
-        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        resource: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: List[Dict[str, Any]] = Body(...),
     ):
         try:
@@ -99,7 +99,7 @@ def build_generic_router(contract_store) -> APIRouter:
     # Partial update (PATCH): body must include {"keys": {...}, "data": {...}}
     @tables_router.patch("/{resource}")
     def patch_row(
-        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        resource: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: Dict[str, Any] = Body(...),
     ):
         try:
@@ -114,7 +114,7 @@ def build_generic_router(contract_store) -> APIRouter:
     # Full replace (PUT): body must include {"keys": {...}, "data": {...}} and does full validation
     @tables_router.put("/{resource}")
     def put_row(
-        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        resource: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: Dict[str, Any] = Body(...),
     ):
         try:
@@ -129,7 +129,7 @@ def build_generic_router(contract_store) -> APIRouter:
     # Delete row
     @tables_router.delete("/{resource}")
     def delete_row(
-        resource: str = Path(..., pattern=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+        resource: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
         body: Dict[str, Any] = Body(...),
     ):
         try:

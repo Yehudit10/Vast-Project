@@ -93,88 +93,6 @@ Invoke-WebRequest "http://localhost:8001/api/files?limit=2" `
 
 ---
 
----
-
-## Example: Generic API Usage
-
-The Generic API provides unified CRUD endpoints for any allowed table.
-
-### Available endpoints
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/api/tables/{resource}/schema` | Get table schema |
-| GET | `/api/tables/{resource}` | List rows |
-| POST | `/api/tables/{resource}` | Create a single row |
-| POST | `/api/tables/{resource}/rows:batch` | Create multiple rows in one request |
-
-### Example 1 — List rows
-```bash
-curl -X GET "http://localhost:8001/api/tables/event_logs_sensors?limit=5" \
-  -H "Authorization: Bearer <access_token>"
-```
-
-## Networking & Access
-
-When running via Docker Compose, all services share the same internal network automatically.  
-You can access the API at:
-
-http://localhost:8001
-
-If other services need to reach it internally, use the service name defined in `docker-compose.yml`
-(for example `db-api`).
-
-### Example 2 — Create a single row
-```bash
-curl -X POST "http://localhost:8001/api/tables/event_logs_sensors" \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "device_id": "dev-a",
-        "issue_type": "temperature_out_of_range",
-        "severity": "warn",
-        "start_ts": "2025-10-15T20:09:02.065445+03:00",
-        "details": {"measured": 52.4, "expected_range": [0, 50], "unit": "°C"}
-      }'
-```
-
-### Example 2 — Create — single row (POST /api/tables/{resource})
-```bash
-curl -X POST "http://localhost:8001/api/tables/event_logs_sensors?returning=keys" \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "device_id": "dev-a",
-  "issue_type": "temperature_out_of_range",
-  "severity": "warn",
-  "start_ts": "2025-10-15T20:09:02.065445+03:00",
-  "details": {"measured": 52.4, "expected_range": [0, 50], "unit": "°C"}
-  }'
-```
-
-### Example 3 — Create — multiple rows (POST /api/tables/{resource}/rows:batch)
-```bash
-curl -X POST "http://localhost:8001/api/tables/event_logs_sensors/rows:batch" \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '[
-  {"device_id":"dev-a","issue_type":"low_battery","severity":"info","start_ts":"2025-10-20T12:00:00Z"},
-  {"device_id":"dev-b","issue_type":"disconnect","severity":"error","start_ts":"2025-10-20T12:05:00Z"}
-  ]'
-```
-
-### Example 4 — Update (partial) — single row (PATCH /api/tables/{resource})
-```bash
-curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors" \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "keys": {"log_id": 101, "device_id": "dev-a"},
-  "data": {"severity": "resolved", "details": {"note": "acknowledged by ops"}}
-  }'
-```
-
----
-
 ## Testing readme in /test
 
 
@@ -186,6 +104,14 @@ curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors" \
 - `/auth/_dev_bootstrap` is intended for development only – do not enable in production.
 
 ## API Examples (CRUD)
+
+### Available endpoints
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| GET | `/api/tables/{resource}/schema` | Get table schema |
+| GET | `/api/tables/{resource}` | List rows |
+| POST | `/api/tables/{resource}` | Create a single row |
+| POST | `/api/tables/{resource}/rows:batch` | Create multiple rows in one request |
 
 Base URL: http://localhost:8001 (adjust if different)
 Prefix used below: /api/tables/{resource}
@@ -228,10 +154,10 @@ curl "http://localhost:8001/api/tables/event_logs_sensors/schema"
 # Response: {"table":"event_logs_sensors","contract":{...},"columns":[...]}
 ```
 
-Update — partial (PATCH /api/tables/{resource}/rows)
+Update — partial (PATCH /api/tables/{resource})
 - body must include `keys` (identifying fields) and `data` (fields to update)
 ```bash
-curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors/rows" \
+curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors" \
   -H "Content-Type: application/json" \
   -d '{
     "keys": {"log_id": 4, "device_id": "dev-c"},
@@ -240,10 +166,10 @@ curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors/rows" \
 # Response: {"affected_rows":1,"returning":{...}}
 ```
 
-Replace / full update (PUT /api/tables/{resource}/rows)
+Replace / full update (PUT /api/tables/{resource})
 - body includes `keys` and a full `data` payload validated against the contract
 ```bash
-curl -X PUT "http://localhost:8001/api/tables/event_logs_sensors/rows" \
+curl -X PUT "http://localhost:8001/api/tables/event_logs_sensors" \
   -H "Content-Type: application/json" \
   -d '{
     "keys": {"log_id": 4, "device_id": "dev-c"},
@@ -258,10 +184,10 @@ curl -X PUT "http://localhost:8001/api/tables/event_logs_sensors/rows" \
 # Response: {"affected_rows":1,"returning":{...}}
 ```
 
-Delete (DELETE /api/tables/{resource}/rows)
+Delete (DELETE /api/tables/{resource})
 - body must include `keys` object
 ```bash
-curl -X DELETE "http://localhost:8001/api/tables/event_logs_sensors/rows" \
+curl -X DELETE "http://localhost:8001/api/tables/event_logs_sensors" \
   -H "Content-Type: application/json" \
   -d '{"keys": {"log_id": 4, "device_id": "dev-c"}}'
 # Response: {"affected_rows":1}
