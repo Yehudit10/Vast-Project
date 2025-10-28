@@ -9,7 +9,7 @@ Built with **FastAPI**, **PANNs (CNN14)**, **PostgreSQL**, and optional **Kafka 
 
 ## Quick Start
 ```bash
-docker compose up -d classifier
+docker compose up -d sounds_classifier
 ```
 ervice runs on **http://localhost:8088** (see `docker-compose.yml`, port 8088).
 
