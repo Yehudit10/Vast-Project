@@ -237,7 +237,51 @@ CREATE TABLE IF NOT EXISTS sensors (
   description TEXT,
   last_maintenance TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
+    id BIGSERIAL PRIMARY KEY,
+    plant_id INT NOT NULL,
+    sensor VARCHAR(64) NOT NULL,
+    ts TIMESTAMPTZ NOT NULL,
+    value DOUBLE PRECISION,
+    lat DOUBLE PRECISION,
+    lon DOUBLE PRECISION,
+    zone VARCHAR(128),
+    result JSONB NOT NULL,           
+    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
+
+
+CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
+    id BIGSERIAL PRIMARY KEY,
+    zone VARCHAR(128) NOT NULL,
+    window_start TIMESTAMPTZ NOT NULL,
+    window_end TIMESTAMPTZ NOT NULL,
+    count INT NOT NULL,
+    mean DOUBLE PRECISION,
+    median DOUBLE PRECISION,
+    min DOUBLE PRECISION,
+    max DOUBLE PRECISION,
+    std DOUBLE PRECISION,
+    anomalies INT,
+    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
+    ON public.sensor_anomalies USING BRIN (ts);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
+    ON public.sensor_anomalies (zone);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
+    ON public.sensor_anomalies (sensor);
+
+
+CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
+    ON public.sensor_zone_stats (zone, window_start, window_end);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_anomalies
+    ON public.sensor_zone_stats (anomalies);
 CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
 CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
 CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
