@@ -505,7 +505,7 @@ services:
       - MAX_BYTES=104857600
 
       # Tuning params 
-      - UNKNOWN_THRESHOLD=0.55
+      - UNKNOWN_THRESHOLD=0.4
       - WINDOW_SEC=2.0
       - HOP_SEC=0.5
       - PAD_LAST=true
