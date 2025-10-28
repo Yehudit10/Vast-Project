@@ -76,24 +76,24 @@ services:
     networks:
       - ag_cloud
 
-  plant_stress:
-    build: ./services/plant_stress
-    environment:
-      - INPUT_DIR=/data/inbox
-      - MODEL_DIR=/models
-      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
-      - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
-    volumes:
-      - "./services/plant_stress/models:/models:ro"
-      - "./services/plant_stress/samples:/data/inbox:ro"
+  # plant_stress:
+  #   build: ./services/plant_stress
+  #   environment:
+  #     - INPUT_DIR=/data/inbox
+  #     - MODEL_DIR=/models
+  #     - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+  #     - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
+  #     - CONFIDENCE_THRESHOLD=0.6
+  #     # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
+  #   volumes:
+  #     - "./services/plant_stress/models:/models:ro"
+  #     - "./services/plant_stress/samples:/data/inbox:ro"
 
-    depends_on:
-      - postgres
-    command: ["python", "-u", "/app/app.py"]
-    networks:
-      - ag_cloud
+  #   depends_on:
+  #     - postgres
+  #   command: ["python", "-u", "/app/app.py"]
+  #   networks:
+  #     - ag_cloud
 
 
  
