@@ -8,7 +8,9 @@ import hashlib
 
 
 AUDIO_DIR   = "audio_samples"
-ADDR, PORT  = "127.0.0.1", 8001
+# ADDR, PORT  = "127.0.0.1", 8001
+ADDR = os.getenv("ADDR", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8001"))
 WINDOW_MIN  = 5        #5
 FRAME_SEC   = 0.1        
 THRESHOLD   = 0.01      

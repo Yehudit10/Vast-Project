@@ -32,7 +32,7 @@ scrape_configs:
     static_configs:
       - targets: ['minio-cold:9000']  
   
-  - job_name: sound-metrics
+  - job_name: sound_metrics
     static_configs:
-      - targets: ["sound-metrics:8001"]  
+      - targets: ['host.docker.internal:8001']
 
