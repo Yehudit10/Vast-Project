@@ -137,6 +137,41 @@ curl -X POST "http://localhost:8080/api/tables/event_logs_sensors" \
       }'
 ```
 
+### Example 2 — Create — single row (POST /api/tables/{resource})
+```bash
+curl -X POST "http://localhost:8080/api/tables/event_logs_sensors?returning=keys" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "device_id": "dev-a",
+  "issue_type": "temperature_out_of_range",
+  "severity": "warn",
+  "start_ts": "2025-10-15T20:09:02.065445+03:00",
+  "details": {"measured": 52.4, "expected_range": [0, 50], "unit": "°C"}
+  }'
+```
+
+### Example 3 — Create — multiple rows (POST /api/tables/{resource}/rows:batch)
+```bash
+curl -X POST "http://localhost:8080/api/tables/event_logs_sensors/rows:batch" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '[
+  {"device_id":"dev-a","issue_type":"low_battery","severity":"info","start_ts":"2025-10-20T12:00:00Z"},
+  {"device_id":"dev-b","issue_type":"disconnect","severity":"error","start_ts":"2025-10-20T12:05:00Z"}
+  ]'
+```
+
+### Example 4 — Update (partial) — single row (PATCH /api/tables/{resource})
+```bash
+curl -X PATCH "http://localhost:8080/api/tables/event_logs_sensors" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "keys": {"log_id": 101, "device_id": "dev-a"},
+  "data": {"severity": "resolved", "details": {"note": "acknowledged by ops"}}
+  }'
+```
 
 ---
 
