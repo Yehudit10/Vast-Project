@@ -39,15 +39,16 @@ jobs:
       - name: Prepare env for db_api_service
         run: |
           mkdir -p services/db_api_service
-          cat > services/db_api_service/.env << EOF
-        DB_DSN=postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
-        ENV=ci
-        JWT_SECRET=change-me-in-ci
-        JWT_ALGO=HS256
-        ACCESS_TTL_MIN=15
-        REFRESH_TTL_DAYS=14
-        DEV_SA_NAME=ci-service
-        EOF
+          printf '%s\n' \
+          'DB_DSN=postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db' \
+          'ENV=ci' \
+          'JWT_SECRET=change-me-in-ci' \
+          'JWT_ALGO=HS256' \
+          'ACCESS_TTL_MIN=15' \
+          'REFRESH_TTL_DAYS=14' \
+          'DEV_SA_NAME=ci-service' \
+              > services/db_api_service/.env
+
 
 
 
