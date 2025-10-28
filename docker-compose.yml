@@ -77,6 +77,26 @@ services:
     networks:
       - ag_cloud
 
+  sound_metrics:
+    build:
+      context: ./services/sound_metrics
+      dockerfile: Dockerfile
+    environment:
+      - ADDR=0.0.0.0
+      - PORT=8001
+      - USE_UTC=false
+      - WINDOW_MIN=1
+      - STABLE_SEC=1
+      - PYTHONUNBUFFERED=1
+    command: ["python","-u","src/local_metrics.py"]
+    volumes:
+      - ./services/sound_metrics/audio_samples:/app/audio_samples:ro
+    ports:
+      - "8001:8001"
+    networks:
+      - ag_cloud 
+    restart: unless-stopped
+
   plant_stress:
     build: ./services/plant_stress
     environment:
@@ -95,6 +115,9 @@ services:
     command: ["python", "-u", "/app/app.py"]
     networks:
       - ag_cloud
+    
+
+
 
 
  
@@ -569,14 +592,7 @@ services:
       REFRESH_TTL_DAYS: 14
       DEV_SA_NAME: my-ingest-service
     ports:
-      - "8001:8001"
-    volumes:
-      - contracts:/app/app/contracts
-    depends_on:
-      contracts-gen:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
+      - "8003:8001"
     networks:
       - ag_cloud
     restart: unless-stopped
@@ -595,25 +611,4 @@ services:
     networks:
       - ag_cloud
     restart: unless-stopped
-
-  flink_writer_db:
-    build:
-      context: ./services/flink_writer_db
-      dockerfile: Dockerfile.flink
-    container_name: flink_writer_db
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies
-      - DB_API_BASE=http://db_api_service:8001
-      - DB_API_AUTH_MODE=service
-      - DB_API_SERVICE_NAME=flink-writer-db
-      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
-      - FLINK_PARALLELISM=1
-    depends_on:
-      kafka:
-        condition: service_healthy
-      db_api_service:
-        condition: service_started
-    networks:
-      - ag_cloud
-    restart: unless-stopped  
+    
