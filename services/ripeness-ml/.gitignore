@@ -1,7 +1,6 @@
 __pycache__/
 *.pt
 *.onnx
-checkpoints/
 data/
 datasets/
 *.png
