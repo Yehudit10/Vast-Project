@@ -1,5 +1,5 @@
 # Byte-compiled / cache
-**/__pycache__/
+__pycache__/
 *.py[cod]
 *.pyo
 *.pyd
@@ -8,8 +8,6 @@
 .venv/
 env/
 venv/
-.env
-.env.*
 
 # Pytest / coverage
 .pytest_cache/
@@ -38,7 +36,4 @@ dist/
 
 # Logs
 *.log
-
-app/contracts/*.json
-
 

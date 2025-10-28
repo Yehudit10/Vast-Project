@@ -9,7 +9,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QUrl
 from home_view import HomeView
 from views.sensors_view import SensorsView
-from views.sound_view import SoundView
+from views.notification_view import NotificationView
 from dashboard_api import DashboardApi
 
 
@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
 
         for name in [
             "Home", "Sensors", "Sound", "Ground Image", 
-            "Aerial Image", "Fruits", "Security", "Settings"
+            "Aerial Image", "Fruits", "Security", "Settings", "Notifications"
         ]:
             QListWidgetItem(name, self.nav_list)
         
@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
         # ---------- Views ----------
         self.home = HomeView(api, self)
         self.sensors_view = SensorsView(api, self)
-        self.sound_view = SoundView(self)
+        self.notification_view = NotificationView(self)
 
         # Stack for switching between views
         self.stack = QStackedWidget()
@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         self.views = {
             "Home": self.home,
             "Sensors": self.sensors_view,
-            "Sound": self.sound_view,
+            "Notifications": self.notification_view,
         }
         
         for view in self.views.values():
