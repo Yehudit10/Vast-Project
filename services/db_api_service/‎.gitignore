@@ -8,8 +8,6 @@ __pycache__/
 .venv/
 env/
 venv/
-.env
-.env.*
 
 # Pytest / coverage
 .pytest_cache/
@@ -38,3 +36,4 @@ dist/
 
 # Logs
 *.log
+

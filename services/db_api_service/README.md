@@ -2,17 +2,11 @@
 
 A FastAPI microservice for managing image/file metadata in the **AgCloud** platform.
 
-## Quickstart (Dockerfile)
+## Quickstart (Docker Compose)
 
 Build:
 ```bash
-docker build -t db-api-service:latest ./services/db_api_service
-```
-
-Run:
-**Host access (publish port, for development only):**
-```bash
-docker run --rm -d --name db-api-service-run   -p 8001:8001   --env-file .env   db-api-service:latest
+docker compose up -d --build
 ```
 
 Check health:
@@ -20,6 +14,20 @@ Check health:
 curl http://localhost:8001/healthz
 curl http://localhost:8001/ready
 ```
+
+Stop and clean up:
+```bash
+docker compose down
+```
+
+## Generic API Support
+The service now includes a Generic API layer that automatically exposes CRUD endpoints for allowed database tables.
+
+To enable a table:
+
+1. Open the config file app/config.py.
+
+2. Add the table name under the ALLOWED_TABLES list.
 
 ## Authentication
 
@@ -75,7 +83,7 @@ $boot = Invoke-WebRequest -Method POST "http://localhost:8001/auth/_dev_bootstra
 $j = $boot.Content | ConvertFrom-Json
 $access = $j.tokens.access_token
 
-Invoke-WebRequest "http://localhost:8001/api/files?limit=2" `
+Invoke-WebRequest "http://localhost:8001/api/tables/sensor_anomalies?limit=5" `
   -Headers @{ Authorization = ("Bearer {0}" -f $access) }
 ```
 
@@ -87,22 +95,50 @@ Invoke-WebRequest "http://localhost:8001/api/files?limit=2" `
 
 ---
 
+---
+
+## Example: Generic API Usage
+
+The Generic API provides unified CRUD endpoints for any allowed table.
+
+### Available endpoints
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| GET | `/api/tables/{resource}/schema` | Get table schema |
+| GET | `/api/tables/{resource}` | List rows |
+| POST | `/api/tables/{resource}` | Create a single row |
+| POST | `/api/tables/{resource}/rows:batch` | Create multiple rows in one request |
+
+### Example 1 — List rows
+```bash
+curl -X GET "http://localhost:8001/api/tables/event_logs_sensors?limit=5" \
+  -H "Authorization: Bearer <access_token>"
+```
+
 ## Networking & Access
 
-**Host access (publish port, for development only):**
-```bash
-docker run --rm -d --name db-api-service-run   -p 127.0.0.1:8001:8001   --env-file .env   db-api-service:latest
-```
-Use `http://localhost:8001`. Bind to `127.0.0.1` for local-only, or change the host port (e.g. `8081`) to avoid conflicts.
+When running via Docker Compose, all services share the same internal network automatically.  
+You can access the API at:
 
-**Inter-container access (same network, no published port required):**
-```bash
-docker network create api_net || true
+http://localhost:8001
 
-docker run -d --name db-api --network api_net --env-file .env db-api-service:latest
-docker run --rm --network api_net curlimages/curl:8.9.1 curl -s http://db-api:8001/healthz
+If other services need to reach it internally, use the service name defined in `docker-compose.yml`
+(for example `db-api`).
+
+### Example 2 — Create a single row
+```bash
+curl -X POST "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "device_id": "dev-a",
+        "issue_type": "temperature_out_of_range",
+        "severity": "warn",
+        "start_ts": "2025-10-15T20:09:02.065445+03:00",
+        "details": {"measured": 52.4, "expected_range": [0, 50], "unit": "°C"}
+      }'
 ```
-Both containers must be on the same Docker network to resolve `db-api` by name.
+
 
 ---
 

@@ -1,0 +1,1062 @@
+object_key,truth,pred,score_unripe,score_ripe,score_overripe
+orange/test/overripe/Screen Shot 2018-06-12 at 11.18.34 PM.png,overripe,overripe,0.0,0.5465501546859741,0.4534498453140259
+orange/test/overripe/Screen Shot 2018-06-12 at 11.18.53 PM.png,overripe,overripe,0.0,0.4113272726535797,0.5886726975440979
+orange/test/overripe/Screen Shot 2018-06-12 at 11.19.01 PM.png,overripe,overripe,0.0,0.42804014682769775,0.5719598531723022
+orange/test/overripe/Screen Shot 2018-06-12 at 11.19.56 PM.png,overripe,overripe,0.0,0.40284356474876404,0.5971564054489136
+orange/test/overripe/Screen Shot 2018-06-12 at 11.20.05 PM.png,overripe,overripe,0.0,0.6155761480331421,0.3844238817691803
+orange/test/overripe/Screen Shot 2018-06-12 at 11.20.59 PM.png,overripe,overripe,0.0,0.5387961268424988,0.4612038731575012
+orange/test/overripe/Screen Shot 2018-06-12 at 11.21.22 PM.png,overripe,overripe,0.0,0.45342984795570374,0.5465701222419739
+orange/test/overripe/Screen Shot 2018-06-12 at 11.21.29 PM.png,overripe,overripe,0.0,0.4012085199356079,0.5987914800643921
+orange/test/overripe/Screen Shot 2018-06-12 at 11.21.54 PM.png,overripe,overripe,0.0,0.8375071883201599,0.16249282658100128
+orange/test/overripe/Screen Shot 2018-06-12 at 11.22.32 PM.png,overripe,overripe,0.0,0.8050832748413086,0.19491669535636902
+orange/test/overripe/Screen Shot 2018-06-12 at 11.23.03 PM.png,overripe,overripe,0.0,0.42092999815940857,0.579069972038269
+orange/test/overripe/Screen Shot 2018-06-12 at 11.23.33 PM.png,overripe,overripe,0.0,0.40036237239837646,0.5996376276016235
+orange/test/overripe/Screen Shot 2018-06-12 at 11.24.08 PM.png,overripe,overripe,0.0,0.83368319272995,0.16631677746772766
+orange/test/overripe/Screen Shot 2018-06-12 at 11.25.20 PM.png,overripe,overripe,0.0,0.5782192349433899,0.4217807352542877
+orange/test/overripe/Screen Shot 2018-06-12 at 11.25.25 PM.png,overripe,overripe,0.0,0.4014260470867157,0.5985739231109619
+orange/test/overripe/Screen Shot 2018-06-12 at 11.25.33 PM.png,overripe,overripe,0.0,0.41610682010650635,0.5838931798934937
+orange/test/overripe/Screen Shot 2018-06-12 at 11.26.07 PM.png,overripe,overripe,0.0,0.829289436340332,0.17071057856082916
+orange/test/overripe/Screen Shot 2018-06-12 at 11.26.12 PM.png,overripe,overripe,0.0,0.5542857050895691,0.4457142949104309
+orange/test/overripe/Screen Shot 2018-06-12 at 11.26.18 PM.png,overripe,overripe,0.0,0.925989031791687,0.07401097565889359
+orange/test/overripe/Screen Shot 2018-06-12 at 11.26.24 PM.png,overripe,overripe,0.0,0.5363100171089172,0.4636899530887604
+orange/test/overripe/Screen Shot 2018-06-12 at 11.26.28 PM.png,overripe,overripe,0.0,0.8348244428634644,0.16517557203769684
+orange/test/overripe/Screen Shot 2018-06-12 at 11.26.36 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/Screen Shot 2018-06-12 at 11.27.01 PM.png,overripe,overripe,0.0,0.5337799787521362,0.4662199914455414
+orange/test/overripe/Screen Shot 2018-06-12 at 11.27.07 PM.png,overripe,overripe,0.0,0.44370049238204956,0.5562995076179504
+orange/test/overripe/Screen Shot 2018-06-12 at 11.28.21 PM.png,overripe,overripe,0.0,0.4043291509151459,0.5956708788871765
+orange/test/overripe/Screen Shot 2018-06-12 at 11.29.31 PM.png,overripe,overripe,0.0,0.43243104219436646,0.5675689578056335
+orange/test/overripe/Screen Shot 2018-06-12 at 11.29.44 PM.png,overripe,overripe,0.0,0.7418874502182007,0.2581125497817993
+orange/test/overripe/Screen Shot 2018-06-12 at 11.30.28 PM.png,overripe,overripe,0.0,0.42841944098472595,0.5715805292129517
+orange/test/overripe/Screen Shot 2018-06-12 at 11.31.39 PM.png,overripe,overripe,0.0,0.4145498275756836,0.5854501724243164
+orange/test/overripe/Screen Shot 2018-06-12 at 11.32.09 PM.png,overripe,overripe,0.0,0.4049011766910553,0.5950988531112671
+orange/test/overripe/Screen Shot 2018-06-12 at 11.32.13 PM.png,overripe,overripe,0.0,0.4159739911556244,0.5840259790420532
+orange/test/overripe/Screen Shot 2018-06-12 at 11.32.21 PM.png,overripe,overripe,0.0,0.4000642001628876,0.59993577003479
+orange/test/overripe/Screen Shot 2018-06-12 at 11.32.46 PM.png,overripe,overripe,0.0,0.49079635739326477,0.5092036724090576
+orange/test/overripe/Screen Shot 2018-06-12 at 11.33.12 PM.png,overripe,overripe,0.0,0.40468987822532654,0.5953100919723511
+orange/test/overripe/Screen Shot 2018-06-12 at 11.36.42 PM.png,overripe,overripe,0.0,0.9967008829116821,0.0032991296611726284
+orange/test/overripe/Screen Shot 2018-06-12 at 11.37.00 PM.png,overripe,overripe,0.0,0.40640872716903687,0.5935912728309631
+orange/test/overripe/Screen Shot 2018-06-12 at 11.37.52 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/Screen Shot 2018-06-12 at 11.38.13 PM.png,overripe,overripe,0.0,0.40124180912971497,0.5987582206726074
+orange/test/overripe/Screen Shot 2018-06-12 at 11.38.26 PM.png,overripe,overripe,0.0,0.401203453540802,0.598796546459198
+orange/test/overripe/Screen Shot 2018-06-12 at 11.40.23 PM.png,overripe,overripe,0.0,0.4538966715335846,0.546103298664093
+orange/test/overripe/Screen Shot 2018-06-12 at 11.41.35 PM.png,overripe,overripe,0.0,0.4201434254646301,0.5798565745353699
+orange/test/overripe/Screen Shot 2018-06-12 at 11.42.38 PM.png,overripe,overripe,0.0,0.5650395750999451,0.43496042490005493
+orange/test/overripe/Screen Shot 2018-06-12 at 11.44.16 PM.png,overripe,overripe,0.0,0.43400800228118896,0.565991997718811
+orange/test/overripe/Screen Shot 2018-06-12 at 11.44.48 PM.png,overripe,overripe,0.0,0.5483419299125671,0.45165807008743286
+orange/test/overripe/Screen Shot 2018-06-12 at 11.45.33 PM.png,overripe,overripe,0.0,0.49139201641082764,0.5086079835891724
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.18.46 PM.png,overripe,overripe,0.0,0.4059287905693054,0.5940712094306946
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.19.01 PM.png,overripe,overripe,0.0,0.42362791299819946,0.5763720870018005
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.20.52 PM.png,overripe,overripe,0.0,0.75217205286026,0.24782794713974
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.21.22 PM.png,overripe,overripe,0.0,0.44947952032089233,0.5505204796791077
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.21.29 PM.png,overripe,overripe,0.0,0.40184396505355835,0.5981560349464417
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.24.04 PM.png,overripe,overripe,0.0,0.7803724408149719,0.21962757408618927
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.24.29 PM.png,overripe,overripe,0.0,0.9115854501724243,0.08841457217931747
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.24.43 PM.png,overripe,overripe,0.0,0.6616992950439453,0.3383007049560547
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.25.16 PM.png,overripe,overripe,0.0,0.46126237511634827,0.5387375950813293
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.25.25 PM.png,overripe,overripe,0.0,0.40177181363105774,0.5982282161712646
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.25.55 PM.png,overripe,overripe,0.0,0.4031059145927429,0.5968940854072571
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.26.07 PM.png,overripe,overripe,0.0,0.824708878993988,0.17529110610485077
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.26.12 PM.png,overripe,overripe,0.0,0.5319263339042664,0.46807366609573364
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.26.36 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.26.44 PM.png,overripe,overripe,0.0,0.7360752820968628,0.2639247179031372
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.29.31 PM.png,overripe,overripe,0.0,0.42977648973464966,0.5702235102653503
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.29.58 PM.png,overripe,overripe,0.0,0.8767346143722534,0.12326537072658539
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.30.06 PM.png,overripe,overripe,0.0,0.550600528717041,0.449399471282959
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.30.41 PM.png,overripe,overripe,0.0,0.5742276906967163,0.4257723391056061
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.31.48 PM.png,overripe,overripe,0.0,0.5360850095748901,0.46391499042510986
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.32.04 PM.png,overripe,overripe,0.0,0.40404513478279114,0.5959548950195312
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.32.17 PM.png,overripe,overripe,0.0,0.4223516881465912,0.5776482820510864
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.34.13 PM.png,overripe,overripe,0.0,0.40002161264419556,0.5999783873558044
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.36.19 PM.png,overripe,overripe,0.0,0.607452929019928,0.392547070980072
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.36.31 PM.png,overripe,overripe,0.0,0.4119863510131836,0.5880136489868164
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.37.13 PM.png,overripe,overripe,0.0,0.4561128318309784,0.543887197971344
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.40.51 PM.png,overripe,overripe,0.0,0.661964476108551,0.33803555369377136
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.42.45 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.43.49 PM.png,overripe,overripe,0.0,0.721710741519928,0.27828922867774963
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.44.06 PM.png,overripe,overripe,0.0,0.46296730637550354,0.5370326638221741
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.45.17 PM.png,overripe,overripe,0.0,0.42259663343429565,0.5774033665657043
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.45.42 PM.png,overripe,overripe,0.0,0.4630676209926605,0.5369323492050171
+orange/test/overripe/rotated_by_15_Screen Shot 2018-06-12 at 11.46.17 PM.png,overripe,overripe,0.0,0.6018050312995911,0.39819496870040894
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.18.46 PM.png,overripe,overripe,0.0,0.4057433009147644,0.5942566990852356
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.19.22 PM.png,overripe,overripe,0.0,0.40194159746170044,0.5980584025382996
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.19.37 PM.png,overripe,overripe,0.0,0.5510573387145996,0.448942631483078
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.20.13 PM.png,overripe,overripe,0.0,0.8912700414657593,0.10872996598482132
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.20.18 PM.png,overripe,overripe,0.0,0.42658695578575134,0.573413074016571
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.21.17 PM.png,overripe,overripe,0.0,0.6019973754882812,0.39800262451171875
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.21.22 PM.png,overripe,overripe,0.0,0.45771142840385437,0.5422885417938232
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.21.40 PM.png,overripe,overripe,0.0,0.434280663728714,0.5657193064689636
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.22.21 PM.png,overripe,overripe,0.0,0.4363807141780853,0.5636193156242371
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.22.47 PM.png,overripe,overripe,0.0,0.58526611328125,0.41473388671875
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.23.40 PM.png,overripe,overripe,0.0,0.4269882142543793,0.5730117559432983
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.24.04 PM.png,overripe,overripe,0.0,0.7810708284378052,0.21892917156219482
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.25.16 PM.png,overripe,overripe,0.0,0.4624260663986206,0.5375739336013794
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.25.33 PM.png,overripe,overripe,0.0,0.414968341588974,0.5850316882133484
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.26.12 PM.png,overripe,overripe,0.0,0.5319681167602539,0.4680318534374237
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.27.07 PM.png,overripe,overripe,0.0,0.4437108039855957,0.5562891960144043
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.28.21 PM.png,overripe,overripe,0.0,0.4044130742549896,0.5955869555473328
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.29.14 PM.png,overripe,overripe,0.0,0.9441819787025452,0.055818021297454834
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.29.21 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.29.36 PM.png,overripe,overripe,0.0,0.4119778275489807,0.5880221724510193
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.30.11 PM.png,overripe,overripe,0.0,0.6813796162605286,0.31862038373947144
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.30.16 PM.png,overripe,overripe,0.0,0.7221758365631104,0.27782419323921204
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.31.17 PM.png,overripe,overripe,0.0,0.7051301598548889,0.2948698401451111
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.31.24 PM.png,overripe,overripe,0.0,0.40099799633026123,0.5990020036697388
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.32.13 PM.png,overripe,overripe,0.0,0.4112389385700226,0.588761031627655
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.33.00 PM.png,overripe,overripe,0.0,0.4174706041812897,0.5825294256210327
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.33.23 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.36.06 PM.png,overripe,overripe,0.0,0.401370108127594,0.598629891872406
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.36.48 PM.png,overripe,overripe,0.0,0.7864734530448914,0.21352657675743103
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.36.53 PM.png,overripe,overripe,0.0,0.40234309434890747,0.5976569056510925
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.37.13 PM.png,overripe,overripe,0.0,0.4558376967906952,0.5441623330116272
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.37.31 PM.png,overripe,overripe,0.0,0.45473355054855347,0.5452664494514465
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.38.13 PM.png,overripe,overripe,0.0,0.40061452984809875,0.5993854403495789
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.38.26 PM.png,overripe,overripe,0.0,0.4008482098579407,0.5991517901420593
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.38.46 PM.png,overripe,overripe,0.0,0.7146769762039185,0.28532302379608154
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.39.02 PM.png,overripe,overripe,0.0,0.4045131504535675,0.5954868793487549
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.40.23 PM.png,overripe,overripe,0.0,0.4546692371368408,0.5453307628631592
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.40.42 PM.png,overripe,overripe,0.0,0.40791910886764526,0.5920808911323547
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.41.08 PM.png,overripe,overripe,0.0,0.4000151753425598,0.5999848246574402
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.41.44 PM.png,overripe,overripe,0.0,0.5278763175010681,0.4721237123012543
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.42.05 PM.png,overripe,overripe,0.0,0.4358725845813751,0.5641273856163025
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.43.36 PM.png,overripe,overripe,0.0,0.48686110973358154,0.5131388902664185
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.43.54 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.44.06 PM.png,overripe,overripe,0.0,0.4614916741847992,0.5385083556175232
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.44.16 PM.png,overripe,overripe,0.0,0.4351569712162018,0.5648429989814758
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.44.29 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.44.48 PM.png,overripe,overripe,0.0,0.5533947944641113,0.44660520553588867
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.45.28 PM.png,overripe,overripe,0.0,0.5828563570976257,0.41714364290237427
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.45.33 PM.png,overripe,overripe,0.0,0.4835543930530548,0.5164455771446228
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.45.47 PM.png,overripe,overripe,0.0,0.48328471183776855,0.5167152881622314
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.46.26 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_30_Screen Shot 2018-06-12 at 11.46.56 PM.png,overripe,overripe,0.0,0.4586730897426605,0.5413269400596619
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.18.53 PM.png,overripe,overripe,0.0,0.4105454385280609,0.5894545912742615
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.19.01 PM.png,overripe,overripe,0.0,0.4229714274406433,0.5770285725593567
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.19.37 PM.png,overripe,overripe,0.0,0.548916757106781,0.4510832726955414
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.20.05 PM.png,overripe,overripe,0.0,0.6104890704154968,0.3895108997821808
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.20.40 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.20.59 PM.png,overripe,overripe,0.0,0.5189635157585144,0.481036514043808
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.21.29 PM.png,overripe,overripe,0.0,0.4028681516647339,0.5971318483352661
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.21.35 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.21.40 PM.png,overripe,overripe,0.0,0.4324828088283539,0.5675172209739685
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.23.19 PM.png,overripe,overripe,0.0,0.4001689851284027,0.5998310446739197
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.23.46 PM.png,overripe,overripe,0.0,0.4071677029132843,0.5928323268890381
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.23.54 PM.png,overripe,overripe,0.0,0.9866513609886169,0.013348651118576527
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.24.04 PM.png,overripe,overripe,0.0,0.7830771207809448,0.21692287921905518
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.24.43 PM.png,overripe,overripe,0.0,0.6614071130752563,0.33859288692474365
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.26.18 PM.png,overripe,overripe,0.0,0.9430534243583679,0.05694659426808357
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.26.28 PM.png,overripe,overripe,0.0,0.8769425749778748,0.12305745482444763
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.27.01 PM.png,overripe,overripe,0.0,0.5302291512489319,0.4697708487510681
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.27.38 PM.png,overripe,overripe,0.0,0.4625113010406494,0.5374886989593506
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.28.33 PM.png,overripe,overripe,0.0,0.4798281788825989,0.5201718211174011
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.29.10 PM.png,overripe,overripe,0.0,0.4013165831565857,0.5986834168434143
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.29.26 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.30.28 PM.png,overripe,overripe,0.0,0.42668014764785767,0.5733198523521423
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.30.48 PM.png,overripe,overripe,0.0,0.6648649573326111,0.3351350426673889
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.31.17 PM.png,overripe,overripe,0.0,0.7000311017036438,0.2999689280986786
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.31.39 PM.png,overripe,overripe,0.0,0.41099968552589417,0.5890003442764282
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.31.44 PM.png,overripe,overripe,0.0,0.40710514783859253,0.5928948521614075
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.32.46 PM.png,overripe,overripe,0.0,0.4796046316623688,0.5203953981399536
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.33.12 PM.png,overripe,overripe,0.0,0.4035676121711731,0.5964323878288269
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.34.07 PM.png,overripe,overripe,0.0,0.4221082329750061,0.5778917670249939
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.36.19 PM.png,overripe,overripe,0.0,0.5995864868164062,0.40041351318359375
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.36.42 PM.png,overripe,overripe,0.0,0.998141348361969,0.001858631381765008
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.37.07 PM.png,overripe,overripe,0.0,0.4005332589149475,0.5994667410850525
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.37.13 PM.png,overripe,overripe,0.0,0.45538508892059326,0.5446149110794067
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.37.25 PM.png,overripe,overripe,0.0,0.4043894410133362,0.5956105589866638
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.38.19 PM.png,overripe,overripe,0.0,0.4003666341304779,0.5996333956718445
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.40.18 PM.png,overripe,overripe,0.0,0.4052952826023102,0.5947046875953674
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.41.04 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.41.08 PM.png,overripe,overripe,0.0,0.4001069962978363,0.5998929738998413
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.41.44 PM.png,overripe,overripe,0.0,0.5286813974380493,0.4713185727596283
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.41.52 PM.png,overripe,overripe,0.0,0.4956986904144287,0.5043013095855713
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.42.00 PM.png,overripe,overripe,0.0,0.5455523729324341,0.45444759726524353
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.42.10 PM.png,overripe,overripe,0.0,0.8442989587783813,0.15570101141929626
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.42.56 PM.png,overripe,overripe,0.0,0.8986786007881165,0.10132139176130295
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.43.03 PM.png,overripe,overripe,0.0,0.4116533100605011,0.5883466601371765
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.44.16 PM.png,overripe,overripe,0.0,0.43485620617866516,0.5651437640190125
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.44.24 PM.png,overripe,overripe,0.0,0.41531702876091003,0.5846830010414124
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.45.21 PM.png,overripe,overripe,0.0,0.4209743142127991,0.5790256857872009
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.46.10 PM.png,overripe,overripe,0.0,0.4061603248119354,0.593839704990387
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.46.17 PM.png,overripe,overripe,0.0,0.5998648405075073,0.40013518929481506
+orange/test/overripe/rotated_by_45_Screen Shot 2018-06-12 at 11.46.56 PM.png,overripe,overripe,0.0,0.46016615629196167,0.5398338437080383
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.18.46 PM.png,overripe,overripe,0.0,0.4057123363018036,0.5942876935005188
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.18.53 PM.png,overripe,overripe,0.0,0.410433828830719,0.589566171169281
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.19.22 PM.png,overripe,overripe,0.0,0.4020634591579437,0.5979365706443787
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.21.29 PM.png,overripe,overripe,0.0,0.40315118432044983,0.5968487858772278
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.21.48 PM.png,overripe,overripe,0.0,0.503688395023346,0.49631160497665405
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.22.47 PM.png,overripe,overripe,0.0,0.584974467754364,0.415025532245636
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.23.03 PM.png,overripe,overripe,0.0,0.43109288811683655,0.5689070820808411
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.23.09 PM.png,overripe,overripe,0.0,0.4288609027862549,0.5711390972137451
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.23.29 PM.png,overripe,overripe,0.0,0.52248215675354,0.47751787304878235
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.23.46 PM.png,overripe,overripe,0.0,0.40681150555610657,0.5931885242462158
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.24.17 PM.png,overripe,overripe,0.0,0.4479112923145294,0.552088737487793
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.24.24 PM.png,overripe,overripe,0.0,0.7375028729438782,0.2624971270561218
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.24.37 PM.png,overripe,overripe,0.0,0.4130899906158447,0.5869100093841553
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.25.07 PM.png,overripe,overripe,0.0,0.40156981348991394,0.5984301567077637
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.25.20 PM.png,overripe,overripe,0.0,0.5480342507362366,0.4519657492637634
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.26.12 PM.png,overripe,overripe,0.0,0.5459277629852295,0.4540722370147705
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.26.49 PM.png,overripe,overripe,0.0,0.4218737483024597,0.5781262516975403
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.27.26 PM.png,overripe,overripe,0.0,0.49674877524375916,0.5032511949539185
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.28.33 PM.png,overripe,overripe,0.0,0.4788305163383484,0.5211694836616516
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.28.50 PM.png,overripe,overripe,0.0,0.4443144202232361,0.5556855797767639
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.29.03 PM.png,overripe,overripe,0.0,0.7150823473930359,0.2849176824092865
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.29.31 PM.png,overripe,overripe,0.0,0.4281792640686035,0.5718207359313965
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.30.35 PM.png,overripe,overripe,0.0,0.4093981981277466,0.5906018018722534
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.30.41 PM.png,overripe,overripe,0.0,0.5775925517082214,0.4224074184894562
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.31.48 PM.png,overripe,overripe,0.0,0.5378645062446594,0.4621354639530182
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.32.17 PM.png,overripe,overripe,0.0,0.4249333441257477,0.5750666260719299
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.33.16 PM.png,overripe,overripe,0.0,0.4000570476055145,0.5999429821968079
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.33.43 PM.png,overripe,overripe,0.0,0.4045105576515198,0.5954894423484802
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.33.55 PM.png,overripe,overripe,0.0,0.537666916847229,0.462333083152771
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.36.31 PM.png,overripe,overripe,0.0,0.41005566716194153,0.5899443626403809
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.36.48 PM.png,overripe,overripe,0.0,0.7857075333595276,0.2142924964427948
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.37.31 PM.png,overripe,overripe,0.0,0.4551923871040344,0.5448076128959656
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.37.41 PM.png,overripe,overripe,0.0,0.48806384205818176,0.5119361877441406
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.38.46 PM.png,overripe,overripe,0.0,0.7160021066665649,0.28399792313575745
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.39.02 PM.png,overripe,overripe,0.0,0.40447714924812317,0.5955228209495544
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.41.17 PM.png,overripe,overripe,0.0,0.4012751579284668,0.5987248420715332
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.41.48 PM.png,overripe,overripe,0.0,0.5577865839004517,0.44221341609954834
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.42.05 PM.png,overripe,overripe,0.0,0.43602612614631653,0.5639738440513611
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.42.10 PM.png,overripe,overripe,0.0,0.844566285610199,0.15543368458747864
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.42.45 PM.png,overripe,overripe,0.0,0.4013741910457611,0.5986257791519165
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.43.26 PM.png,overripe,overripe,0.0,0.4013577699661255,0.5986422300338745
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.44.06 PM.png,overripe,overripe,0.0,0.4616963267326355,0.5383036732673645
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.45.17 PM.png,overripe,overripe,0.0,0.4199761748313904,0.5800238251686096
+orange/test/overripe/rotated_by_60_Screen Shot 2018-06-12 at 11.45.21 PM.png,overripe,overripe,0.0,0.42098990082740784,0.5790101289749146
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.18.28 PM.png,overripe,overripe,0.0,0.4016802906990051,0.5983197093009949
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.19.16 PM.png,overripe,overripe,0.0,0.7758351564407349,0.22416482865810394
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.20.13 PM.png,overripe,overripe,0.0,0.8810184001922607,0.11898158490657806
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.22.36 PM.png,overripe,overripe,0.0,0.5306815505027771,0.4693184494972229
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.24.04 PM.png,overripe,overripe,0.0,0.7819700241088867,0.2180299460887909
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.24.24 PM.png,overripe,overripe,0.0,0.730472207069397,0.269527792930603
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.24.51 PM.png,overripe,overripe,0.0,0.6627470254898071,0.33725297451019287
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.25.33 PM.png,overripe,overripe,0.0,0.4061896502971649,0.5938103199005127
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.26.02 PM.png,overripe,overripe,0.0,0.6745072603225708,0.3254927694797516
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.27.07 PM.png,overripe,overripe,0.0,0.43001997470855713,0.5699800252914429
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.27.12 PM.png,overripe,overripe,0.0,0.49467140436172485,0.5053285956382751
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.27.30 PM.png,overripe,overripe,0.0,0.4711993336677551,0.5288006663322449
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.28.00 PM.png,overripe,overripe,0.0,0.4104587733745575,0.5895412564277649
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.29.58 PM.png,overripe,overripe,0.0,0.8974378705024719,0.10256210714578629
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.30.11 PM.png,overripe,overripe,0.0,0.6812619566917419,0.31873801350593567
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.31.01 PM.png,overripe,overripe,0.0,0.41842424869537354,0.5815757513046265
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.31.48 PM.png,overripe,overripe,0.0,0.5361812710762024,0.4638187289237976
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.32.04 PM.png,overripe,overripe,0.0,0.4042244553565979,0.5957755446434021
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.32.46 PM.png,overripe,overripe,0.0,0.4801589548587799,0.5198410749435425
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.32.50 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.34.07 PM.png,overripe,overripe,0.0,0.42181023955345154,0.5781897306442261
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.35.51 PM.png,overripe,overripe,0.0,0.4042609632015228,0.5957390069961548
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.36.14 PM.png,overripe,overripe,0.0,0.4047667980194092,0.5952332019805908
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.36.35 PM.png,overripe,overripe,0.0,0.4022544026374817,0.5977455973625183
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.36.42 PM.png,overripe,overripe,0.0,1.0,0.0
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.37.25 PM.png,overripe,overripe,0.0,0.4046003818511963,0.5953996181488037
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.38.13 PM.png,overripe,overripe,0.0,0.4007953405380249,0.5992046594619751
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.38.46 PM.png,overripe,overripe,0.0,0.7166879177093506,0.283312052488327
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.40.18 PM.png,overripe,overripe,0.0,0.40604153275489807,0.5939584970474243
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.40.42 PM.png,overripe,overripe,0.0,0.4063659906387329,0.5936340093612671
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.41.08 PM.png,overripe,overripe,0.0,0.40001532435417175,0.5999847054481506
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.42.10 PM.png,overripe,overripe,0.0,0.8445281982421875,0.1554717719554901
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.42.56 PM.png,overripe,overripe,0.0,0.8986151814460754,0.10138481110334396
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.44.54 PM.png,overripe,overripe,0.0,0.45217597484588623,0.5478240251541138
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.45.12 PM.png,overripe,overripe,0.0,0.5220043659210205,0.4779956340789795
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.45.28 PM.png,overripe,overripe,0.0,0.5853123068809509,0.4146876931190491
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.45.47 PM.png,overripe,overripe,0.0,0.4726443886756897,0.5273556113243103
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.45.57 PM.png,overripe,overripe,0.0,0.40361088514328003,0.59638911485672
+orange/test/overripe/rotated_by_75_Screen Shot 2018-06-12 at 11.46.17 PM.png,overripe,overripe,0.0,0.602722704410553,0.39727726578712463
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.18.41 PM.png,overripe,overripe,0.0,0.4299727976322174,0.570027232170105
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.19.08 PM.png,overripe,overripe,0.0,0.40206584334373474,0.5979341268539429
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.19.16 PM.png,overripe,overripe,0.0,0.7774520516395569,0.2225479632616043
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.19.56 PM.png,overripe,overripe,0.0,0.4049410820007324,0.5950589179992676
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.20.13 PM.png,overripe,overripe,0.0,0.8702501058578491,0.12974990904331207
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.21.17 PM.png,overripe,overripe,0.0,0.6021936535835266,0.397806316614151
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.21.48 PM.png,overripe,overripe,0.0,0.5004580616950989,0.4995419383049011
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.22.41 PM.png,overripe,overripe,0.0,0.7945145964622498,0.20548543334007263
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.23.46 PM.png,overripe,overripe,0.0,0.40891456604003906,0.5910854339599609
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.24.12 PM.png,overripe,overripe,0.0,0.44598719477653503,0.5540128350257874
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.24.17 PM.png,overripe,overripe,0.0,0.49101904034614563,0.5089809894561768
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.24.29 PM.png,overripe,overripe,0.0,0.9106550812721252,0.08934489637613297
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.24.43 PM.png,overripe,overripe,0.0,0.6572193503379822,0.34278061985969543
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.25.38 PM.png,overripe,overripe,0.0,0.40203043818473816,0.5979695916175842
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.25.55 PM.png,overripe,overripe,0.0,0.40531525015830994,0.5946847796440125
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.26.02 PM.png,overripe,overripe,0.0,0.6607599258422852,0.33924010396003723
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.26.24 PM.png,overripe,overripe,0.0,0.5379749536514282,0.4620250165462494
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.26.36 PM.png,overripe,overripe,0.0,0.40208062529563904,0.5979194045066833
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.27.01 PM.png,overripe,overripe,0.0,0.5345678925514221,0.46543213725090027
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.27.12 PM.png,overripe,overripe,0.0,0.4953173100948334,0.504682719707489
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.28.17 PM.png,overripe,overripe,0.0,0.41148093342781067,0.5885190367698669
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.28.33 PM.png,overripe,overripe,0.0,0.48115086555480957,0.5188491344451904
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.29.44 PM.png,overripe,overripe,0.0,0.7412126660346985,0.2587873339653015
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.29.51 PM.png,overripe,overripe,0.0,0.5534701347351074,0.4465298652648926
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.30.16 PM.png,overripe,overripe,0.0,0.7280462384223938,0.2719537913799286
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.31.39 PM.png,overripe,overripe,0.0,0.4167838990688324,0.58321613073349
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.32.13 PM.png,overripe,overripe,0.0,0.41778847575187683,0.5822115540504456
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.32.41 PM.png,overripe,overripe,0.0,0.4040473401546478,0.5959526300430298
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.32.55 PM.png,overripe,overripe,0.0,0.40804705023765564,0.5919529795646667
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.33.43 PM.png,overripe,overripe,0.0,0.4068211615085602,0.5931788086891174
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.33.50 PM.png,overripe,overripe,0.0,0.41078025102615356,0.5892197489738464
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.36.31 PM.png,overripe,overripe,0.0,0.4147254526615143,0.5852745771408081
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.36.48 PM.png,overripe,overripe,0.0,0.7877112627029419,0.2122887521982193
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.37.19 PM.png,overripe,overripe,0.0,0.40282413363456726,0.5971758961677551
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.37.31 PM.png,overripe,overripe,0.0,0.45408111810684204,0.545918881893158
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.37.52 PM.png,overripe,overripe,0.0,0.4018377661705017,0.5981622338294983
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.37.58 PM.png,overripe,overripe,0.0,0.40305304527282715,0.5969469547271729
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.38.19 PM.png,overripe,overripe,0.0,0.40332648158073425,0.5966734886169434
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.38.26 PM.png,overripe,overripe,0.0,0.4028938412666321,0.5971061587333679
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.39.19 PM.png,overripe,overripe,0.0,0.571527898311615,0.428472101688385
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.40.23 PM.png,overripe,overripe,0.0,0.45584890246391296,0.5441510677337646
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.41.52 PM.png,overripe,overripe,0.0,0.5041157007217407,0.49588432908058167
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.42.56 PM.png,overripe,overripe,0.0,0.8931359648704529,0.10686401277780533
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.43.03 PM.png,overripe,overripe,0.0,0.4168471693992615,0.5831528306007385
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.44.24 PM.png,overripe,overripe,0.0,0.42125174403190613,0.5787482857704163
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.44.54 PM.png,overripe,overripe,0.0,0.4585931599140167,0.5414068102836609
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.45.28 PM.png,overripe,overripe,0.0,0.5878448486328125,0.4121551513671875
+orange/test/overripe/saltandpepper_Screen Shot 2018-06-12 at 11.45.33 PM.png,overripe,overripe,0.0,0.4926905632019043,0.5073094367980957
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.18.28 PM.png,overripe,overripe,0.0,0.40345239639282227,0.5965476036071777
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.19.16 PM.png,overripe,overripe,0.0,0.7740722894668579,0.2259277105331421
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.20.18 PM.png,overripe,overripe,0.0,0.4264484643936157,0.5735515356063843
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.20.30 PM.png,overripe,overripe,0.0,0.40176668763160706,0.5982333421707153
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.21.40 PM.png,overripe,overripe,0.0,0.43110036849975586,0.5688996315002441
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.21.54 PM.png,overripe,overripe,0.0,0.8228006362915039,0.1771993786096573
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.22.05 PM.png,overripe,overripe,0.0,0.4476332366466522,0.5523667335510254
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.22.32 PM.png,overripe,overripe,0.0,0.982677161693573,0.017322834581136703
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.23.29 PM.png,overripe,overripe,0.0,0.5378592014312744,0.4621407985687256
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.24.12 PM.png,overripe,overripe,0.0,0.4173382818698883,0.5826617479324341
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.24.43 PM.png,overripe,overripe,0.0,0.6628471612930298,0.3371528387069702
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.25.07 PM.png,overripe,overripe,0.0,0.40195173025131226,0.5980482697486877
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.25.25 PM.png,overripe,overripe,0.0,0.40037691593170166,0.5996230840682983
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.25.33 PM.png,overripe,overripe,0.0,0.40175455808639526,0.5982454419136047
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.26.12 PM.png,overripe,overripe,0.0,0.5661727786064148,0.4338272511959076
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.26.36 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.26.44 PM.png,overripe,overripe,0.0,0.7404582500457764,0.25954174995422363
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.27.46 PM.png,overripe,overripe,0.0,0.4011189341545105,0.5988810658454895
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.30.06 PM.png,overripe,overripe,0.0,0.5518874526023865,0.4481125473976135
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.30.16 PM.png,overripe,overripe,0.0,0.7205187082290649,0.27948129177093506
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.30.28 PM.png,overripe,overripe,0.0,0.40577995777130127,0.5942200422286987
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.32.09 PM.png,overripe,overripe,0.0,0.4059009850025177,0.5940989851951599
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.32.21 PM.png,overripe,overripe,0.0,0.4000750482082367,0.5999249815940857
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.32.41 PM.png,overripe,overripe,0.0,0.40212583541870117,0.5978741645812988
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.33.00 PM.png,overripe,overripe,0.0,0.40045326948165894,0.5995467305183411
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.33.16 PM.png,overripe,overripe,0.0,0.4010617136955261,0.5989382863044739
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.34.00 PM.png,overripe,overripe,0.0,0.5004704594612122,0.49952954053878784
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.36.31 PM.png,overripe,overripe,0.0,0.41388139128685,0.5861186385154724
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.36.35 PM.png,overripe,overripe,0.0,0.40219202637672424,0.5978080034255981
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.36.53 PM.png,overripe,overripe,0.0,0.4016750454902649,0.5983249545097351
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.37.25 PM.png,overripe,overripe,0.0,0.4069770872592926,0.5930229425430298
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.37.36 PM.png,overripe,overripe,0.0,0.540550708770752,0.45944932103157043
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.39.02 PM.png,overripe,overripe,0.0,0.40434902906417847,0.5956509709358215
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.40.18 PM.png,overripe,overripe,0.0,0.40607765316963196,0.5939223766326904
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.40.30 PM.png,overripe,overripe,0.0,0.6029918789863586,0.39700815081596375
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.40.36 PM.png,overripe,overripe,0.0,0.7765624523162842,0.22343753278255463
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.41.08 PM.png,overripe,overripe,0.0,0.4001893103122711,0.5998106598854065
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.41.17 PM.png,overripe,overripe,0.0,0.40056294202804565,0.5994370579719543
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.42.38 PM.png,overripe,overripe,0.0,0.5544090270996094,0.4455909729003906
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.42.56 PM.png,overripe,overripe,0.0,0.8975929021835327,0.10240712016820908
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.44.06 PM.png,overripe,overripe,0.0,0.4612405598163605,0.5387594103813171
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.44.16 PM.png,overripe,overripe,0.0,0.44057849049568176,0.5594215393066406
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.44.39 PM.png,overripe,overripe,0.0,0.42739978432655334,0.5726001858711243
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.44.54 PM.png,overripe,overripe,0.0,0.45296162366867065,0.5470383763313293
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.45.12 PM.png,overripe,overripe,0.0,0.5121460556983948,0.48785391449928284
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.45.42 PM.png,overripe,overripe,0.0,0.4629429280757904,0.5370570421218872
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.45.57 PM.png,overripe,overripe,0.0,0.4042777419090271,0.5957222580909729
+orange/test/overripe/translation_Screen Shot 2018-06-12 at 11.46.17 PM.png,overripe,overripe,0.0,0.5931536555290222,0.4068463146686554
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.18.41 PM.png,overripe,overripe,0.0,0.4288705587387085,0.5711294412612915
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.18.46 PM.png,overripe,overripe,0.0,0.4067687392234802,0.5932312607765198
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.19.01 PM.png,overripe,overripe,0.0,0.42824122309684753,0.5717588067054749
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.19.22 PM.png,overripe,overripe,0.0,0.4028748571872711,0.5971251726150513
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.19.47 PM.png,overripe,overripe,0.0,0.4027535915374756,0.5972464084625244
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.20.05 PM.png,overripe,overripe,0.0,0.6160404682159424,0.38395956158638
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.20.59 PM.png,overripe,overripe,0.0,0.5381160974502563,0.46188390254974365
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.21.22 PM.png,overripe,overripe,0.0,0.45671942830085754,0.5432806015014648
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.21.40 PM.png,overripe,overripe,0.0,0.43631306290626526,0.5636869072914124
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.21.54 PM.png,overripe,overripe,0.0,0.8362544178962708,0.16374559700489044
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.22.05 PM.png,overripe,overripe,0.0,0.44188639521598816,0.5581136345863342
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.22.12 PM.png,overripe,overripe,0.0,0.5008472800254822,0.49915269017219543
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.22.41 PM.png,overripe,overripe,0.0,0.7983575463294983,0.2016424536705017
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.23.24 PM.png,overripe,overripe,0.0,0.4064602851867676,0.5935397148132324
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.23.29 PM.png,overripe,overripe,0.0,0.5205323100090027,0.4794676899909973
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.23.46 PM.png,overripe,overripe,0.0,0.40726807713508606,0.5927319526672363
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.23.54 PM.png,overripe,overripe,0.0,0.9856794476509094,0.01432055700570345
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.24.04 PM.png,overripe,overripe,0.0,0.7768810391426086,0.22311897575855255
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.24.12 PM.png,overripe,overripe,0.0,0.4438348114490509,0.5561652183532715
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.25.07 PM.png,overripe,overripe,0.0,0.4017972946166992,0.5982027053833008
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.25.25 PM.png,overripe,overripe,0.0,0.40139511227607727,0.5986048579216003
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.26.28 PM.png,overripe,overripe,0.0,0.8346876502037048,0.16531236469745636
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.30.06 PM.png,overripe,overripe,0.0,0.5543012619018555,0.44569873809814453
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.30.28 PM.png,overripe,overripe,0.0,0.42851221561431885,0.5714877843856812
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.31.44 PM.png,overripe,overripe,0.0,0.40965163707733154,0.5903483629226685
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.32.17 PM.png,overripe,overripe,0.0,0.4234316647052765,0.5765683054924011
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.32.33 PM.png,overripe,overripe,0.0,0.4109918475151062,0.5890081524848938
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.33.23 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.35.51 PM.png,overripe,overripe,0.0,0.40451785922050476,0.5954821705818176
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.36.06 PM.png,overripe,overripe,0.0,0.40204960107803345,0.5979503989219666
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.36.24 PM.png,overripe,overripe,0.0,0.7884870767593384,0.21151290833950043
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.37.31 PM.png,overripe,overripe,0.0,0.45287907123565674,0.5471209287643433
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.38.26 PM.png,overripe,overripe,0.0,0.40119731426239014,0.5988026857376099
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.38.34 PM.png,overripe,overripe,0.0,0.4006815254688263,0.5993185043334961
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.40.11 PM.png,overripe,overripe,0.0,0.5019064545631409,0.49809351563453674
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.40.30 PM.png,overripe,overripe,0.0,0.6027091145515442,0.3972909152507782
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.40.51 PM.png,overripe,overripe,0.0,0.6628382205963135,0.3371617794036865
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.41.22 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.41.52 PM.png,overripe,overripe,0.0,0.5027392506599426,0.4972607493400574
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.42.45 PM.png,overripe,overripe,0.0,0.40047144889831543,0.5995285511016846
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.42.56 PM.png,overripe,overripe,0.0,0.894010066986084,0.10598991066217422
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.44.34 PM.png,overripe,overripe,0.0,0.4028486907482147,0.5971513390541077
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.44.48 PM.png,overripe,overripe,0.0,0.5480459928512573,0.45195403695106506
+orange/test/overripe/vertical_flip_Screen Shot 2018-06-12 at 11.46.10 PM.png,overripe,overripe,0.0,0.4064030945301056,0.593596875667572
+orange/test/ripe/Screen Shot 2018-06-12 at 11.50.14 PM.png,ripe,overripe,0.0,0.4335423707962036,0.5664576292037964
+orange/test/ripe/Screen Shot 2018-06-12 at 11.50.41 PM.png,ripe,overripe,0.0,0.4337223470211029,0.5662776827812195
+orange/test/ripe/Screen Shot 2018-06-12 at 11.50.54 PM.png,ripe,overripe,0.0,0.40066272020339966,0.5993372797966003
+orange/test/ripe/Screen Shot 2018-06-12 at 11.52.26 PM.png,ripe,overripe,0.0,0.40788915753364563,0.592110812664032
+orange/test/ripe/Screen Shot 2018-06-12 at 11.52.51 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/Screen Shot 2018-06-12 at 11.53.17 PM.png,ripe,overripe,0.0,0.4365522563457489,0.5634477734565735
+orange/test/ripe/Screen Shot 2018-06-12 at 11.53.43 PM.png,ripe,overripe,0.0,0.4605514109134674,0.539448618888855
+orange/test/ripe/Screen Shot 2018-06-12 at 11.54.03 PM.png,ripe,overripe,0.0,0.4181668162345886,0.5818331837654114
+orange/test/ripe/Screen Shot 2018-06-12 at 11.54.27 PM.png,ripe,overripe,0.0,0.4210408627986908,0.5789591670036316
+orange/test/ripe/Screen Shot 2018-06-12 at 11.55.23 PM.png,ripe,overripe,0.0,0.5442709922790527,0.45572903752326965
+orange/test/ripe/Screen Shot 2018-06-12 at 11.55.28 PM.png,ripe,overripe,0.0,0.43626630306243896,0.563733696937561
+orange/test/ripe/Screen Shot 2018-06-12 at 11.56.55 PM.png,ripe,overripe,0.0,0.41494959592819214,0.5850504040718079
+orange/test/ripe/Screen Shot 2018-06-12 at 11.57.52 PM.png,ripe,overripe,0.0,0.41801950335502625,0.5819804668426514
+orange/test/ripe/Screen Shot 2018-06-12 at 11.59.28 PM.png,ripe,overripe,0.0,0.40419062972068787,0.5958093404769897
+orange/test/ripe/Screen Shot 2018-06-13 at 12.00.06 AM.png,ripe,overripe,0.0,0.686504065990448,0.313495934009552
+orange/test/ripe/Screen Shot 2018-06-13 at 12.00.43 AM.png,ripe,overripe,0.0,0.40175503492355347,0.5982449650764465
+orange/test/ripe/Screen Shot 2018-06-13 at 12.00.54 AM.png,ripe,overripe,0.0,0.40343913435935974,0.5965608954429626
+orange/test/ripe/Screen Shot 2018-06-13 at 12.01.03 AM.png,ripe,overripe,0.0,0.5569904446601868,0.4430095851421356
+orange/test/ripe/Screen Shot 2018-06-13 at 12.01.58 AM.png,ripe,overripe,0.0,0.40200841426849365,0.5979915857315063
+orange/test/ripe/Screen Shot 2018-06-13 at 12.02.11 AM.png,ripe,overripe,0.0,0.7442454695701599,0.2557545602321625
+orange/test/ripe/Screen Shot 2018-06-13 at 12.04.01 AM.png,ripe,overripe,0.0,0.47007250785827637,0.5299274921417236
+orange/test/ripe/Screen Shot 2018-06-13 at 12.04.46 AM.png,ripe,overripe,0.0,0.40062591433525085,0.5993740558624268
+orange/test/ripe/Screen Shot 2018-06-13 at 12.05.33 AM.png,ripe,overripe,0.0,0.4621105194091797,0.5378894805908203
+orange/test/ripe/Screen Shot 2018-06-13 at 12.06.36 AM.png,ripe,overripe,0.0,0.6788046956062317,0.3211952745914459
+orange/test/ripe/Screen Shot 2018-06-13 at 12.06.43 AM.png,ripe,overripe,0.0,0.4600461423397064,0.5399538278579712
+orange/test/ripe/Screen Shot 2018-06-13 at 12.07.05 AM.png,ripe,overripe,0.0,0.5527213215827942,0.4472786486148834
+orange/test/ripe/Screen Shot 2018-06-13 at 12.07.17 AM.png,ripe,overripe,0.0,0.4207989573478699,0.5792010426521301
+orange/test/ripe/Screen Shot 2018-06-13 at 12.08.17 AM.png,ripe,overripe,0.0,0.42308759689331055,0.5769124031066895
+orange/test/ripe/Screen Shot 2018-06-13 at 12.08.41 AM.png,ripe,overripe,0.0,0.679557204246521,0.3204427659511566
+orange/test/ripe/Screen Shot 2018-06-13 at 12.09.05 AM.png,ripe,overripe,0.0,0.43748557567596436,0.5625144243240356
+orange/test/ripe/Screen Shot 2018-06-13 at 12.09.14 AM.png,ripe,overripe,0.0,0.4710678160190582,0.5289322137832642
+orange/test/ripe/Screen Shot 2018-06-13 at 12.10.16 AM.png,ripe,overripe,0.0,0.5609626770019531,0.43903735280036926
+orange/test/ripe/Screen Shot 2018-06-13 at 12.11.17 AM.png,ripe,overripe,0.0,0.40007486939430237,0.5999251008033752
+orange/test/ripe/Screen Shot 2018-06-13 at 12.11.57 AM.png,ripe,overripe,0.0,0.45824065804481506,0.5417593717575073
+orange/test/ripe/Screen Shot 2018-06-13 at 12.13.29 AM.png,ripe,overripe,0.0,0.4319014847278595,0.5680984854698181
+orange/test/ripe/Screen Shot 2018-06-13 at 12.14.03 AM.png,ripe,overripe,0.0,0.45137450098991394,0.5486254692077637
+orange/test/ripe/Screen Shot 2018-06-13 at 12.14.18 AM.png,ripe,overripe,0.0,0.42196032404899597,0.5780397057533264
+orange/test/ripe/Screen Shot 2018-06-13 at 12.16.33 AM.png,ripe,overripe,0.0,0.40616747736930847,0.5938324928283691
+orange/test/ripe/Screen Shot 2018-06-13 at 12.17.37 AM.png,ripe,overripe,0.0,0.40769320726394653,0.5923067927360535
+orange/test/ripe/Screen Shot 2018-06-13 at 12.17.43 AM.png,ripe,overripe,0.0,0.4105232357978821,0.5894767642021179
+orange/test/ripe/Screen Shot 2018-06-13 at 12.18.07 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/Screen Shot 2018-06-13 at 12.18.34 AM.png,ripe,overripe,0.0,0.40037626028060913,0.5996237397193909
+orange/test/ripe/Screen Shot 2018-06-13 at 12.18.40 AM.png,ripe,overripe,0.0,0.40294092893600464,0.5970590710639954
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.50.41 PM.png,ripe,overripe,0.0,0.43433865904808044,0.5656613111495972
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.50.47 PM.png,ripe,overripe,0.0,0.40763887763023376,0.5923611521720886
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.51.02 PM.png,ripe,overripe,0.0,0.41719385981559753,0.5828061699867249
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.51.08 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.51.13 PM.png,ripe,overripe,0.0,0.40165260434150696,0.5983474254608154
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.52.26 PM.png,ripe,overripe,0.0,0.4050164818763733,0.5949835181236267
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.52.46 PM.png,ripe,overripe,0.0,0.40137943625450134,0.5986205339431763
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.53.33 PM.png,ripe,overripe,0.0,0.4540253281593323,0.5459746718406677
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.54.55 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.55.42 PM.png,ripe,overripe,0.0,0.40088576078414917,0.5991142392158508
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.59.11 PM.png,ripe,overripe,0.0,0.5438951849937439,0.4561047852039337
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.59.23 PM.png,ripe,overripe,0.0,0.40275508165359497,0.597244918346405
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.59.28 PM.png,ripe,overripe,0.0,0.4040672481060028,0.5959327816963196
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-12 at 11.59.38 PM.png,ripe,overripe,0.0,0.40407034754753113,0.5959296226501465
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.00.35 AM.png,ripe,overripe,0.0,0.4084365665912628,0.5915634632110596
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.00.43 AM.png,ripe,overripe,0.0,0.4015670418739319,0.5984329581260681
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.01.03 AM.png,ripe,overripe,0.0,0.5625366568565369,0.4374633729457855
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.01.32 AM.png,ripe,overripe,0.0,0.4425560235977173,0.5574439764022827
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.02.11 AM.png,ripe,overripe,0.0,0.756267249584198,0.2437327653169632
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.03.27 AM.png,ripe,overripe,0.0,0.4240713119506836,0.5759286880493164
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.04.01 AM.png,ripe,overripe,0.0,0.4689674973487854,0.5310325026512146
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.06.36 AM.png,ripe,overripe,0.0,0.6783803105354309,0.3216196894645691
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.06.59 AM.png,ripe,overripe,0.0,0.40324777364730835,0.5967522263526917
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.07.17 AM.png,ripe,overripe,0.0,0.42107152938842773,0.5789284706115723
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.08.09 AM.png,ripe,overripe,0.0,0.5006057024002075,0.49939432740211487
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.09.14 AM.png,ripe,overripe,0.0,0.4938332438468933,0.5061667561531067
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.09.43 AM.png,ripe,overripe,0.0,0.4196399748325348,0.5803600549697876
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.10.16 AM.png,ripe,overripe,0.0,0.5635204315185547,0.4364795684814453
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.13.44 AM.png,ripe,overripe,0.0,0.4095478951931,0.5904521346092224
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.14.43 AM.png,ripe,overripe,0.0,0.5434105396270752,0.4565894603729248
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.15.39 AM.png,ripe,overripe,0.0,0.40247079730033875,0.5975292325019836
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.16.16 AM.png,ripe,overripe,0.0,0.4047936499118805,0.5952063798904419
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.17.43 AM.png,ripe,overripe,0.0,0.4095912277698517,0.5904087424278259
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.19.08 AM.png,ripe,overripe,0.0,0.40084439516067505,0.599155604839325
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.20.06 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.20.15 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_15_Screen Shot 2018-06-13 at 12.20.39 AM.png,ripe,overripe,0.0,0.40028536319732666,0.5997146368026733
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.50.14 PM.png,ripe,overripe,0.0,0.4349445402622223,0.5650554299354553
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.50.19 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.50.28 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.50.54 PM.png,ripe,overripe,0.0,0.40055811405181885,0.5994418859481812
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.51.08 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.51.47 PM.png,ripe,overripe,0.0,0.43490883708000183,0.5650911331176758
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.52.26 PM.png,ripe,overripe,0.0,0.40401768684387207,0.5959823131561279
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.52.32 PM.png,ripe,overripe,0.0,0.4003765285015106,0.599623441696167
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.52.55 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.53.33 PM.png,ripe,overripe,0.0,0.45980700850486755,0.5401929616928101
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.54.20 PM.png,ripe,overripe,0.0,0.562410831451416,0.437589168548584
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.55.48 PM.png,ripe,overripe,0.0,0.40019491314888,0.5998050570487976
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.58.11 PM.png,ripe,overripe,0.0,0.4189373254776001,0.5810626745223999
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.58.24 PM.png,ripe,overripe,0.0,0.40051910281181335,0.599480926990509
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.58.28 PM.png,ripe,overripe,0.0,0.5211280584335327,0.4788719713687897
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-12 at 11.59.48 PM.png,ripe,overripe,0.0,0.46273374557495117,0.5372662544250488
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.00.54 AM.png,ripe,overripe,0.0,0.40394678711891174,0.5960532426834106
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.01.32 AM.png,ripe,overripe,0.0,0.44319039583206177,0.5568096041679382
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.02.45 AM.png,ripe,overripe,0.0,0.41207659244537354,0.5879234075546265
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.03.44 AM.png,ripe,overripe,0.0,0.4002414643764496,0.5997585654258728
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.04.01 AM.png,ripe,overripe,0.0,0.46825453639030457,0.531745433807373
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.04.26 AM.png,ripe,overripe,0.0,0.4207531809806824,0.5792468190193176
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.04.39 AM.png,ripe,overripe,0.0,0.4184781312942505,0.5815218687057495
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.04.46 AM.png,ripe,overripe,0.0,0.40066149830818176,0.5993385314941406
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.05.33 AM.png,ripe,overripe,0.0,0.4608907699584961,0.5391092300415039
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.06.15 AM.png,ripe,overripe,0.0,0.4859659969806671,0.5140339732170105
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.07.32 AM.png,ripe,overripe,0.0,0.4655631184577942,0.5344368815422058
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.08.09 AM.png,ripe,overripe,0.0,0.5022974610328674,0.49770256876945496
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.09.49 AM.png,ripe,overripe,0.0,0.409732460975647,0.590267539024353
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.10.16 AM.png,ripe,overripe,0.0,0.5745957493782043,0.42540428042411804
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.10.27 AM.png,ripe,overripe,0.0,0.4770071506500244,0.5229928493499756
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.10.57 AM.png,ripe,overripe,0.0,0.9265409708023071,0.07345905154943466
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.11.17 AM.png,ripe,overripe,0.0,0.4000314772129059,0.5999684929847717
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.12.04 AM.png,ripe,overripe,0.0,0.6497442722320557,0.35025572776794434
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.13.29 AM.png,ripe,overripe,0.0,0.4287729263305664,0.5712270736694336
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.13.51 AM.png,ripe,overripe,0.0,0.7116619348526001,0.2883380651473999
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.14.09 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.16.33 AM.png,ripe,overripe,0.0,0.40587472915649414,0.5941252708435059
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.16.45 AM.png,ripe,overripe,0.0,0.4404315948486328,0.5595684051513672
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.17.05 AM.png,ripe,overripe,0.0,0.4026504158973694,0.5973495841026306
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.17.19 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.17.43 AM.png,ripe,overripe,0.0,0.40915367007255554,0.5908463001251221
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.18.27 AM.png,ripe,overripe,0.0,0.40443864464759827,0.5955613851547241
+orange/test/ripe/rotated_by_30_Screen Shot 2018-06-13 at 12.19.36 AM.png,ripe,overripe,0.0,0.5491697192192078,0.45083025097846985
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.51.02 PM.png,ripe,overripe,0.0,0.4179164171218872,0.5820835828781128
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.52.26 PM.png,ripe,overripe,0.0,0.4038989841938019,0.5961010456085205
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.52.40 PM.png,ripe,overripe,0.0,0.40101829171180725,0.5989817380905151
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.53.53 PM.png,ripe,overripe,0.0,0.4174499809741974,0.5825499892234802
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.55.37 PM.png,ripe,overripe,0.0,0.7180221080780029,0.28197792172431946
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.56.20 PM.png,ripe,overripe,0.0,0.6949619054794312,0.30503806471824646
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.57.37 PM.png,ripe,overripe,0.0,0.40370967984199524,0.5962902903556824
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.58.02 PM.png,ripe,overripe,0.0,0.46294140815734863,0.5370585918426514
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.58.56 PM.png,ripe,overripe,0.0,0.4003576338291168,0.5996423959732056
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.59.19 PM.png,ripe,overripe,0.0,0.4054124653339386,0.594587504863739
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.59.23 PM.png,ripe,overripe,0.0,0.4026213586330414,0.5973786115646362
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.59.38 PM.png,ripe,overripe,0.0,0.40459927916526794,0.5954007506370544
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-12 at 11.59.48 PM.png,ripe,overripe,0.0,0.46379077434539795,0.536209225654602
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.00.02 AM.png,ripe,overripe,0.0,0.6447979807853699,0.3552020490169525
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.00.06 AM.png,ripe,overripe,0.0,0.6965498328208923,0.30345016717910767
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.01.49 AM.png,ripe,overripe,0.0,0.4059062898159027,0.5940936803817749
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.02.41 AM.png,ripe,overripe,0.0,0.42058342695236206,0.5794165730476379
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.03.21 AM.png,ripe,overripe,0.0,0.40845194458961487,0.5915480852127075
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.04.46 AM.png,ripe,overripe,0.0,0.40069887042045593,0.5993011593818665
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.06.59 AM.png,ripe,overripe,0.0,0.40242472290992737,0.5975752472877502
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.07.05 AM.png,ripe,overripe,0.0,0.555185854434967,0.44481414556503296
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.08.41 AM.png,ripe,overripe,0.0,0.7357015013694763,0.2642984688282013
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.08.58 AM.png,ripe,overripe,0.0,0.5800322890281677,0.4199676811695099
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.09.32 AM.png,ripe,overripe,0.0,0.4679105281829834,0.5320894718170166
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.10.04 AM.png,ripe,overripe,0.0,0.40001392364501953,0.5999860763549805
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.10.21 AM.png,ripe,overripe,0.0,0.41473016142845154,0.5852698087692261
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.10.45 AM.png,ripe,overripe,0.0,0.6923728585243225,0.3076271116733551
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.10.57 AM.png,ripe,overripe,0.0,0.9264397621154785,0.0735602080821991
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.11.28 AM.png,ripe,overripe,0.0,0.4032646715641022,0.5967353582382202
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.13.24 AM.png,ripe,overripe,0.0,0.4000300467014313,0.5999699831008911
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.14.09 AM.png,ripe,overripe,0.0,0.4004180431365967,0.5995819568634033
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.15.01 AM.png,ripe,overripe,0.0,0.4480901062488556,0.5519099235534668
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.15.08 AM.png,ripe,overripe,0.0,0.41677984595298767,0.5832201838493347
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.16.54 AM.png,ripe,overripe,0.0,0.4023481011390686,0.5976518988609314
+orange/test/ripe/rotated_by_45_Screen Shot 2018-06-13 at 12.17.01 AM.png,ripe,overripe,0.0,0.41639554500579834,0.5836044549942017
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.50.14 PM.png,ripe,overripe,0.0,0.4345209300518036,0.5654790997505188
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.50.19 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.50.33 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.50.47 PM.png,ripe,overripe,0.0,0.4079257845878601,0.5920742154121399
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.52.32 PM.png,ripe,overripe,0.0,0.40037673711776733,0.5996232628822327
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.53.43 PM.png,ripe,overripe,0.0,0.46769964694976807,0.5323003530502319
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.53.53 PM.png,ripe,overripe,0.0,0.4173039197921753,0.5826960802078247
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.54.03 PM.png,ripe,overripe,0.0,0.41916343569755554,0.5808365941047668
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.54.10 PM.png,ripe,overripe,0.0,0.4380883574485779,0.5619116425514221
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.54.27 PM.png,ripe,overripe,0.0,0.4169052541255951,0.5830947756767273
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.54.35 PM.png,ripe,overripe,0.0,0.4478834569454193,0.5521165728569031
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.55.37 PM.png,ripe,overripe,0.0,0.7183789610862732,0.2816210091114044
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.55.48 PM.png,ripe,overripe,0.0,0.40016257762908936,0.5998374223709106
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.56.02 PM.png,ripe,overripe,0.0,0.4087181091308594,0.5912818908691406
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.56.20 PM.png,ripe,overripe,0.0,0.6946899890899658,0.3053100109100342
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.56.43 PM.png,ripe,overripe,0.0,0.407955527305603,0.592044472694397
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.58.43 PM.png,ripe,overripe,0.0,0.4009178578853607,0.5990821123123169
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.58.56 PM.png,ripe,overripe,0.0,0.40031251311302185,0.5996874570846558
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.59.11 PM.png,ripe,overripe,0.0,0.5513634085655212,0.44863656163215637
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.59.19 PM.png,ripe,overripe,0.0,0.4056667387485504,0.594333291053772
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.59.33 PM.png,ripe,overripe,0.0,0.40157514810562134,0.5984248518943787
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.59.38 PM.png,ripe,overripe,0.0,0.40345829725265503,0.596541702747345
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-12 at 11.59.48 PM.png,ripe,overripe,0.0,0.46307066082954407,0.5369293093681335
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.00.54 AM.png,ripe,overripe,0.0,0.4039514362812042,0.5960485339164734
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.01.03 AM.png,ripe,overripe,0.0,0.5616693496704102,0.43833065032958984
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.02.11 AM.png,ripe,overripe,0.0,0.7509338855743408,0.2490660846233368
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.02.41 AM.png,ripe,overripe,0.0,0.4201929271221161,0.5798071026802063
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.03.44 AM.png,ripe,overripe,0.0,0.4001978039741516,0.5998021960258484
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.05.33 AM.png,ripe,overripe,0.0,0.460367351770401,0.5396326184272766
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.06.36 AM.png,ripe,overripe,0.0,0.685490071773529,0.31450995802879333
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.06.52 AM.png,ripe,overripe,0.0,0.509645402431488,0.49035462737083435
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.06.59 AM.png,ripe,overripe,0.0,0.4027911424636841,0.5972088575363159
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.07.17 AM.png,ripe,overripe,0.0,0.42294079065322876,0.5770592093467712
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.07.39 AM.png,ripe,overripe,0.0,0.5649420022964478,0.43505799770355225
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.08.54 AM.png,ripe,overripe,0.0,0.41188278794288635,0.588117241859436
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.09.14 AM.png,ripe,overripe,0.0,0.5032802224159241,0.49671974778175354
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.09.49 AM.png,ripe,overripe,0.0,0.4091758728027344,0.5908241271972656
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.10.21 AM.png,ripe,overripe,0.0,0.4147604703903198,0.5852395296096802
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.10.45 AM.png,ripe,overripe,0.0,0.6924223899841309,0.30757758021354675
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.11.02 AM.png,ripe,overripe,0.0,0.7995529770851135,0.20044705271720886
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.11.17 AM.png,ripe,overripe,0.0,0.4000157117843628,0.5999842882156372
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.13.29 AM.png,ripe,overripe,0.0,0.42847201228141785,0.5715280175209045
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.14.09 AM.png,ripe,overripe,0.0,0.40035340189933777,0.5996466279029846
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.14.18 AM.png,ripe,overripe,0.0,0.4226474463939667,0.5773525238037109
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.15.39 AM.png,ripe,overripe,0.0,0.40248534083366394,0.5975146293640137
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.17.01 AM.png,ripe,overripe,0.0,0.41621726751327515,0.5837827324867249
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.17.05 AM.png,ripe,overripe,0.0,0.4028426706790924,0.59715735912323
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.17.37 AM.png,ripe,overripe,0.0,0.40267011523246765,0.5973299145698547
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.17.43 AM.png,ripe,overripe,0.0,0.418155699968338,0.5818442702293396
+orange/test/ripe/rotated_by_60_Screen Shot 2018-06-13 at 12.18.02 AM.png,ripe,overripe,0.0,0.40100613236427307,0.5989938378334045
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.50.41 PM.png,ripe,overripe,0.0,0.434240460395813,0.565759539604187
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.52.46 PM.png,ripe,overripe,0.0,0.4019716680049896,0.5980283617973328
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.53.12 PM.png,ripe,overripe,0.0,0.4003807008266449,0.5996192693710327
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.53.33 PM.png,ripe,overripe,0.0,0.4579617977142334,0.5420382022857666
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.55.05 PM.png,ripe,overripe,0.0,0.4020552933216095,0.5979446768760681
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.55.37 PM.png,ripe,overripe,0.0,0.7146114706993103,0.2853884994983673
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.55.48 PM.png,ripe,overripe,0.0,0.40020889043807983,0.5997911095619202
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.56.55 PM.png,ripe,overripe,0.0,0.41546857357025146,0.5845314264297485
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.58.11 PM.png,ripe,overripe,0.0,0.4174860119819641,0.5825139880180359
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.58.24 PM.png,ripe,overripe,0.0,0.40053796768188477,0.5994620323181152
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.58.50 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-12 at 11.59.19 PM.png,ripe,overripe,0.0,0.4056634306907654,0.5943365693092346
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.00.06 AM.png,ripe,overripe,0.0,0.6929829716682434,0.3070169985294342
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.01.23 AM.png,ripe,overripe,0.0,0.42248156666755676,0.5775184631347656
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.01.32 AM.png,ripe,overripe,0.0,0.4420408010482788,0.5579591989517212
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.02.53 AM.png,ripe,overripe,0.0,0.4559575915336609,0.5440424084663391
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.03.27 AM.png,ripe,overripe,0.0,0.42404451966285706,0.5759554505348206
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.03.55 AM.png,ripe,overripe,0.0,0.5217795372009277,0.47822049260139465
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.04.34 AM.png,ripe,overripe,0.0,0.41988635063171387,0.5801136493682861
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.04.46 AM.png,ripe,overripe,0.0,0.4006688892841339,0.5993311405181885
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.05.13 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.05.27 AM.png,ripe,overripe,0.0,0.4062556326389313,0.5937443375587463
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.06.01 AM.png,ripe,overripe,0.0,0.41062650084495544,0.5893735289573669
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.06.28 AM.png,ripe,overripe,0.0,0.4893014132976532,0.5106985569000244
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.07.32 AM.png,ripe,overripe,0.0,0.48468488454818726,0.5153151154518127
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.07.46 AM.png,ripe,overripe,0.0,0.46652752161026,0.53347247838974
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.08.17 AM.png,ripe,overripe,0.0,0.42356693744659424,0.5764330625534058
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.08.29 AM.png,ripe,overripe,0.0,0.44957053661346436,0.5504294633865356
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.08.48 AM.png,ripe,overripe,0.0,0.6642388105392456,0.3357611894607544
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.10.27 AM.png,ripe,overripe,0.0,0.47363030910491943,0.5263696908950806
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.11.02 AM.png,ripe,overripe,0.0,0.7991301417350769,0.2008698582649231
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.11.57 AM.png,ripe,overripe,0.0,0.4506983458995819,0.5493016242980957
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.13.29 AM.png,ripe,overripe,0.0,0.429716557264328,0.5702834725379944
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.14.18 AM.png,ripe,overripe,0.0,0.4222407639026642,0.5777592658996582
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.15.08 AM.png,ripe,overripe,0.0,0.4180994927883148,0.5819005370140076
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.16.08 AM.png,ripe,overripe,0.0,0.4612061381340027,0.5387938618659973
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.16.33 AM.png,ripe,overripe,0.0,0.406547874212265,0.5934520959854126
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.17.31 AM.png,ripe,overripe,0.0,0.4089736342430115,0.5910263657569885
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.17.51 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.18.07 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.18.23 AM.png,ripe,overripe,0.0,0.40670228004455566,0.5932977199554443
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.18.40 AM.png,ripe,overripe,0.0,0.40282395482063293,0.5971760153770447
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.18.52 AM.png,ripe,overripe,0.0,0.40514564514160156,0.5948543548583984
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.19.17 AM.png,ripe,overripe,0.0,0.41080930829048157,0.5891907215118408
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.19.36 AM.png,ripe,overripe,0.0,0.5440984964370728,0.45590150356292725
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.20.15 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.20.25 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/rotated_by_75_Screen Shot 2018-06-13 at 12.20.39 AM.png,ripe,overripe,0.0,0.4001976251602173,0.5998023748397827
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.51.02 PM.png,ripe,overripe,0.0,0.4186004102230072,0.5813995599746704
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.52.32 PM.png,ripe,overripe,0.0,0.40301820635795593,0.5969818234443665
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.53.33 PM.png,ripe,overripe,0.0,0.4558236598968506,0.5441763401031494
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.53.43 PM.png,ripe,overripe,0.0,0.4620853066444397,0.5379146933555603
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.54.27 PM.png,ripe,overripe,0.0,0.4226866662502289,0.5773133635520935
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.54.55 PM.png,ripe,overripe,0.0,0.40217670798301697,0.5978232622146606
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.55.05 PM.png,ripe,overripe,0.0,0.40433913469314575,0.5956608653068542
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.55.48 PM.png,ripe,overripe,0.0,0.4021660387516022,0.5978339910507202
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.56.35 PM.png,ripe,overripe,0.0,0.4023319184780121,0.5976680517196655
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.56.43 PM.png,ripe,overripe,0.0,0.4091532230377197,0.5908467769622803
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.56.55 PM.png,ripe,overripe,0.0,0.4167226254940033,0.5832774043083191
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.57.37 PM.png,ripe,overripe,0.0,0.4063703119754791,0.5936296582221985
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.58.18 PM.png,ripe,overripe,0.0,0.6580840349197388,0.34191596508026123
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.58.56 PM.png,ripe,overripe,0.0,0.4030565023422241,0.5969434976577759
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.59.19 PM.png,ripe,overripe,0.0,0.4078630208969116,0.5921369791030884
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.59.48 PM.png,ripe,overripe,0.0,0.46317386627197266,0.5368261337280273
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-12 at 11.59.54 PM.png,ripe,overripe,0.0,0.42652106285095215,0.5734789371490479
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.00.06 AM.png,ripe,overripe,0.0,0.6868755221366882,0.31312447786331177
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.01.23 AM.png,ripe,overripe,0.0,0.42521563172340393,0.5747843384742737
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.01.32 AM.png,ripe,overripe,0.0,0.44196343421936035,0.5580365657806396
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.02.11 AM.png,ripe,overripe,0.0,0.7447037100791931,0.2552962899208069
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.03.21 AM.png,ripe,overripe,0.0,0.41036179661750793,0.5896381735801697
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.03.27 AM.png,ripe,overripe,0.0,0.42618677020072937,0.5738131999969482
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.05.13 AM.png,ripe,overripe,0.0,0.40193918347358704,0.5980607867240906
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.06.28 AM.png,ripe,overripe,0.0,0.4697388708591461,0.5302611589431763
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.07.39 AM.png,ripe,overripe,0.0,0.5865234136581421,0.4134765863418579
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.08.09 AM.png,ripe,overripe,0.0,0.5023175477981567,0.49768248200416565
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.08.29 AM.png,ripe,overripe,0.0,0.45101386308670044,0.5489861369132996
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.08.41 AM.png,ripe,overripe,0.0,0.6796407103538513,0.32035931944847107
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.08.48 AM.png,ripe,overripe,0.0,0.6281474232673645,0.3718525767326355
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.08.54 AM.png,ripe,overripe,0.0,0.41494354605674744,0.5850564241409302
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.09.05 AM.png,ripe,overripe,0.0,0.43903177976608276,0.5609682202339172
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.09.32 AM.png,ripe,overripe,0.0,0.46417930722236633,0.5358206629753113
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.09.49 AM.png,ripe,overripe,0.0,0.4159221351146698,0.5840778946876526
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.10.21 AM.png,ripe,overripe,0.0,0.4151309132575989,0.5848690867424011
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.10.53 AM.png,ripe,overripe,0.0,0.8170055747032166,0.18299445509910583
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.10.57 AM.png,ripe,overripe,0.0,0.9227342009544373,0.07726580649614334
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.14.09 AM.png,ripe,overripe,0.0,0.4021969437599182,0.5978030562400818
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.14.18 AM.png,ripe,overripe,0.0,0.42327407002449036,0.576725959777832
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.17.43 AM.png,ripe,overripe,0.0,0.4117398262023926,0.5882601737976074
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.17.55 AM.png,ripe,overripe,0.0,0.4678674638271332,0.5321325659751892
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.19.36 AM.png,ripe,overripe,0.0,0.5295490622520447,0.4704509377479553
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.19.43 AM.png,ripe,overripe,0.0,0.4020839035511017,0.5979160666465759
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.20.15 AM.png,ripe,overripe,0.0,0.40215420722961426,0.5978457927703857
+orange/test/ripe/saltandpepper_Screen Shot 2018-06-13 at 12.20.39 AM.png,ripe,overripe,0.0,0.401804119348526,0.5981958508491516
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.50.28 PM.png,ripe,overripe,0.0,0.40011391043663025,0.5998860597610474
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.50.41 PM.png,ripe,overripe,0.0,0.43066564202308655,0.5693343281745911
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.52.03 PM.png,ripe,overripe,0.0,0.4075765013694763,0.5924234986305237
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.52.21 PM.png,ripe,overripe,0.0,0.40188515186309814,0.5981148481369019
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.52.46 PM.png,ripe,overripe,0.0,0.400274395942688,0.599725604057312
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.53.22 PM.png,ripe,overripe,0.0,0.4000319242477417,0.5999680757522583
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.53.33 PM.png,ripe,overripe,0.0,0.45900654792785645,0.5409934520721436
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.54.10 PM.png,ripe,overripe,0.0,0.4241611361503601,0.5758388638496399
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.54.27 PM.png,ripe,overripe,0.0,0.40746062994003296,0.592539370059967
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.55.23 PM.png,ripe,overripe,0.0,0.5546778440475464,0.445322185754776
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.55.48 PM.png,ripe,overripe,0.0,0.4002510607242584,0.599748969078064
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.55.58 PM.png,ripe,overripe,0.0,0.406985342502594,0.593014657497406
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.56.20 PM.png,ripe,overripe,0.0,0.6843841075897217,0.3156158924102783
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.56.55 PM.png,ripe,overripe,0.0,0.40777507424354553,0.5922248959541321
+orange/test/ripe/translation_Screen Shot 2018-06-12 at 11.59.48 PM.png,ripe,overripe,0.0,0.4646848440170288,0.5353151559829712
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.00.06 AM.png,ripe,overripe,0.0,0.6956424713134766,0.30435752868652344
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.01.23 AM.png,ripe,overripe,0.0,0.42424890398979187,0.5757510662078857
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.01.36 AM.png,ripe,overripe,0.0,0.4009783864021301,0.5990216135978699
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.02.05 AM.png,ripe,overripe,0.0,0.5893847942352295,0.4106151759624481
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.02.20 AM.png,ripe,overripe,0.0,0.423935204744339,0.5760648250579834
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.03.17 AM.png,ripe,overripe,0.0,0.40004271268844604,0.599957287311554
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.04.01 AM.png,ripe,overripe,0.0,0.46439817547798157,0.535601794719696
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.06.36 AM.png,ripe,overripe,0.0,0.6786687970161438,0.3213312029838562
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.06.43 AM.png,ripe,overripe,0.0,0.4513436555862427,0.5486563444137573
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.07.46 AM.png,ripe,overripe,0.0,0.4627790153026581,0.5372209548950195
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.08.48 AM.png,ripe,overripe,0.0,0.6411512494087219,0.35884878039360046
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.09.05 AM.png,ripe,overripe,0.0,0.42887213826179504,0.5711278319358826
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.09.37 AM.png,ripe,overripe,0.0,0.42007073760032654,0.5799292325973511
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.10.10 AM.png,ripe,overripe,0.0,0.620449423789978,0.379550576210022
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.10.16 AM.png,ripe,overripe,0.0,0.5700668692588806,0.4299331307411194
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.10.38 AM.png,ripe,overripe,0.0,0.4003574550151825,0.5996425747871399
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.11.28 AM.png,ripe,overripe,0.0,0.402208536863327,0.5977914333343506
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.14.03 AM.png,ripe,overripe,0.0,0.43593844771385193,0.5640615820884705
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.15.08 AM.png,ripe,overripe,0.0,0.41766539216041565,0.5823346376419067
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.17.01 AM.png,ripe,overripe,0.0,0.41579824686050415,0.5842017531394958
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.17.31 AM.png,ripe,overripe,0.0,0.4063868820667267,0.5936130881309509
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.18.02 AM.png,ripe,overripe,0.0,0.40014898777008057,0.5998510122299194
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.18.07 AM.png,ripe,overripe,0.0,0.40026700496673584,0.5997329950332642
+orange/test/ripe/translation_Screen Shot 2018-06-13 at 12.18.27 AM.png,ripe,overripe,0.0,0.4008373022079468,0.5991626977920532
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.50.28 PM.png,ripe,overripe,0.0,0.40006211400032043,0.5999378561973572
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.50.41 PM.png,ripe,overripe,0.0,0.4337199330329895,0.5662800669670105
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.52.21 PM.png,ripe,overripe,0.0,0.4023519456386566,0.5976480841636658
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.52.40 PM.png,ripe,overripe,0.0,0.4011448323726654,0.598855197429657
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.52.46 PM.png,ripe,overripe,0.0,0.4016675353050232,0.5983324646949768
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.53.12 PM.png,ripe,overripe,0.0,0.4004839062690735,0.5995160937309265
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.53.43 PM.png,ripe,overripe,0.0,0.4606296420097351,0.5393703579902649
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.53.53 PM.png,ripe,overripe,0.0,0.4164189100265503,0.5835810899734497
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.54.35 PM.png,ripe,overripe,0.0,0.45761433243751526,0.5423856377601624
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.54.55 PM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.55.05 PM.png,ripe,overripe,0.0,0.40233469009399414,0.5976653099060059
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.56.16 PM.png,ripe,overripe,0.0,0.7620337009429932,0.23796628415584564
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.58.11 PM.png,ripe,overripe,0.0,0.42025741934776306,0.5797425508499146
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.59.23 PM.png,ripe,overripe,0.0,0.4033469557762146,0.5966530442237854
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-12 at 11.59.54 PM.png,ripe,overripe,0.0,0.4245757758617401,0.5754241943359375
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.00.06 AM.png,ripe,overripe,0.0,0.6865912079811096,0.31340882182121277
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.00.35 AM.png,ripe,overripe,0.0,0.41023948788642883,0.5897604823112488
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.01.03 AM.png,ripe,overripe,0.0,0.5569937229156494,0.4430062770843506
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.01.58 AM.png,ripe,overripe,0.0,0.40199014544487,0.5980098247528076
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.03.17 AM.png,ripe,overripe,0.0,0.4008665084838867,0.5991334915161133
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.03.21 AM.png,ripe,overripe,0.0,0.40824246406555176,0.5917575359344482
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.03.55 AM.png,ripe,overripe,0.0,0.5284034609794617,0.47159650921821594
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.04.12 AM.png,ripe,overripe,0.0,0.4004710018634796,0.5995290279388428
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.04.26 AM.png,ripe,overripe,0.0,0.4270927309989929,0.5729072690010071
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.05.33 AM.png,ripe,overripe,0.0,0.4619922339916229,0.5380077362060547
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.05.46 AM.png,ripe,overripe,0.0,0.5205737352371216,0.47942623496055603
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.06.01 AM.png,ripe,overripe,0.0,0.4113631546497345,0.5886368751525879
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.06.59 AM.png,ripe,overripe,0.0,0.40408244729042053,0.5959175825119019
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.08.29 AM.png,ripe,overripe,0.0,0.4495634436607361,0.5504365563392639
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.08.54 AM.png,ripe,overripe,0.0,0.4128876328468323,0.5871123671531677
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.08.58 AM.png,ripe,overripe,0.0,0.577181875705719,0.4228181540966034
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.09.43 AM.png,ripe,overripe,0.0,0.4186861217021942,0.5813138484954834
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.09.49 AM.png,ripe,overripe,0.0,0.41255292296409607,0.5874471068382263
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.09.54 AM.png,ripe,overripe,0.0,0.4030071496963501,0.5969928503036499
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.10.16 AM.png,ripe,overripe,0.0,0.5609200596809387,0.4390799105167389
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.10.53 AM.png,ripe,overripe,0.0,0.8180553913116455,0.1819446086883545
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.10.57 AM.png,ripe,overripe,0.0,0.9244189262390137,0.07558108866214752
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.13.35 AM.png,ripe,overripe,0.0,0.41222766041755676,0.5877723693847656
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.14.18 AM.png,ripe,overripe,0.0,0.42196550965309143,0.578034520149231
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.16.22 AM.png,ripe,overripe,0.0,0.46914172172546387,0.5308582782745361
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.17.05 AM.png,ripe,overripe,0.0,0.4028591811656952,0.5971407890319824
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.17.31 AM.png,ripe,overripe,0.0,0.40922585129737854,0.5907741785049438
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.17.55 AM.png,ripe,overripe,0.0,0.46623584628105164,0.533764123916626
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.18.23 AM.png,ripe,overripe,0.0,0.40678954124450684,0.5932104587554932
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.18.27 AM.png,ripe,overripe,0.0,0.40476399660110474,0.5952360033988953
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.19.08 AM.png,ripe,overripe,0.0,0.40206485986709595,0.597935140132904
+orange/test/ripe/vertical_flip_Screen Shot 2018-06-13 at 12.20.06 AM.png,ripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/1.jpg,unripe,overripe,0.05882352963089943,0.9411764740943909,0.0117647061124444
+orange/test/unripe/10.jpg,unripe,overripe,0.05491723492741585,0.9450827836990356,0.017721518874168396
+orange/test/unripe/100.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/101.jpg,unripe,overripe,0.0,0.8472921848297119,0.1527077853679657
+orange/test/unripe/102.jpg,unripe,overripe,0.0,0.46488240361213684,0.5351176261901855
+orange/test/unripe/103.jpg,unripe,overripe,0.0,0.4205549955368042,0.5794450044631958
+orange/test/unripe/104.jpg,unripe,overripe,0.0,0.4010075628757477,0.5989924669265747
+orange/test/unripe/105.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/106.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/107.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/108.jpg,unripe,overripe,0.0,0.41361933946609497,0.586380660533905
+orange/test/unripe/109.jpg,unripe,overripe,0.0,0.42739036679267883,0.5726096034049988
+orange/test/unripe/11.jpg,unripe,overripe,0.015874162316322327,0.7585463523864746,0.24145366251468658
+orange/test/unripe/110.jpg,unripe,overripe,0.3393162488937378,0.6606837511062622,0.1111111119389534
+orange/test/unripe/111.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/112.jpg,unripe,overripe,0.0,0.4801968038082123,0.5198032259941101
+orange/test/unripe/113.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/114.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/115.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/116.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/117.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/118.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/119.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/12.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/120.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/121.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/122.jpg,unripe,overripe,0.0,0.4137609899044037,0.5862390398979187
+orange/test/unripe/123.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/124.jpg,unripe,overripe,0.0,0.5014492869377136,0.4985507130622864
+orange/test/unripe/125.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/127.jpg,unripe,overripe,0.0,0.4902777671813965,0.5097222328186035
+orange/test/unripe/128.jpg,unripe,overripe,0.0,0.43703705072402954,0.5629629492759705
+orange/test/unripe/13.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/131.jpg,unripe,overripe,0.015092765912413597,0.714363157749176,0.285636842250824
+orange/test/unripe/132.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/133.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/134.jpg,unripe,overripe,0.0,0.4011750817298889,0.5988249182701111
+orange/test/unripe/135.jpg,unripe,overripe,0.0,0.6456408500671387,0.35435912013053894
+orange/test/unripe/137.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/139.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/14.jpg,unripe,overripe,0.0,0.40197092294692993,0.5980290770530701
+orange/test/unripe/140.jpg,unripe,overripe,0.025451092049479485,0.9102880954742432,0.08971193432807922
+orange/test/unripe/141.jpg,unripe,overripe,0.015092765912413597,0.714363157749176,0.285636842250824
+orange/test/unripe/142.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/143.jpg,unripe,unripe,0.46180883049964905,0.5381911396980286,0.0
+orange/test/unripe/144.jpg,unripe,overripe,0.0,0.45541810989379883,0.5445818901062012
+orange/test/unripe/145.jpg,unripe,overripe,0.0,0.4025464653968811,0.5974535346031189
+orange/test/unripe/146.jpg,unripe,ripe,0.0,1.0,0.0
+orange/test/unripe/147.jpg,unripe,overripe,0.0,0.5141528248786926,0.48584720492362976
+orange/test/unripe/148.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/149.jpg,unripe,overripe,0.0,0.40326300263404846,0.5967369675636292
+orange/test/unripe/15.jpg,unripe,overripe,0.039540860801935196,0.9315515756607056,0.06844840198755264
+orange/test/unripe/151.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/152.jpg,unripe,overripe,0.0,0.4013802707195282,0.5986197590827942
+orange/test/unripe/153.jpg,unripe,overripe,0.0,0.4147774279117584,0.5852225422859192
+orange/test/unripe/154.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/155.jpg,unripe,overripe,0.0,0.4010586142539978,0.5989413857460022
+orange/test/unripe/156.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/157.jpg,unripe,overripe,0.09615384787321091,0.9038461446762085,0.01666666753590107
+orange/test/unripe/159.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/16.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/160.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/161.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/163.jpg,unripe,overripe,0.0,0.40506330132484436,0.594936728477478
+orange/test/unripe/164.jpg,unripe,overripe,0.09615384787321091,0.9038461446762085,0.01666666753590107
+orange/test/unripe/165.jpg,unripe,overripe,0.0,0.4410628080368042,0.5589371919631958
+orange/test/unripe/166.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/167.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/168.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/169.jpg,unripe,overripe,0.0,0.4168919026851654,0.583108127117157
+orange/test/unripe/17.jpg,unripe,overripe,0.0,0.4260782301425934,0.5739217400550842
+orange/test/unripe/170.jpg,unripe,overripe,0.0,0.5644562244415283,0.4355437755584717
+orange/test/unripe/171.jpg,unripe,overripe,0.0,0.41486987471580505,0.5851300954818726
+orange/test/unripe/172.jpg,unripe,overripe,0.0,0.40326300263404846,0.5967369675636292
+orange/test/unripe/174.jpg,unripe,overripe,0.0,0.42941176891326904,0.570588231086731
+orange/test/unripe/175.jpg,unripe,overripe,0.0,0.4058266580104828,0.5941733717918396
+orange/test/unripe/176.jpg,unripe,overripe,0.0,0.46488240361213684,0.5351176261901855
+orange/test/unripe/177.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/178.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/179.jpg,unripe,overripe,0.04403182864189148,0.9141066074371338,0.085893414914608
+orange/test/unripe/18.jpg,unripe,overripe,0.0,0.6370370388031006,0.3629629611968994
+orange/test/unripe/180.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/181.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/183.jpg,unripe,overripe,0.025400104001164436,0.8161073923110962,0.183892622590065
+orange/test/unripe/184.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/185.jpg,unripe,unripe,0.26459598541259766,0.7354040145874023,0.0
+orange/test/unripe/186.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/187.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/188.jpg,unripe,overripe,0.0,0.4003271162509918,0.5996728539466858
+orange/test/unripe/189.jpg,unripe,overripe,0.0,0.45394784212112427,0.5460521578788757
+orange/test/unripe/19.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/190.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/191.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/193.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/194.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/195.jpg,unripe,overripe,0.020299701020121574,0.7272727489471436,0.27272728085517883
+orange/test/unripe/196.jpg,unripe,overripe,0.0,0.4013020694255829,0.5986979007720947
+orange/test/unripe/197.jpg,unripe,overripe,0.0,0.45002156496047974,0.5499784350395203
+orange/test/unripe/198.jpg,unripe,overripe,0.0,0.40123364329338074,0.5987663269042969
+orange/test/unripe/199.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/2.jpg,unripe,overripe,0.0,0.40101009607315063,0.5989899039268494
+orange/test/unripe/20.jpg,unripe,unripe,0.26384931802749634,0.7361506819725037,0.0
+orange/test/unripe/202.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/205.jpg,unripe,overripe,0.0,0.43889203667640686,0.5611079335212708
+orange/test/unripe/207.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/209.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/21.jpg,unripe,overripe,0.0,0.4260782301425934,0.5739217400550842
+orange/test/unripe/211.jpg,unripe,overripe,0.0,0.5720361471176147,0.42796385288238525
+orange/test/unripe/212.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/213.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/214.jpg,unripe,overripe,0.0,0.4511463940143585,0.5488536357879639
+orange/test/unripe/215.jpg,unripe,overripe,0.0,0.8489428758621216,0.15105712413787842
+orange/test/unripe/216.jpg,unripe,unripe,0.3309091031551361,0.6690909266471863,0.0
+orange/test/unripe/217.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/218.jpg,unripe,overripe,0.0,0.4980325698852539,0.5019674301147461
+orange/test/unripe/22.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/220.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/221.jpg,unripe,overripe,0.0,0.44795942306518555,0.5520405769348145
+orange/test/unripe/222.jpg,unripe,ripe,0.12228287756443024,0.877717137336731,0.0
+orange/test/unripe/223.jpg,unripe,overripe,0.0,0.4168350100517273,0.5831649899482727
+orange/test/unripe/225.jpg,unripe,overripe,0.0,0.6331838369369507,0.36681613326072693
+orange/test/unripe/226.jpg,unripe,overripe,0.06953693181276321,0.9215588569641113,0.07844112813472748
+orange/test/unripe/23.jpg,unripe,overripe,0.0,0.6370370388031006,0.3629629611968994
+orange/test/unripe/231.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/233.jpg,unripe,overripe,0.0,0.407013863325119,0.5929861664772034
+orange/test/unripe/234.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/235.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/236.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/24.jpg,unripe,unripe,0.26384931802749634,0.7361506819725037,0.0
+orange/test/unripe/240.jpg,unripe,overripe,0.0,0.5650475025177002,0.4349524676799774
+orange/test/unripe/241.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/242.jpg,unripe,overripe,0.0,0.44458597898483276,0.5554140210151672
+orange/test/unripe/244.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/245.jpg,unripe,overripe,0.0,0.4226537346839905,0.5773462653160095
+orange/test/unripe/247.jpg,unripe,overripe,0.0,0.5676891803741455,0.4323108494281769
+orange/test/unripe/249.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/25.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/253.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/256.jpg,unripe,overripe,0.0,0.4740740656852722,0.5259259343147278
+orange/test/unripe/257.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/258.jpg,unripe,overripe,0.0,0.4346175193786621,0.5653824806213379
+orange/test/unripe/26.jpg,unripe,ripe,0.08910256624221802,0.910897433757782,0.0
+orange/test/unripe/261.jpg,unripe,overripe,0.0,0.4138224422931671,0.5861775875091553
+orange/test/unripe/263.jpg,unripe,ripe,0.18689458072185516,0.8131054043769836,0.0
+orange/test/unripe/265.jpg,unripe,overripe,0.0,0.819459080696106,0.18054093420505524
+orange/test/unripe/266.jpg,unripe,overripe,0.0,0.4124683439731598,0.5875316858291626
+orange/test/unripe/269.jpg,unripe,overripe,0.0,0.5079365372657776,0.4920634925365448
+orange/test/unripe/27.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/271.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/272.jpg,unripe,overripe,0.0,0.4134378433227539,0.5865621566772461
+orange/test/unripe/273.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/277.jpg,unripe,overripe,0.0,0.41663938760757446,0.5833606123924255
+orange/test/unripe/279.jpg,unripe,overripe,0.0,0.6559890508651733,0.34401094913482666
+orange/test/unripe/28.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/280.jpg,unripe,overripe,0.0,0.46016713976860046,0.5398328900337219
+orange/test/unripe/282.jpg,unripe,overripe,0.0,0.4346175193786621,0.5653824806213379
+orange/test/unripe/283.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/286.jpg,unripe,overripe,0.0,0.46016713976860046,0.5398328900337219
+orange/test/unripe/287.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/29.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/290.jpg,unripe,ripe,0.11799576878547668,0.8820042610168457,0.0
+orange/test/unripe/291.jpg,unripe,overripe,0.0,0.5535532832145691,0.4464466869831085
+orange/test/unripe/294.jpg,unripe,ripe,0.19120068848133087,0.8087993264198303,0.0
+orange/test/unripe/295.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/297.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/298.jpg,unripe,ripe,0.18689458072185516,0.8131054043769836,0.0
+orange/test/unripe/3.jpg,unripe,ripe,0.14017094671726227,0.8598290681838989,0.0
+orange/test/unripe/30.jpg,unripe,overripe,0.10675229132175446,0.8932477235794067,0.043032869696617126
+orange/test/unripe/300.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/303.jpg,unripe,overripe,0.0,0.4857763350009918,0.5142236948013306
+orange/test/unripe/305.jpg,unripe,overripe,0.0,0.4002361595630646,0.5997638702392578
+orange/test/unripe/308.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/309.jpg,unripe,overripe,0.0,0.403809517621994,0.5961904525756836
+orange/test/unripe/31.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/311.jpg,unripe,overripe,0.0,0.4217785894870758,0.5782214403152466
+orange/test/unripe/312.jpg,unripe,overripe,0.0,0.40294334292411804,0.5970566868782043
+orange/test/unripe/317.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/32.jpg,unripe,overripe,0.0,0.4404040277004242,0.5595959424972534
+orange/test/unripe/325.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/327.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/33.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/336.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/339.jpg,unripe,overripe,0.0,0.597300112247467,0.40269988775253296
+orange/test/unripe/34.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/343.jpg,unripe,overripe,0.0,0.42225131392478943,0.577748715877533
+orange/test/unripe/35.jpg,unripe,overripe,0.0,0.4684670567512512,0.5315329432487488
+orange/test/unripe/353.jpg,unripe,overripe,0.0,0.41333332657814026,0.5866666436195374
+orange/test/unripe/358.jpg,unripe,overripe,0.0,0.5116427540779114,0.4883572459220886
+orange/test/unripe/359.jpg,unripe,overripe,0.0,0.597300112247467,0.40269988775253296
+orange/test/unripe/36.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/366.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/368.jpg,unripe,overripe,0.0,0.597300112247467,0.40269988775253296
+orange/test/unripe/37.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/372.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/373.jpg,unripe,overripe,0.0,0.42761340737342834,0.5723865628242493
+orange/test/unripe/377.jpg,unripe,overripe,0.0,0.40843722224235535,0.5915627479553223
+orange/test/unripe/379.jpg,unripe,overripe,0.0,0.41218119859695435,0.5878188014030457
+orange/test/unripe/38.jpg,unripe,overripe,0.0,0.4016016125679016,0.5983983874320984
+orange/test/unripe/383.jpg,unripe,overripe,0.0,0.40843722224235535,0.5915627479553223
+orange/test/unripe/384.jpg,unripe,overripe,0.0,0.42761340737342834,0.5723865628242493
+orange/test/unripe/385.jpg,unripe,overripe,0.0,0.420968234539032,0.579031765460968
+orange/test/unripe/387.jpg,unripe,overripe,0.0,0.41218119859695435,0.5878188014030457
+orange/test/unripe/39.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/398.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/4.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/40.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/41.jpg,unripe,overripe,0.0,0.40147003531455994,0.5985299348831177
+orange/test/unripe/42.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/43.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/44.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/45.jpg,unripe,overripe,0.0,0.4228809177875519,0.5771191120147705
+orange/test/unripe/46.jpg,unripe,overripe,0.0,0.4004208743572235,0.5995790958404541
+orange/test/unripe/47.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/48.jpg,unripe,overripe,0.0,0.514387845993042,0.485612154006958
+orange/test/unripe/49.jpg,unripe,overripe,0.0,0.4721102714538574,0.5278897285461426
+orange/test/unripe/5.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/50.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/51.jpg,unripe,overripe,0.0,0.40701186656951904,0.592988133430481
+orange/test/unripe/52.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/53.jpg,unripe,overripe,0.0,0.4117354154586792,0.5882645845413208
+orange/test/unripe/54.jpg,unripe,overripe,0.011564274318516254,0.655033528804779,0.34496644139289856
+orange/test/unripe/55.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/56.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/57.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/58.jpg,unripe,overripe,0.0,0.4056786000728607,0.5943214297294617
+orange/test/unripe/59.jpg,unripe,overripe,0.0,0.4230942130088806,0.5769057869911194
+orange/test/unripe/6.jpg,unripe,overripe,0.0,0.4010598957538605,0.5989401340484619
+orange/test/unripe/60.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/61.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/62.jpg,unripe,overripe,0.0,0.4257400333881378,0.5742599964141846
+orange/test/unripe/63.jpg,unripe,overripe,0.0,0.4484848380088806,0.5515151619911194
+orange/test/unripe/64.jpg,unripe,overripe,0.0,0.44344305992126465,0.5565569400787354
+orange/test/unripe/65.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/66.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/67.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/68.jpg,unripe,overripe,0.0,0.5363993644714355,0.46360063552856445
+orange/test/unripe/69.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/7.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/70.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/71.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/72.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/73.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/74.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/75.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/76.jpg,unripe,overripe,0.0,0.446540892124176,0.553459107875824
+orange/test/unripe/77.jpg,unripe,overripe,0.015384615398943424,0.7401360273361206,0.259863942861557
+orange/test/unripe/78.jpg,unripe,overripe,0.0,0.40298953652381897,0.5970104336738586
+orange/test/unripe/79.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/8.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/80.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/81.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/82.jpg,unripe,overripe,0.0,0.4022020399570465,0.5977979898452759
+orange/test/unripe/83.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/84.jpg,unripe,overripe,0.0,0.42688173055648804,0.573118269443512
+orange/test/unripe/85.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/86.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/87.jpg,unripe,overripe,0.0,0.40298953652381897,0.5970104336738586
+orange/test/unripe/88.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/89.jpg,unripe,ripe,0.14635108411312103,0.8536489009857178,0.0
+orange/test/unripe/9.jpg,unripe,overripe,0.0514548234641552,0.9485451579093933,0.01398672815412283
+orange/test/unripe/90.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/91.jpg,unripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+orange/test/unripe/92.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/93.jpg,unripe,ripe,0.0615384615957737,0.9384615421295166,0.0
+orange/test/unripe/94.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/95.jpg,unripe,overripe,0.0,0.6207931637763977,0.3792068660259247
+orange/test/unripe/96.jpg,unripe,overripe,0.0,0.42527076601982117,0.5747292637825012
+orange/test/unripe/97.jpg,unripe,overripe,0.0666508898139,0.9333491325378418,0.003076923079788685
+orange/test/unripe/98.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+orange/test/unripe/99.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
