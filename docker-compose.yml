@@ -523,7 +523,7 @@ services:
       - ag_cloud
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
-      interval: 10s
+      interval: 45s
       timeout: 5s
       retries: 10
       start_period: 20s
