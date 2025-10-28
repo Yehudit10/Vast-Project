@@ -9,9 +9,9 @@ Built with **FastAPI**, **PANNs (CNN14)**, **PostgreSQL**, and optional **Kafka 
 
 ## Quick Start
 ```bash
-docker compose up -d classifier
+docker compose up -d sounds_classifier
 ```
-ervice runs on **http://localhost:8088** (see `docker-compose.yml`, port 8088).
+Service runs on **http://localhost:8088** (see `docker-compose.yml`, port 8088).
 
 ## API Usage
 ```json
@@ -38,32 +38,6 @@ POST /classify
 - WAV, MP3, FLAC, OGG
 - M4A, AAC, WMA, OPUS
 
-## Required Environment Variables
-Create `.env` file with:
-```
-# MinIO Connection
-MINIO_ENDPOINT=
-MINIO_ACCESS_KEY=
-MINIO_SECRET_KEY=
-MINIO_SECURE=
-
-# Model Configuration
-CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
-SK_PIPELINE_PATH=/app/classification/models/head/head_cnn14_rf.joblib
-DEVICE=cpu  # or cuda
-
-# Database
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=missions_db
-DB_USER=missions_user
-DB_PASSWORD=pg123
-DB_SCHEMA=agcloud_audio
-
-# Kafka (optional)
-KAFKA_BROKERS=kafka:9092
-ALERTS_TOPIC=dev-robot-alerts
-```
 
 ## Health & Docs
 - `GET /health` → basic readiness and model load status  
