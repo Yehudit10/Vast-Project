@@ -464,24 +464,70 @@ services:
   # ------------------------
   # Classifier - Sounds
   # ------------------------
-  classifier:
+  sounds_classifier:
     build:
-      context: ./services/sounds/classifier
+      context: ./services/sounds/sounds_classifier
       dockerfile: Dockerfile.classifier-svc
-      args:
-        CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
-    container_name: classifier
+      # args:
+        # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
+    container_name: sounds_classifier
     restart: unless-stopped
-    env_file:
-      - ./services/sounds/classifier/src/classification/.env
+    # env_file:
+      # - ./services/sounds/sounds_classifier/src/classification/.env
+    environment:
+      # Runtime mode
+      - DEVICE=cpu
+      - BACKBONE=cnn14
+
+      # Model artifacts (must exist inside the image)
+      - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
+      - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
+      - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
+
+      # DB 
+      - WRITE_DB=false
+      - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - DB_SCHEMA=agcloud_audio
+      - DB_RUN_ID=api-default
+
+      # Kafka 
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTS_TOPIC=dev-robot-alerts
+
+      # MinIO 
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=false
+
+      # Request validation
+      - ALLOWED_BUCKETS=imagery
+      - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
+      - MAX_BYTES=104857600
+
+      # Tuning params 
+      - UNKNOWN_THRESHOLD=0.4
+      - WINDOW_SEC=2.0
+      - HOP_SEC=0.5
+      - PAD_LAST=true
+      - AGG=mean
     depends_on:
-      - postgres
-      - kafka
-      - minio-hot
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
     ports:
       - "8088:8088"
     networks:
       - ag_cloud
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
+      interval: 45s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   # --------------------------
   # DB API Service

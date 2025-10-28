@@ -59,8 +59,6 @@ def ensure_run(conn, run_id: str):
     """
     Ensure there is a row in agcloud_audio.runs for FK constraints.
     This will INSERT ... ON CONFLICT DO NOTHING with reasonable defaults.
-    IMPORTANT: runs table has NOT NULL constraints on several fields.
-    Adjust values if your runtime config differs.
     """
     import os
     window_sec = float(os.getenv("WINDOW_SEC", "2.0"))
@@ -83,7 +81,7 @@ def ensure_run(conn, run_id: str):
             "run_id": run_id,
             "model_name": os.getenv("MODEL_NAME", "panns_cnn14"),
             "checkpoint": os.getenv("CHECKPOINT", "panns_cnn14.pth"),
-            "head_path": os.getenv("SK_PIPELINE_PATH", ""),
+            "head_path": os.getenv("HEAD", ""),
             "labels_csv": os.getenv("LABELS_CSV", ""),
             "window_sec": float(os.getenv("WINDOW_SEC", "10")),
             "hop_sec": float(os.getenv("HOP_SEC", "10")),
