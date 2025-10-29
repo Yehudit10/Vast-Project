@@ -267,33 +267,60 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- === Task thresholds (enum + table) ===
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_type_enum') THEN
-        CREATE TYPE task_type_enum AS ENUM (
-            'ripeness',    
-            'disease',    
-            'size',        
-            'color',       
-            'quality'      
-        );
-    END IF;
-END$$;
+--- Alerts table
 
-CREATE TABLE IF NOT EXISTS task_thresholds (
-    threshold_id SERIAL PRIMARY KEY,                 
-    task       task_type_enum NOT NULL,           
-    label      TEXT NOT NULL DEFAULT '',         
-    threshold  NUMERIC(6,4) NOT NULL CHECK (threshold >= 0 AND threshold <= 1),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_by TEXT,
-    CONSTRAINT ux_task_thresholds_task_label UNIQUE (task, label)
+CREATE TABLE IF NOT EXISTS public.alerts (
+  id bigserial PRIMARY KEY,
+  entity_id text NOT NULL,
+  rule text NOT NULL,
+  window_start timestamptz NOT NULL,
+  window_end   timestamptz NOT NULL,
+  score double precision NOT NULL,
+  first_seen timestamptz NOT NULL,
+  last_seen  timestamptz NOT NULL,
+  status text NOT NULL CHECK (status IN ('OPEN','ACK','RESOLVED')),
+  meta_json jsonb
 );
 
 
-CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
-CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
+--- === Soil moisture irrigation tables ===
+
+CREATE TABLE IF NOT EXISTS soil_moisture_events (
+  id SERIAL PRIMARY KEY,
+  zone_id TEXT NOT NULL,
+  ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  dry_ratio REAL NOT NULL,
+  decision TEXT NOT NULL,
+  confidence REAL NOT NULL,
+  patch_count INT NOT NULL,
+  idempotency_key TEXT NOT NULL,
+  extra JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idem ON soil_moisture_events (idempotency_key);
+
+CREATE TABLE IF NOT EXISTS irrigation_schedule (
+  zone_id TEXT PRIMARY KEY,
+  next_run_at TIMESTAMPTZ NOT NULL,
+  duration_min INT NOT NULL,
+  updated_by TEXT NOT NULL,
+  update_reason TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS irrigation_schedule_audit (
+  id SERIAL PRIMARY KEY,
+  zone_id TEXT NOT NULL,
+  prev_next_run_at TIMESTAMPTZ,
+  prev_duration_min INT,
+  next_run_at TIMESTAMPTZ NOT NULL,
+  duration_min INT NOT NULL,
+  updated_by TEXT NOT NULL,
+  update_reason TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+-- === Indexes for performance optimization ===
+
 
 CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
     ON public.sensor_anomalies USING BRIN (ts);
@@ -355,3 +382,6 @@ CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sens
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
 
+
+CREATE INDEX IF NOT EXISTS ix_alerts_entity_rule ON public.alerts(entity_id, rule);
+CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
