@@ -77,6 +77,10 @@ services:
     networks:
       - ag_cloud
 
+  # -------------------------
+  # Sound Metrics Service
+  # -------------------------
+
   sound_metrics:
     build:
       context: ./services/sound_metrics
@@ -88,14 +92,25 @@ services:
       - WINDOW_MIN=1
       - STABLE_SEC=1
       - PYTHONUNBUFFERED=1
-    command: ["python","-u","src/local_metrics.py"]
-    volumes:
-      - ./services/sound_metrics/audio_samples:/app/audio_samples:ro
+
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_BUCKET=telemetry         
+      - MINIO_PREFIX=sounds/           
+
+    command: ["python","-u","src/metrics.py"]  
     ports:
       - "8001:8001"
+    depends_on:
+      - minio-hot
     networks:
       - ag_cloud 
     restart: unless-stopped
+
+  # -------------------------
+  # Plant Stress Detector
+  # -------------------------
 
   plant_stress:
     build: ./services/plant_stress
@@ -103,9 +118,9 @@ services:
       - INPUT_DIR=/data/inbox
       - MODEL_DIR=/models
       - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
+      - PERIOD_DAYS=0           
       - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
+      # - TF_ENABLE_ONEDNN_OPTS=0   # Disable oneDNN optimizations (for CPU compatibility)
     volumes:
       - "./services/plant_stress/models:/models:ro"
       - "./services/plant_stress/samples:/data/inbox:ro"
@@ -117,7 +132,27 @@ services:
       - ag_cloud
     
 
-
+  flink_writer_db:
+      build:
+        context: ./services/flink_writer_db
+        dockerfile: Dockerfile.flink
+      container_name: flink_writer_db
+      environment:
+        - KAFKA_BROKERS=kafka:9092
+        - TOPICS=sensor_zone_stats,sensor_anomalies
+        - DB_API_BASE=http://db_api_service:8001
+        - DB_API_AUTH_MODE=service
+        - DB_API_SERVICE_NAME=flink-writer-db
+        - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+        - FLINK_PARALLELISM=1
+      depends_on:
+        kafka:
+          condition: service_healthy
+        db_api_service:
+          condition: service_started
+      networks:
+        - ag_cloud
+      restart: unless-stopped
 
 
  
