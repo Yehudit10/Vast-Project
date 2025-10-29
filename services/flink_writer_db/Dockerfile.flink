@@ -3,9 +3,9 @@ FROM flink:1.20.0-scala_2.12-java11
 
 USER root
 
-# Add local CA (place netfree-ca.crt next to this Dockerfile before building)
-COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+# Add local CA (place *.crt next to this Dockerfile before building)
+COPY *.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/ && update-ca-certificates
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt

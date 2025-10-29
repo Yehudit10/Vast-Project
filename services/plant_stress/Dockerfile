@@ -11,12 +11,12 @@ WORKDIR /app
 
 COPY certs /app/certs
 
-RUN if [ -f /app/certs/netfree-ca.crt ]; then \
+RUN if [ -f /app/certs/*.crt ]; then \
     echo "Installing NetFree certificate..."; \
-    cp /app/certs/netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt && \
+    cp /app/certs/*.crt /usr/local/share/ca-certificates/ && \
     update-ca-certificates; \
     else \
-    echo "⚠️ WARNING: netfree-ca.crt not found, continuing without it."; \
+    echo "⚠️ WARNING: *.crt not found, continuing without it."; \
     fi
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \

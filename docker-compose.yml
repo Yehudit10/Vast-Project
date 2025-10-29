@@ -3,8 +3,8 @@
 # Docker Compose - AG Cloud
 # ==========================
 
-version: "3.9"
-  
+version: '3.9'
+
 # --------------------------
 # Networks
 # --------------------------
@@ -115,9 +115,6 @@ services:
     command: ["python", "-u", "/app/app.py"]
     networks:
       - ag_cloud
-    
-
-
 
 
  
@@ -491,12 +488,8 @@ services:
     build:
       context: ./services/sounds/sounds_classifier
       dockerfile: Dockerfile.classifier-svc
-      # args:
-        # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
     container_name: sounds_classifier
     restart: unless-stopped
-    # env_file:
-      # - ./services/sounds/sounds_classifier/src/classification/.env
     environment:
       # Runtime mode
       - DEVICE=cpu
@@ -546,7 +539,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health').read()"]
       interval: 45s
       timeout: 5s
       retries: 10
@@ -611,4 +604,25 @@ services:
     networks:
       - ag_cloud
     restart: unless-stopped
-    
+
+  flink_writer_db:
+    build:
+      context: ./services/flink_writer_db
+      dockerfile: Dockerfile.flink
+    container_name: flink_writer_db
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - TOPICS=sensor_zone_stats,sensor_anomalies
+      - DB_API_BASE=http://db_api_service:8001
+      - DB_API_AUTH_MODE=service
+      - DB_API_SERVICE_NAME=flink-writer-db
+      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+      - FLINK_PARALLELISM=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped  

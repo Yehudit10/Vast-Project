@@ -6,12 +6,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+COPY *.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/ && update-ca-certificates
 
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+ENV SSL_CERT_FILE=/etc/ssl/certs/*.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/*.crt \
+    PIP_CERT=/etc/ssl/certs/*.crt \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
