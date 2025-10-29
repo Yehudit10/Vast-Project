@@ -2,6 +2,7 @@
 import json
 import time
 import pathlib
+from typing import Dict, List
 import requests
 from urllib.parse import quote
 from requests.adapters import HTTPAdapter
@@ -100,3 +101,41 @@ class DashboardApi:
         except Exception as e:
             print(f"[API FAIL] {e}")
         return []
+
+    # ---------- THRESHOLDS ----------
+    def bulk_set_task_thresholds_labeled(
+        self,
+        mapping: dict[tuple[str, str], float],
+        updated_by: str = "gui",
+    ) -> dict:
+        """
+        mapping: {("ripeness",""): 0.8, ("disease","rot"): 0.66, ...}
+        
+        """
+        # 1)  cast to items:
+        items: list[dict] = []
+        for (task, label), thr in mapping.items():
+            items.append({
+                "task": str(task),
+                "label": str(label or ""),
+                "threshold": float(thr),
+                "updated_by": updated_by,
+            })
+
+        path = "/api/task_thresholds/batch" 
+        url = _safe_join_url(self.base, path)
+        try:
+            r = self.http.post(url, json=items, timeout=20)
+            if r.status_code in (200, 201):
+                #  {"ok":[["ripeness",""],["disease","rot"]], "fail":[[("task","label"), "reason"], ...]}
+                return r.json()
+            return {
+                "ok": [],
+                "fail": [((i.get("task"), i.get("label", "")), f"http-{r.status_code} {r.text[:200]}")
+                         for i in items]
+            }
+        except Exception as e:
+            return {
+                "ok": [],
+                "fail": [((i.get("task"), i.get("label", "")), str(e)) for i in items]
+            }
