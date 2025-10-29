@@ -274,7 +274,16 @@ def insert_row(resource: str, payload: Dict[str, Any], returning: str = "keys") 
         with session_scope() as s:
             res = s.execute(stmt)
             row = res.mappings().first() if res.returns_rows else None
-            return {"affected_rows": 1, "returning": dict(row) if row else None}
+            if not row:
+                return {"affected_rows": 1, "returning": None}
+            
+            full = dict(row)
+            if returning == "full":
+                return {"affected_rows": 1, "returning": full}
+            
+            key_fields = contract.get("x-keyFields") or (["id"] if "id" in props else [])
+            keys_obj = {k: full[k] for k in key_fields if k in full} if key_fields else None
+            return {"affected_rows": 1, "returning": keys_obj}
     except IntegrityError as e:
         raise DbConstraintError("integrity error", {"detail": str(e.orig)})
     except SQLAlchemyError as e:
