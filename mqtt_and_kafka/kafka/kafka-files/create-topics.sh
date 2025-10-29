@@ -31,10 +31,14 @@ TOPICS=(
   dev-robot-status
   dev-robot-telemetry-raw
   dev-robot-state
-  sensor-telemetry
-  sensor-anomalies
+  sensor_anomalies
+  sensor_zone_stats
   dev-robot-telemetry-anomalies
-  dev-aerial-images-keys
+  irrigation.control
+  irrigation.control.dlq
+  sound.new
+  image.new
+  summaries.5m
 )
 
 # Idempotent creation with retention.ms

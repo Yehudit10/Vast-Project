@@ -1,0 +1,56 @@
+{
+  "accuracy": 0.4279176201372998,
+  "report": {
+    "unripe": {
+      "precision": 0.890625,
+      "recall": 0.1425,
+      "f1-score": 0.24568965517241378,
+      "support": 400.0
+    },
+    "ripe": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 381.0
+    },
+    "overripe": {
+      "precision": 0.44919786096256686,
+      "recall": 0.9509433962264151,
+      "f1-score": 0.6101694915254238,
+      "support": 530.0
+    },
+    "accuracy": 0.4279176201372998,
+    "macro avg": {
+      "precision": 0.4466076203208556,
+      "recall": 0.3644811320754717,
+      "f1-score": 0.28528638223261255,
+      "support": 1311.0
+    },
+    "weighted avg": {
+      "precision": 0.45333704524039703,
+      "recall": 0.4279176201372998,
+      "f1-score": 0.32163668388820754,
+      "support": 1311.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      57,
+      106,
+      237
+    ],
+    [
+      0,
+      0,
+      381
+    ],
+    [
+      7,
+      19,
+      504
+    ]
+  ],
+  "samples": 1311,
+  "prefix": "banana/test",
+  "bucket": "imagery"
+}
