@@ -39,6 +39,9 @@ TOPICS=(
   sound.new
   image.new
   summaries.5m
+  dev-aerial-images-keys
+  image.new.aerial
+  image.new.aerial.connections
 )
 
 # Idempotent creation with retention.ms
