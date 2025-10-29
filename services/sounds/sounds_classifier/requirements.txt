@@ -1,0 +1,20 @@
+# Web API
+fastapi==0.115.5
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+
+# Core scientific / audio
+numpy==1.26.4
+scipy==1.11.4
+librosa==0.10.2.post1
+soundfile==0.12.1
+joblib==1.4.2
+scikit-learn==1.5.2
+
+# Storage / messaging / DB
+minio==7.2.7
+confluent-kafka==2.6.0
+psycopg2-binary==2.9.9
+
+# PANNs helper (optional but referenced by imports)
+panns-inference==0.1.1

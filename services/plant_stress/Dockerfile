@@ -8,12 +8,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+COPY certs /app/certs
+
+RUN if [ -f /app/certs/netfree-ca.crt ]; then \
+    echo "Installing NetFree certificate..."; \
+    cp /app/certs/netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt && \
+    update-ca-certificates; \
+    else \
+    echo "⚠️ WARNING: netfree-ca.crt not found, continuing without it."; \
+    fi
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org
 
 COPY src/ /app/
 
-# ברירות מחדל (אפשר לשנות ב-run)
 ENV INPUT_DIR=/data/inbox \
     MODEL_DIR=/models \
     PERIOD_DAYS=7 \
