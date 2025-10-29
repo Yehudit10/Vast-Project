@@ -168,7 +168,6 @@ def main() -> None:
         try:
             schema_json = build_schema_for_table(ins, table)
         except Exception as e:
-            # נניח שהטבלה לא קיימת או שקרתה שגיאת reflection
             print(f"[contracts-gen] ⚠️ Skipped table '{table}': {e}")
             skipped.append(table)
             continue
