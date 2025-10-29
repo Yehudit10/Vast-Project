@@ -112,6 +112,14 @@ def flush_finished_windows(now: datetime, agg):
     for key in finished:
         del agg[key]
 
+def apply_delta(slot, delta, sign):
+    """Apply (sign=+1 add, sign=-1 subtract) a contribution delta to an agg slot."""
+    slot["sum"]           += sign * delta["sum"]
+    slot["sum_sq"]        += sign * delta["sum_sq"]
+    slot["n"]             += sign * delta["n"]
+    slot["active_frames"] += sign * delta["active_frames"]
+    slot["total_frames"]  += sign * delta["total_frames"]
+
 def main():
     start_http_server(PORT, addr=ADDR)
     print(f"✅ MinIO Metrics available at: http://{ADDR}:{PORT}/metrics")
@@ -120,7 +128,12 @@ def main():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS, MINIO_SECRET, secure=False)
 
     # seen: fname -> etag (to detect updates/overwrites)
-    seen, agg = {}, {}
+    seen = {}
+    # agg: (mic, wstart) -> accumulators
+    agg = {}
+    # contrib: fname -> {"wstart": datetime, "delta": {...}}
+    # keeps last contribution of each file, so we can subtract it before re-adding
+    contrib = {}
 
     while True:
         now = now_time()
@@ -132,27 +145,39 @@ def main():
             continue
 
         for obj in objects:
-            fname = Path(obj.object_name).name
+            fname_full = obj.object_name  # includes prefix/path
+            fname = Path(fname_full).name
             ext = Path(fname).suffix.lower()
             if ext not in ALLOWED_EXTS:
                 continue
 
-            # Skip if not changed (etag unchanged)
-            if fname in seen and seen[fname] == getattr(obj, "etag", None):
+            etag = getattr(obj, "etag", None)
+
+            # If we already processed this exact version (same etag), skip
+            if fname in seen and seen[fname] == etag:
                 continue
 
             mic, ts = parse_name(fname)
             if not mic:
+                # skip files that don't match naming scheme
                 continue
 
             try:
-                resp = client.get_object(MINIO_BUCKET, obj.object_name)
+                resp = client.get_object(MINIO_BUCKET, fname_full)
                 data = resp.read()
-                resp.close()
-                resp.release_conn()
             except Exception as e:
                 print(f"[ERROR] get_object {fname}: {e}")
+                # ensure the connection is closed even on error
+                try:
+                    resp.close(); resp.release_conn()
+                except Exception:
+                    pass
                 continue
+            finally:
+                try:
+                    resp.close(); resp.release_conn()
+                except Exception:
+                    pass
 
             try:
                 rms, _std, active, total = process_audio_bytes(data, ext)
@@ -160,19 +185,36 @@ def main():
                 print(f"[ERROR] process_audio {fname}: {e}")
                 continue
 
-            # Remember current etag (may be None on some gateways; still fine)
-            seen[fname] = getattr(obj, "etag", None)
+            # Prepare new contribution for this file
+            new_wstart = window_start_for(ts)
+            new_delta = {
+                "sum": float(rms),
+                "sum_sq": float(rms * rms),
+                "n": 1,
+                "active_frames": int(active),
+                "total_frames": int(total),
+            }
 
-            wstart = window_start_for(ts)
-            key = (mic, wstart)
-            slot = agg.setdefault(key, {"sum": 0, "sum_sq": 0, "n": 0, "active_frames": 0, "total_frames": 0})
-            slot["sum"] += rms
-            slot["sum_sq"] += rms * rms
-            slot["n"] += 1
-            slot["active_frames"] += active
-            slot["total_frames"] += total
+            # If this file contributed before, remove its previous contribution first
+            if fname in contrib:
+                prev = contrib[fname]
+                prev_wstart = prev["wstart"]
+                prev_delta  = prev["delta"]
+                prev_key = (mic, prev_wstart)
+                # Only subtract if the previous window slot still exists
+                if prev_key in agg:
+                    apply_delta(agg[prev_key], prev_delta, sign=-1)
 
-            print(f"[OK] {fname} → mic={mic} RMS={rms:.4f} active={active}/{total}")
+            # Now add the new contribution to the appropriate window slot
+            key = (mic, new_wstart)
+            slot = agg.setdefault(key, {"sum": 0.0, "sum_sq": 0.0, "n": 0, "active_frames": 0, "total_frames": 0})
+            apply_delta(slot, new_delta, sign=+1)
+
+            # Remember the last seen etag and contribution
+            seen[fname] = etag
+            contrib[fname] = {"wstart": new_wstart, "delta": new_delta}
+
+            print(f"[OK] {fname} → mic={mic} RMS={rms:.4f} active={active}/{total} window={new_wstart:%Y-%m-%d %H:%M}")
 
         flush_finished_windows(now, agg)
         time.sleep(15)  # reduce load on MinIO
