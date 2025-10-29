@@ -267,6 +267,34 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- === Task thresholds (enum + table) ===
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_type_enum') THEN
+        CREATE TYPE task_type_enum AS ENUM (
+            'ripeness',    
+            'disease',    
+            'size',        
+            'color',       
+            'quality'      
+        );
+    END IF;
+END$$;
+
+CREATE TABLE IF NOT EXISTS task_thresholds (
+    threshold_id SERIAL PRIMARY KEY,                 
+    task       task_type_enum NOT NULL,           
+    label      TEXT NOT NULL DEFAULT '',         
+    threshold  NUMERIC(6,4) NOT NULL CHECK (threshold >= 0 AND threshold <= 1),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by TEXT,
+    CONSTRAINT ux_task_thresholds_task_label UNIQUE (task, label)
+);
+
+
+CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
+CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
+
 CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
     ON public.sensor_anomalies USING BRIN (ts);
 
