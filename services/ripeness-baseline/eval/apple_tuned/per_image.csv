@@ -1,0 +1,1368 @@
+object_key,truth,pred,score_unripe,score_ripe,score_overripe
+apple/test/overripe/Screen Shot 2018-06-07 at 2.15.34 PM.png,overripe,overripe,0.0,0.7545539140701294,0.2454460710287094
+apple/test/overripe/Screen Shot 2018-06-07 at 2.16.54 PM.png,overripe,overripe,0.0,0.8749153017997742,0.12508472800254822
+apple/test/overripe/Screen Shot 2018-06-07 at 2.18.25 PM.png,overripe,overripe,0.11619272083044052,0.7942677140235901,0.2057322859764099
+apple/test/overripe/Screen Shot 2018-06-07 at 2.20.04 PM.png,overripe,overripe,0.0,0.7978011965751648,0.20219877362251282
+apple/test/overripe/Screen Shot 2018-06-07 at 2.20.34 PM.png,overripe,overripe,0.0,0.7535206079483032,0.24647939205169678
+apple/test/overripe/Screen Shot 2018-06-07 at 2.21.09 PM.png,overripe,overripe,0.0,0.426668256521225,0.5733317136764526
+apple/test/overripe/Screen Shot 2018-06-07 at 2.22.39 PM.png,overripe,overripe,0.0,0.6973071098327637,0.30269286036491394
+apple/test/overripe/Screen Shot 2018-06-07 at 2.34.49 PM.png,overripe,overripe,0.0,0.9671603441238403,0.032839640974998474
+apple/test/overripe/Screen Shot 2018-06-07 at 2.35.38 PM.png,overripe,overripe,0.0,0.418703556060791,0.581296443939209
+apple/test/overripe/Screen Shot 2018-06-07 at 2.37.53 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/Screen Shot 2018-06-07 at 2.38.13 PM.png,overripe,overripe,0.0,0.824446439743042,0.1755535751581192
+apple/test/overripe/Screen Shot 2018-06-07 at 2.38.59 PM.png,overripe,overripe,0.0,0.5464485287666321,0.4535514712333679
+apple/test/overripe/Screen Shot 2018-06-07 at 2.39.20 PM.png,overripe,overripe,0.0,0.48430266976356506,0.5156973004341125
+apple/test/overripe/Screen Shot 2018-06-07 at 2.39.35 PM.png,overripe,overripe,0.0,0.4442184567451477,0.5557815432548523
+apple/test/overripe/Screen Shot 2018-06-07 at 2.39.44 PM.png,overripe,overripe,0.0,0.7955507040023804,0.20444931089878082
+apple/test/overripe/Screen Shot 2018-06-07 at 2.39.53 PM.png,overripe,overripe,0.0,0.7676244378089905,0.23237557709217072
+apple/test/overripe/Screen Shot 2018-06-07 at 2.41.14 PM.png,overripe,overripe,0.9428315758705139,0.05716843530535698,0.22037874162197113
+apple/test/overripe/Screen Shot 2018-06-07 at 2.42.37 PM.png,overripe,overripe,0.6122614741325378,0.38773855566978455,0.3390651047229767
+apple/test/overripe/Screen Shot 2018-06-07 at 2.43.48 PM.png,overripe,overripe,0.0,0.49070119857788086,0.5092988014221191
+apple/test/overripe/Screen Shot 2018-06-07 at 2.44.36 PM.png,overripe,overripe,0.848612368106842,0.15138761699199677,0.23628957569599152
+apple/test/overripe/Screen Shot 2018-06-07 at 2.46.32 PM.png,overripe,overripe,0.776132345199585,0.22386763989925385,0.059576887637376785
+apple/test/overripe/Screen Shot 2018-06-07 at 2.47.50 PM.png,overripe,overripe,0.0904172882437706,0.6515184044837952,0.34848159551620483
+apple/test/overripe/Screen Shot 2018-06-07 at 2.51.08 PM.png,overripe,overripe,0.0,0.4012884795665741,0.5987115502357483
+apple/test/overripe/Screen Shot 2018-06-07 at 2.51.16 PM.png,overripe,overripe,0.0,0.40443962812423706,0.5955603718757629
+apple/test/overripe/Screen Shot 2018-06-07 at 2.51.37 PM.png,overripe,overripe,0.0,0.6409111022949219,0.3590888977050781
+apple/test/overripe/Screen Shot 2018-06-07 at 2.51.45 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/Screen Shot 2018-06-07 at 2.53.57 PM.png,overripe,overripe,0.0,0.40827131271362305,0.591728687286377
+apple/test/overripe/Screen Shot 2018-06-07 at 2.54.41 PM.png,overripe,overripe,0.0,0.4024764895439148,0.5975235104560852
+apple/test/overripe/Screen Shot 2018-06-07 at 2.56.47 PM.png,overripe,overripe,0.1045917421579361,0.8770256042480469,0.12297438830137253
+apple/test/overripe/Screen Shot 2018-06-07 at 2.58.04 PM.png,overripe,overripe,0.0,0.401737779378891,0.5982621908187866
+apple/test/overripe/Screen Shot 2018-06-07 at 2.58.30 PM.png,overripe,overripe,0.0,0.5290892124176025,0.47091078758239746
+apple/test/overripe/Screen Shot 2018-06-07 at 2.58.38 PM.png,overripe,overripe,0.0,0.48512938618659973,0.5148705840110779
+apple/test/overripe/Screen Shot 2018-06-07 at 2.59.09 PM.png,overripe,overripe,0.0,0.5103872418403625,0.48961275815963745
+apple/test/overripe/Screen Shot 2018-06-07 at 2.59.13 PM.png,overripe,overripe,0.0,0.5074149966239929,0.49258503317832947
+apple/test/overripe/Screen Shot 2018-06-07 at 2.59.23 PM.png,overripe,overripe,0.7817977666854858,0.21820221841335297,0.3606202006340027
+apple/test/overripe/Screen Shot 2018-06-07 at 3.00.25 PM.png,overripe,overripe,0.0,0.7927172780036926,0.20728273689746857
+apple/test/overripe/Screen Shot 2018-06-07 at 3.01.38 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/Screen Shot 2018-06-07 at 3.02.37 PM.png,overripe,overripe,0.011743295006453991,0.5223132967948914,0.47768667340278625
+apple/test/overripe/Screen Shot 2018-06-07 at 3.03.02 PM.png,overripe,overripe,0.22627583146095276,0.5952256917953491,0.4047743082046509
+apple/test/overripe/Screen Shot 2018-06-07 at 3.03.31 PM.png,overripe,overripe,0.0,0.6625497937202454,0.33745017647743225
+apple/test/overripe/Screen Shot 2018-06-07 at 3.04.04 PM.png,overripe,overripe,0.0,0.5296342968940735,0.4703657031059265
+apple/test/overripe/Screen Shot 2018-06-07 at 3.04.10 PM.png,overripe,overripe,0.0,0.5789469480514526,0.42105305194854736
+apple/test/overripe/Screen Shot 2018-06-07 at 3.05.38 PM.png,overripe,overripe,0.0,0.42003384232521057,0.579966127872467
+apple/test/overripe/Screen Shot 2018-06-07 at 3.06.30 PM.png,overripe,overripe,0.0,0.45272931456565857,0.5472707152366638
+apple/test/overripe/Screen Shot 2018-06-07 at 3.17.32 PM.png,overripe,overripe,0.0,0.4085937440395355,0.5914062261581421
+apple/test/overripe/Screen Shot 2018-06-08 at 2.24.46 PM.png,overripe,overripe,0.0,0.48230722546577454,0.5176928043365479
+apple/test/overripe/Screen Shot 2018-06-08 at 2.25.04 PM.png,overripe,overripe,0.8088228702545166,0.1911771148443222,0.15510158240795135
+apple/test/overripe/Screen Shot 2018-06-08 at 2.25.17 PM.png,overripe,overripe,0.0,0.47224000096321106,0.5277600288391113
+apple/test/overripe/Screen Shot 2018-06-08 at 2.25.24 PM.png,overripe,overripe,0.0,0.5476417541503906,0.4523582458496094
+apple/test/overripe/Screen Shot 2018-06-08 at 2.26.09 PM.png,overripe,overripe,0.0,0.8933544158935547,0.10664559155702591
+apple/test/overripe/Screen Shot 2018-06-08 at 2.26.55 PM.png,overripe,overripe,0.0,0.574117124080658,0.42588290572166443
+apple/test/overripe/Screen Shot 2018-06-08 at 2.28.07 PM.png,overripe,overripe,0.0,0.8121988773345947,0.18780113756656647
+apple/test/overripe/Screen Shot 2018-06-08 at 2.29.10 PM.png,overripe,overripe,0.0,0.46738964319229126,0.5326103568077087
+apple/test/overripe/Screen Shot 2018-06-08 at 2.29.20 PM.png,overripe,overripe,0.0,0.6598382592201233,0.3401617407798767
+apple/test/overripe/Screen Shot 2018-06-08 at 2.30.45 PM.png,overripe,overripe,0.33995410799980164,0.660045862197876,0.23476363718509674
+apple/test/overripe/Screen Shot 2018-06-08 at 2.30.51 PM.png,overripe,overripe,0.0,0.5387656092643738,0.4612343907356262
+apple/test/overripe/Screen Shot 2018-06-08 at 2.31.03 PM.png,overripe,overripe,0.0,0.5897746682167053,0.4102253019809723
+apple/test/overripe/Screen Shot 2018-06-08 at 2.34.37 PM.png,overripe,overripe,0.0,0.46794599294662476,0.5320540070533752
+apple/test/overripe/Screen Shot 2018-06-08 at 2.34.47 PM.png,overripe,overripe,0.0,0.4029044210910797,0.5970955491065979
+apple/test/overripe/Screen Shot 2018-06-08 at 2.37.03 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/Screen Shot 2018-06-08 at 2.39.51 PM.png,overripe,overripe,0.0,0.8298832178115845,0.17011681199073792
+apple/test/overripe/Screen Shot 2018-06-08 at 2.42.30 PM.png,overripe,overripe,0.0,0.6761451959609985,0.32385480403900146
+apple/test/overripe/Screen Shot 2018-06-08 at 2.42.58 PM.png,overripe,overripe,0.0,0.8416235446929932,0.15837645530700684
+apple/test/overripe/Screen Shot 2018-06-08 at 2.43.54 PM.png,overripe,overripe,0.0,0.47808218002319336,0.5219178199768066
+apple/test/overripe/Screen Shot 2018-06-08 at 2.45.44 PM.png,overripe,overripe,0.0,0.5183576345443726,0.48164236545562744
+apple/test/overripe/Screen Shot 2018-06-08 at 2.46.08 PM.png,overripe,overripe,0.0,0.40096020698547363,0.5990397930145264
+apple/test/overripe/Screen Shot 2018-06-08 at 2.46.25 PM.png,overripe,overripe,0.0,0.4709493815898895,0.5290505886077881
+apple/test/overripe/Screen Shot 2018-06-08 at 2.48.09 PM.png,overripe,overripe,0.0,0.5950728058815002,0.40492719411849976
+apple/test/overripe/Screen Shot 2018-06-08 at 2.48.43 PM.png,overripe,overripe,0.0,0.4915332794189453,0.5084667205810547
+apple/test/overripe/Screen Shot 2018-06-08 at 2.50.14 PM.png,overripe,overripe,0.0,0.49049779772758484,0.5095021724700928
+apple/test/overripe/Screen Shot 2018-06-08 at 2.50.25 PM.png,overripe,overripe,0.0,0.452358216047287,0.5476418137550354
+apple/test/overripe/Screen Shot 2018-06-08 at 2.50.49 PM.png,overripe,overripe,0.0,0.7317582368850708,0.2682417631149292
+apple/test/overripe/Screen Shot 2018-06-08 at 2.51.28 PM.png,overripe,overripe,0.0,0.7264909148216248,0.27350908517837524
+apple/test/overripe/Screen Shot 2018-06-08 at 2.52.57 PM.png,overripe,overripe,0.0,0.4019714891910553,0.5980285406112671
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.16.18 PM.png,overripe,overripe,0.0,0.9683067798614502,0.03169320896267891
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.16.41 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.18.25 PM.png,overripe,overripe,0.11404334753751755,0.7940260767936707,0.20597393810749054
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.19.37 PM.png,overripe,overripe,0.0,0.7950757145881653,0.20492427051067352
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.20.29 PM.png,overripe,overripe,0.0,0.4887690246105194,0.5112309455871582
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.21.09 PM.png,overripe,overripe,0.0,0.4269527494907379,0.5730472803115845
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.22.39 PM.png,overripe,overripe,0.0,0.6983228325843811,0.3016771376132965
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.25.26 PM.png,overripe,overripe,0.0,0.5882577300071716,0.41174226999282837
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.31.43 PM.png,overripe,overripe,0.0,0.7394410967826843,0.2605589032173157
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.31.59 PM.png,overripe,overripe,0.0,0.8452314138412476,0.15476860105991364
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.34.18 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.35.21 PM.png,overripe,overripe,0.0920504778623581,0.7074757218360901,0.2925243079662323
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.36.21 PM.png,overripe,overripe,0.0,0.5425712466239929,0.4574287533760071
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.37.01 PM.png,overripe,overripe,0.0,0.4025708734989166,0.597429096698761
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.37.53 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.38.38 PM.png,overripe,overripe,0.0,0.5322250723838806,0.467774897813797
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.38.49 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.38.59 PM.png,overripe,overripe,0.0,0.5448402166366577,0.4551598131656647
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.40.00 PM.png,overripe,overripe,0.0,0.9829521775245667,0.01704784668982029
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.40.28 PM.png,overripe,overripe,0.0,0.7483903765678406,0.25160959362983704
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.40.48 PM.png,overripe,overripe,0.0,0.9080915451049805,0.09190845489501953
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.41.07 PM.png,overripe,overripe,0.6295706629753113,0.37042930722236633,0.11884623020887375
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.42.25 PM.png,overripe,overripe,0.0,0.9281436204910278,0.07185638695955276
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.42.58 PM.png,overripe,unripe,0.4167487919330597,0.5832511782646179,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.43.07 PM.png,overripe,unripe,0.4796822965145111,0.5203177332878113,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.44.05 PM.png,overripe,overripe,0.0,0.7026820182800293,0.2973180115222931
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.44.36 PM.png,overripe,overripe,0.6610499620437622,0.3389500677585602,0.26377883553504944
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.44.51 PM.png,overripe,overripe,0.44681820273399353,0.5531817674636841,0.31737861037254333
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.45.09 PM.png,overripe,overripe,0.0,0.40100690722465515,0.5989930629730225
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.46.32 PM.png,overripe,overripe,0.5487484335899353,0.4512515962123871,0.035074446350336075
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.47.35 PM.png,overripe,overripe,0.23336206376552582,0.6845308542251587,0.3154691457748413
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.52.44 PM.png,overripe,overripe,0.0,0.7797549962997437,0.22024501860141754
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.54.49 PM.png,overripe,overripe,0.0,0.9360671043395996,0.06393289566040039
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.55.27 PM.png,overripe,overripe,0.0,0.9280431270599365,0.07195686548948288
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.56.57 PM.png,overripe,overripe,0.0,0.5827373266220093,0.4172627031803131
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.57.26 PM.png,overripe,overripe,0.0,0.6259711384773254,0.37402886152267456
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.58.38 PM.png,overripe,overripe,0.0,0.48935338854789734,0.5106465816497803
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.58.47 PM.png,overripe,overripe,0.0,0.4701474905014038,0.5298525094985962
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.59.23 PM.png,overripe,overripe,0.8215239644050598,0.17847603559494019,0.3506662845611572
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 2.59.52 PM.png,overripe,overripe,0.0,0.9186636209487915,0.0813363566994667
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 3.00.00 PM.png,overripe,overripe,0.13751615583896637,0.5227135419845581,0.4772864878177643
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 3.01.54 PM.png,overripe,overripe,0.29777848720550537,0.6839640736579895,0.3160359263420105
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 3.02.09 PM.png,overripe,overripe,0.0,0.8444986343383789,0.1555013805627823
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 3.02.51 PM.png,overripe,overripe,0.0,0.4000000059604645,0.6000000238418579
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 3.05.13 PM.png,overripe,overripe,0.0,0.8569608926773071,0.14303909242153168
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-07 at 3.06.22 PM.png,overripe,overripe,0.0,0.8946223258972168,0.10537765920162201
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.21.33 PM.png,overripe,overripe,0.0,0.8995535969734192,0.10044639557600021
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.23.40 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.23.48 PM.png,overripe,overripe,0.0,0.8978826999664307,0.10211727023124695
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.24.31 PM.png,overripe,overripe,0.0,0.6632320284843445,0.3367679715156555
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.24.37 PM.png,overripe,overripe,0.0,0.7515414357185364,0.24845854938030243
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.24.46 PM.png,overripe,overripe,0.0,0.4607156217098236,0.539284348487854
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.26.44 PM.png,overripe,overripe,0.0,0.955458402633667,0.0445416085422039
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.28.12 PM.png,overripe,overripe,0.0,0.9383007287979126,0.061699278652668
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.28.23 PM.png,overripe,overripe,0.0,0.6913803815841675,0.3086196482181549
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.30.31 PM.png,overripe,overripe,0.0,0.5019571185112,0.49804291129112244
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.32.10 PM.png,overripe,overripe,0.0,0.4012617766857147,0.5987382531166077
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.33.04 PM.png,overripe,overripe,0.0,0.41342276334762573,0.5865772366523743
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.34.37 PM.png,overripe,overripe,0.0,0.467265784740448,0.532734215259552
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.36.31 PM.png,overripe,overripe,0.5365432500839233,0.46345674991607666,0.10404040664434433
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.36.43 PM.png,overripe,overripe,0.0,0.938224732875824,0.061775270849466324
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.37.24 PM.png,overripe,overripe,0.0,0.5152910351753235,0.4847089648246765
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.40.30 PM.png,overripe,overripe,0.0,0.5359194874763489,0.4640805125236511
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.46.44 PM.png,overripe,overripe,0.0,0.5454541444778442,0.45454588532447815
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.47.54 PM.png,overripe,overripe,0.0,0.43485355377197266,0.5651464462280273
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.48.15 PM.png,overripe,overripe,0.0,0.6856085062026978,0.31439152359962463
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.50.22 PM.png,overripe,overripe,0.0,0.547704815864563,0.452295184135437
+apple/test/overripe/rotated_by_15_Screen Shot 2018-06-08 at 2.50.33 PM.png,overripe,overripe,0.0,0.4461022615432739,0.5538977384567261
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.18.25 PM.png,overripe,overripe,0.10958212614059448,0.7939813137054443,0.20601867139339447
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.19.46 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.20.46 PM.png,overripe,overripe,0.0,0.632486879825592,0.36751309037208557
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.23.02 PM.png,overripe,overripe,0.0,0.9823130965232849,0.017686905339360237
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.25.16 PM.png,overripe,overripe,0.0,0.9632701873779297,0.036729805171489716
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.36.21 PM.png,overripe,overripe,0.08686870336532593,0.5565102100372314,0.44348978996276855
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.37.11 PM.png,overripe,ripe,0.1818079799413681,0.8181920051574707,0.0
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.38.49 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.40.48 PM.png,overripe,overripe,0.0,0.9184742569923401,0.08152573555707932
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.40.55 PM.png,overripe,overripe,0.3069930672645569,0.6930069327354431,0.21854381263256073
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.42.25 PM.png,overripe,overripe,0.0,0.9505967497825623,0.04940324276685715
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.43.26 PM.png,overripe,overripe,0.0,0.9173040390014648,0.08269596099853516
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.45.44 PM.png,overripe,overripe,0.0,0.4051132798194885,0.5948867201805115
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.46.04 PM.png,overripe,overripe,0.0,0.40443769097328186,0.5955622792243958
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.50.31 PM.png,overripe,overripe,0.0,0.5686571002006531,0.4313429296016693
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.52.00 PM.png,overripe,overripe,0.0,0.6491890549659729,0.3508109450340271
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.52.30 PM.png,overripe,overripe,0.0,0.8324998021125793,0.16750018298625946
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.52.44 PM.png,overripe,overripe,0.0,0.8485864400863647,0.15141353011131287
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.53.20 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.53.33 PM.png,overripe,overripe,0.0,0.9859579205513,0.014042074792087078
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.54.58 PM.png,overripe,overripe,0.051665663719177246,0.7535101771354675,0.24648980796337128
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.55.27 PM.png,overripe,overripe,0.0,0.9271116852760315,0.07288828492164612
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.55.52 PM.png,overripe,overripe,0.0,0.4622405171394348,0.5377594828605652
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.56.09 PM.png,overripe,overripe,0.0,0.6168363094329834,0.3831636905670166
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.56.16 PM.png,overripe,overripe,0.0,0.42570480704307556,0.574295163154602
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.56.57 PM.png,overripe,overripe,0.0,0.5843639969825745,0.4156360328197479
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.57.17 PM.png,overripe,overripe,0.0,0.47497987747192383,0.5250201225280762
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.58.38 PM.png,overripe,overripe,0.0,0.4943205714225769,0.5056794285774231
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.58.47 PM.png,overripe,overripe,0.0,0.4746500551700592,0.5253499746322632
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 2.59.09 PM.png,overripe,overripe,0.0,0.5180833339691162,0.4819166660308838
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.00.56 PM.png,overripe,overripe,0.0,0.5245475769042969,0.4754524230957031
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.01.38 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.01.54 PM.png,overripe,overripe,0.24870027601718903,0.6739242076873779,0.32607579231262207
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.02.09 PM.png,overripe,overripe,0.0,0.8391834497451782,0.16081656515598297
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.04.35 PM.png,overripe,overripe,0.0,0.6223083734512329,0.3776916265487671
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.04.41 PM.png,overripe,overripe,0.0,0.46168506145477295,0.538314938545227
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.04.58 PM.png,overripe,overripe,0.036418166011571884,0.9070121049880981,0.09298786520957947
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.05.38 PM.png,overripe,overripe,0.0,0.40247201919555664,0.5975279808044434
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.05.46 PM.png,overripe,overripe,0.29755207896232605,0.6635130047798157,0.3364869952201843
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.05.53 PM.png,overripe,overripe,0.0,0.6730727553367615,0.3269272446632385
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.06.06 PM.png,overripe,overripe,0.0,0.9001975059509277,0.09980249404907227
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.17.25 PM.png,overripe,overripe,0.0,0.9011508226394653,0.09884918481111526
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-07 at 3.17.32 PM.png,overripe,overripe,0.0,0.4086782932281494,0.5913217067718506
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.24.09 PM.png,overripe,overripe,0.18525253236293793,0.6760610342025757,0.3239389657974243
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.26.44 PM.png,overripe,overripe,0.0,0.9540358185768127,0.045964207500219345
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.27.15 PM.png,overripe,overripe,0.0,0.6870434880256653,0.3129565119743347
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.28.23 PM.png,overripe,overripe,0.0,0.6871688365936279,0.31283116340637207
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.30.03 PM.png,overripe,overripe,0.0,0.7327337861061096,0.2672662138938904
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.31.03 PM.png,overripe,overripe,0.0,0.5886185765266418,0.41138145327568054
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.31.23 PM.png,overripe,overripe,0.0,0.6882686018943787,0.31173139810562134
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.32.42 PM.png,overripe,overripe,0.0,0.4039195477962494,0.596080482006073
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.34.47 PM.png,overripe,overripe,0.0,0.40276506543159485,0.5972349643707275
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.35.03 PM.png,overripe,overripe,0.0,0.43099215626716614,0.5690078139305115
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.38.54 PM.png,overripe,overripe,0.0,0.40850457549095154,0.5914954543113708
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.40.13 PM.png,overripe,overripe,0.0,0.8202294111251831,0.1797705888748169
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.44.54 PM.png,overripe,overripe,0.0,0.7589153051376343,0.24108467996120453
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.45.58 PM.png,overripe,overripe,0.0,0.8278490900993347,0.17215090990066528
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.47.30 PM.png,overripe,overripe,0.0,0.8913791179656982,0.10862090438604355
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.49.40 PM.png,overripe,overripe,0.0,0.48092421889305115,0.5190757513046265
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.50.22 PM.png,overripe,overripe,0.0,0.5438693761825562,0.45613065361976624
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.50.33 PM.png,overripe,overripe,0.0,0.4907514750957489,0.5092484951019287
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.50.49 PM.png,overripe,overripe,0.0,0.712379515171051,0.287620484828949
+apple/test/overripe/rotated_by_30_Screen Shot 2018-06-08 at 2.52.43 PM.png,overripe,overripe,0.0,0.9390769600868225,0.060923025012016296
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.15.34 PM.png,overripe,overripe,0.0,0.7551569938659668,0.244842991232872
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.16.18 PM.png,overripe,overripe,0.0,0.967350423336029,0.03264958783984184
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.18.13 PM.png,overripe,unripe,0.7259302735328674,0.27406972646713257,0.0
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.20.56 PM.png,overripe,overripe,0.0,0.44718441367149353,0.5528156161308289
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.23.02 PM.png,overripe,overripe,0.0,0.9833796620368958,0.016620351001620293
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.23.24 PM.png,overripe,overripe,0.0,0.93206387758255,0.06793615221977234
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.24.35 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.24.59 PM.png,overripe,overripe,0.0,0.9695764183998108,0.03042358160018921
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.31.59 PM.png,overripe,overripe,0.0,0.8330531120300293,0.16694685816764832
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.34.36 PM.png,overripe,overripe,0.0,0.5974652171134949,0.4025348126888275
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.34.49 PM.png,overripe,overripe,0.0,0.9630469679832458,0.03695303946733475
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.37.20 PM.png,overripe,unripe,0.567131519317627,0.43286851048469543,0.0
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.37.43 PM.png,overripe,overripe,0.0,0.8424391150474548,0.15756088495254517
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.39.26 PM.png,overripe,overripe,0.0,0.4078674018383026,0.5921326279640198
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.40.13 PM.png,overripe,overripe,0.0,0.4262941777706146,0.573705792427063
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.40.28 PM.png,overripe,overripe,0.0,0.7483091950416565,0.2516908049583435
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.42.18 PM.png,overripe,overripe,0.3821904957294464,0.617809534072876,0.21698372066020966
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.44.36 PM.png,overripe,overripe,0.48610448837280273,0.5138955116271973,0.2841413617134094
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.45.55 PM.png,overripe,overripe,0.0,0.4066220819950104,0.5933778882026672
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.47.27 PM.png,overripe,overripe,0.0,0.7057316303253174,0.2942683696746826
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.50.52 PM.png,overripe,overripe,0.0,0.7147276401519775,0.28527238965034485
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.51.01 PM.png,overripe,overripe,0.0,0.412349134683609,0.5876508355140686
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.51.45 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.52.44 PM.png,overripe,overripe,0.0,0.8451262712478638,0.15487371385097504
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.53.20 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.56.34 PM.png,overripe,overripe,0.0,0.9582783579826355,0.0417216531932354
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.56.57 PM.png,overripe,overripe,0.0,0.5849897265434265,0.4150102436542511
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.57.42 PM.png,overripe,overripe,0.0,0.4153805077075958,0.5846194624900818
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.57.49 PM.png,overripe,overripe,0.0,0.4582032561302185,0.5417967438697815
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.58.30 PM.png,overripe,overripe,0.0,0.5339092016220093,0.4660908281803131
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.59.38 PM.png,overripe,overripe,0.5518174171447754,0.4481825530529022,0.21782192587852478
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 2.59.52 PM.png,overripe,overripe,0.0,0.9076318144798279,0.09236818552017212
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.00.00 PM.png,overripe,overripe,0.24669331312179565,0.5514664053916931,0.4485335946083069
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.00.33 PM.png,overripe,overripe,0.0,0.873406708240509,0.12659327685832977
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.00.40 PM.png,overripe,overripe,0.7814487814903259,0.21855123341083527,0.05215732008218765
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.01.09 PM.png,overripe,overripe,0.0,0.5409248471260071,0.4590751528739929
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.01.54 PM.png,overripe,overripe,0.2155858874320984,0.668299674987793,0.33170029520988464
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.02.18 PM.png,overripe,overripe,0.0,0.8997437953948975,0.10025618225336075
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.02.37 PM.png,overripe,overripe,0.0,0.4911389648914337,0.5088610053062439
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.03.02 PM.png,overripe,overripe,0.14312675595283508,0.6304293870925903,0.36957064270973206
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.04.24 PM.png,overripe,overripe,0.0,0.5080414414405823,0.4919585585594177
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.05.29 PM.png,overripe,overripe,0.0,0.7345165014266968,0.26548346877098083
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.05.38 PM.png,overripe,overripe,0.0,0.40143489837646484,0.5985651016235352
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.05.46 PM.png,overripe,overripe,0.2712413966655731,0.6604287028312683,0.3395713269710541
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.06.06 PM.png,overripe,overripe,0.0,0.9013089537620544,0.09869106113910675
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-07 at 3.17.32 PM.png,overripe,overripe,0.0,0.4090251326560974,0.5909748673439026
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.24.15 PM.png,overripe,overripe,0.0,0.5750827193260193,0.4249172806739807
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.24.46 PM.png,overripe,overripe,0.0,0.44137096405029297,0.558629035949707
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.26.14 PM.png,overripe,overripe,0.0,0.6560968160629272,0.34390321373939514
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.28.42 PM.png,overripe,overripe,0.7839246988296509,0.21607527136802673,0.14804627001285553
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.29.33 PM.png,overripe,overripe,0.0,0.7246161103248596,0.2753838896751404
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.30.51 PM.png,overripe,overripe,0.0,0.536897599697113,0.4631023705005646
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.31.16 PM.png,overripe,overripe,0.0,0.40968266129493713,0.5903173089027405
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.31.45 PM.png,overripe,overripe,0.0,0.5343549251556396,0.46564507484436035
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.34.37 PM.png,overripe,overripe,0.0,0.4676794707775116,0.532320499420166
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.34.42 PM.png,overripe,overripe,0.0,0.414518266916275,0.5854817628860474
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.35.03 PM.png,overripe,overripe,0.0,0.4312627613544464,0.568737268447876
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.35.25 PM.png,overripe,overripe,0.0,0.9288630485534668,0.0711369588971138
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.36.31 PM.png,overripe,overripe,0.46940869092941284,0.5305913090705872,0.09870533645153046
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.36.43 PM.png,overripe,overripe,0.0,0.937780499458313,0.06221947818994522
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.36.55 PM.png,overripe,overripe,0.0,0.8245388865470886,0.17546111345291138
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.37.19 PM.png,overripe,overripe,0.0,0.8321002125740051,0.16789978742599487
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.38.08 PM.png,overripe,overripe,0.0,0.8466804027557373,0.1533195823431015
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.39.02 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.39.26 PM.png,overripe,overripe,0.0,0.5598364472389221,0.44016358256340027
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.41.39 PM.png,overripe,overripe,0.0,0.6395807266235352,0.36041927337646484
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.41.44 PM.png,overripe,overripe,0.0,0.693849503993988,0.30615052580833435
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.42.06 PM.png,overripe,overripe,0.0007034925511106849,0.7578920722007751,0.24210794270038605
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.42.30 PM.png,overripe,overripe,0.0,0.6898362636566162,0.3101637363433838
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.42.38 PM.png,overripe,overripe,0.0,0.624383807182312,0.3756162226200104
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.42.52 PM.png,overripe,overripe,0.0,0.9736606478691101,0.026339346542954445
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.43.29 PM.png,overripe,overripe,0.0,0.7659586668014526,0.23404133319854736
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.44.13 PM.png,overripe,overripe,0.0,0.421697199344635,0.578302800655365
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.46.36 PM.png,overripe,overripe,0.0,0.40004780888557434,0.599952220916748
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.46.50 PM.png,overripe,overripe,0.0,0.4016577899456024,0.59834223985672
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.47.03 PM.png,overripe,overripe,0.0,0.40506136417388916,0.5949386358261108
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.47.30 PM.png,overripe,overripe,0.0,0.8886337876319885,0.11136619746685028
+apple/test/overripe/rotated_by_45_Screen Shot 2018-06-08 at 2.50.14 PM.png,overripe,overripe,0.0,0.485358864068985,0.5146411061286926
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.17.25 PM.png,overripe,overripe,0.0,0.8494974970817566,0.1505025029182434
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.20.46 PM.png,overripe,overripe,0.0,0.6329468488693237,0.36705315113067627
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.22.00 PM.png,overripe,overripe,0.0,0.9032963514328003,0.09670363366603851
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.23.51 PM.png,overripe,overripe,0.0,0.840143620967865,0.159856379032135
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.36.21 PM.png,overripe,overripe,0.0641099065542221,0.5555886626243591,0.44441133737564087
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.37.20 PM.png,overripe,unripe,0.5653679966926575,0.43463197350502014,0.0
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.37.32 PM.png,overripe,overripe,0.0,0.4483490586280823,0.5516509413719177
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.37.43 PM.png,overripe,overripe,0.0,0.8418064713478088,0.15819349884986877
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.40.28 PM.png,overripe,overripe,0.0,0.7490416765213013,0.25095832347869873
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.41.14 PM.png,overripe,overripe,0.6164188385009766,0.38358113169670105,0.18586483597755432
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.43.26 PM.png,overripe,overripe,0.0,0.9171419739723206,0.08285801112651825
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.43.54 PM.png,overripe,overripe,0.0,0.9392583966255188,0.06074158102273941
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.45.55 PM.png,overripe,overripe,0.0,0.4066635072231293,0.5933365225791931
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.46.22 PM.png,overripe,overripe,0.0,0.40962210297584534,0.5903778672218323
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.47.13 PM.png,overripe,overripe,0.3001384139060974,0.6998615860939026,0.25409209728240967
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.47.20 PM.png,overripe,overripe,0.10661923885345459,0.7540392875671387,0.24596072733402252
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.51.45 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.52.44 PM.png,overripe,overripe,0.0,0.8481209874153137,0.15187904238700867
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.56.09 PM.png,overripe,overripe,0.0,0.608056902885437,0.391943097114563
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.56.47 PM.png,overripe,overripe,0.10662014782428741,0.8801792860031128,0.11982069164514542
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 2.58.38 PM.png,overripe,overripe,0.0,0.49593791365623474,0.5040620565414429
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.00.17 PM.png,overripe,overripe,0.0,0.8968648910522461,0.1031351238489151
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.01.54 PM.png,overripe,overripe,0.214319109916687,0.6683759093284607,0.3316240608692169
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.03.38 PM.png,overripe,overripe,0.02575046196579933,0.8483583927154541,0.1516416370868683
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.04.04 PM.png,overripe,overripe,0.0,0.4902566075325012,0.5097433924674988
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.04.35 PM.png,overripe,overripe,0.0,0.6225723624229431,0.3774276375770569
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.05.13 PM.png,overripe,overripe,0.0,0.8565447926521301,0.14345519244670868
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.05.46 PM.png,overripe,overripe,0.28264111280441284,0.6614633798599243,0.3385366201400757
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-07 at 3.05.58 PM.png,overripe,overripe,0.0,0.7993506789207458,0.20064933598041534
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.25.04 PM.png,overripe,overripe,0.7317115664482117,0.26828843355178833,0.1482333093881607
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.26.14 PM.png,overripe,overripe,0.0,0.6563419699668884,0.3436580002307892
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.26.34 PM.png,overripe,overripe,0.0,0.578015148639679,0.42198485136032104
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.29.20 PM.png,overripe,overripe,0.0,0.6566964387893677,0.3433035910129547
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.30.03 PM.png,overripe,overripe,0.0,0.7308566570281982,0.26914334297180176
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.34.51 PM.png,overripe,overripe,0.0,0.41533204913139343,0.5846679210662842
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.35.25 PM.png,overripe,overripe,0.0,0.9264752268791199,0.07352479547262192
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.36.18 PM.png,overripe,overripe,0.16023299098014832,0.7780072093009949,0.22199276089668274
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.36.43 PM.png,overripe,overripe,0.0,0.9373990297317505,0.0626010000705719
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.36.55 PM.png,overripe,overripe,0.0,0.8292298316955566,0.17077018320560455
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.37.19 PM.png,overripe,overripe,0.0,0.8322131037712097,0.1677868813276291
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.37.24 PM.png,overripe,overripe,0.0,0.5228731036186218,0.4771268963813782
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.38.08 PM.png,overripe,overripe,0.0,0.8472363352775574,0.15276364982128143
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.38.47 PM.png,overripe,overripe,0.0,0.46913638710975647,0.5308635830879211
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.40.09 PM.png,overripe,overripe,0.0,0.9557929635047913,0.04420701786875725
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.40.30 PM.png,overripe,overripe,0.0,0.5363069772720337,0.4636929929256439
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.40.56 PM.png,overripe,overripe,0.0,0.4049716293811798,0.5950284004211426
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.41.16 PM.png,overripe,overripe,0.0,0.4824846386909485,0.5175153613090515
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.42.30 PM.png,overripe,overripe,0.0,0.6909096240997314,0.30909040570259094
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.43.54 PM.png,overripe,overripe,0.0,0.4775329828262329,0.5224670171737671
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.44.13 PM.png,overripe,overripe,0.0,0.4211606979370117,0.5788393020629883
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.45.05 PM.png,overripe,overripe,0.0,0.7363434433937073,0.2636565864086151
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.47.09 PM.png,overripe,overripe,0.0,0.40773338079452515,0.5922666192054749
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.47.49 PM.png,overripe,overripe,0.20428843796253204,0.6009278893470764,0.3990720808506012
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.50.38 PM.png,overripe,overripe,0.0,0.6114640235900879,0.3885359764099121
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.50.49 PM.png,overripe,overripe,0.0,0.7080582976341248,0.29194167256355286
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.51.09 PM.png,overripe,overripe,0.0,0.43311309814453125,0.5668869018554688
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.52.05 PM.png,overripe,overripe,0.0,0.6538779735565186,0.34612199664115906
+apple/test/overripe/rotated_by_60_Screen Shot 2018-06-08 at 2.52.20 PM.png,overripe,overripe,0.0,0.40624698996543884,0.5937530398368835
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.15.34 PM.png,overripe,overripe,0.0,0.7550516128540039,0.24494841694831848
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.18.13 PM.png,overripe,unripe,0.7599319219589233,0.24006809294223785,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.19.46 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.21.09 PM.png,overripe,overripe,0.0,0.4281546473503113,0.5718453526496887
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.22.00 PM.png,overripe,overripe,0.0,0.9122918248176575,0.08770819008350372
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.23.24 PM.png,overripe,overripe,0.0,0.926906168460846,0.07309383898973465
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.25.16 PM.png,overripe,overripe,0.0,0.9623044729232788,0.03769555315375328
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.31.43 PM.png,overripe,overripe,0.0,0.7388497591018677,0.2611502707004547
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.34.18 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.36.21 PM.png,overripe,overripe,0.0,0.5387851595878601,0.4612148106098175
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.37.11 PM.png,overripe,ripe,0.18910716474056244,0.8108928203582764,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.38.38 PM.png,overripe,overripe,0.0,0.5328457951545715,0.4671541750431061
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.39.35 PM.png,overripe,overripe,0.0,0.4501740634441376,0.54982590675354
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.39.44 PM.png,overripe,overripe,0.0,0.8042840361595154,0.1957159787416458
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.39.53 PM.png,overripe,overripe,0.0,0.7690977454185486,0.23090225458145142
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.40.00 PM.png,overripe,overripe,0.0,0.9824215173721313,0.0175784844905138
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.41.23 PM.png,overripe,overripe,0.3441731631755829,0.6558268070220947,0.23758749663829803
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.41.32 PM.png,overripe,overripe,0.0,0.9459468126296997,0.054053205996751785
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.42.58 PM.png,overripe,unripe,0.4022534191608429,0.5977466106414795,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.43.54 PM.png,overripe,overripe,0.0,0.9566748738288879,0.04332513362169266
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.44.05 PM.png,overripe,overripe,0.0,0.7034739851951599,0.2965260446071625
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.44.59 PM.png,overripe,overripe,0.0,0.49054017663002014,0.5094598531723022
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.45.55 PM.png,overripe,overripe,0.0,0.4066976308822632,0.5933023691177368
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.46.12 PM.png,overripe,overripe,0.0,0.4086005985736847,0.5913994312286377
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.47.13 PM.png,overripe,overripe,0.3048560619354248,0.6951439380645752,0.2489471733570099
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.50.31 PM.png,overripe,overripe,0.0,0.5756474733352661,0.4243524968624115
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.52.00 PM.png,overripe,overripe,0.0,0.6447377800941467,0.35526221990585327
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.53.57 PM.png,overripe,overripe,0.0,0.4075360894203186,0.5924639105796814
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.54.08 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.54.58 PM.png,overripe,overripe,0.0,0.7431972026824951,0.2568027973175049
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 2.57.05 PM.png,overripe,overripe,0.0,0.9022953510284424,0.09770466387271881
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 3.02.09 PM.png,overripe,overripe,0.0,0.8444233536720276,0.1555766463279724
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 3.02.24 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 3.05.46 PM.png,overripe,overripe,0.3315379023551941,0.6684620976448059,0.3293115794658661
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 3.06.22 PM.png,overripe,overripe,0.0,0.8890763521194458,0.11092362552881241
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-07 at 3.06.51 PM.png,overripe,overripe,0.0,0.5711193084716797,0.4288806617259979
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.23.40 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.25.43 PM.png,overripe,overripe,0.0,0.6806471347808838,0.3193528652191162
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.26.14 PM.png,overripe,overripe,0.0,0.6561587452888489,0.34384122490882874
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.28.23 PM.png,overripe,overripe,0.0,0.6910083889961243,0.3089916408061981
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.29.20 PM.png,overripe,overripe,0.0,0.6582351326942444,0.341764897108078
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.31.03 PM.png,overripe,overripe,0.0,0.5899176001548767,0.4100823998451233
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.31.16 PM.png,overripe,overripe,0.0,0.40940433740615845,0.5905956625938416
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.31.45 PM.png,overripe,overripe,0.0,0.5353731513023376,0.46462681889533997
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.33.49 PM.png,overripe,overripe,0.0,0.8827162981033325,0.11728369444608688
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.34.05 PM.png,overripe,overripe,0.0,0.862308919429779,0.13769106566905975
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.34.47 PM.png,overripe,overripe,0.0,0.4028860330581665,0.5971139669418335
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.36.55 PM.png,overripe,overripe,0.0,0.8274161219596863,0.17258386313915253
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.37.13 PM.png,overripe,overripe,0.0,0.8851184844970703,0.1148814931511879
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.38.33 PM.png,overripe,overripe,0.0,0.6763423085212708,0.32365769147872925
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.38.54 PM.png,overripe,overripe,0.0,0.4083316922187805,0.5916683077812195
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.40.13 PM.png,overripe,overripe,0.0,0.8216577768325806,0.17834220826625824
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.40.38 PM.png,overripe,overripe,0.0,0.4441024363040924,0.55589759349823
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.40.46 PM.png,overripe,overripe,0.0,0.40169283747673035,0.598307192325592
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.41.54 PM.png,overripe,overripe,0.0,0.4227246344089508,0.5772753357887268
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.42.38 PM.png,overripe,overripe,0.0,0.6231865882873535,0.3768134117126465
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.42.58 PM.png,overripe,overripe,0.0,0.8417767882347107,0.1582232415676117
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.43.29 PM.png,overripe,overripe,0.0,0.7498872876167297,0.25011271238327026
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.43.54 PM.png,overripe,overripe,0.0,0.47870317101478577,0.5212968587875366
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.44.54 PM.png,overripe,overripe,0.0,0.7565832734107971,0.24341674149036407
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.46.08 PM.png,overripe,overripe,0.0,0.4012910723686218,0.5987089276313782
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.47.09 PM.png,overripe,overripe,0.0,0.4076642394065857,0.5923357605934143
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.47.37 PM.png,overripe,overripe,0.0,0.4300783574581146,0.569921612739563
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.47.49 PM.png,overripe,overripe,0.25358760356903076,0.6125152111053467,0.3874848186969757
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.47.54 PM.png,overripe,overripe,0.0,0.43532735109329224,0.5646726489067078
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.48.29 PM.png,overripe,overripe,0.15717950463294983,0.647361695766449,0.3526383340358734
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.49.27 PM.png,overripe,overripe,0.0,0.842556893825531,0.157443106174469
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.50.55 PM.png,overripe,overripe,0.0,0.5361279845237732,0.4638720154762268
+apple/test/overripe/rotated_by_75_Screen Shot 2018-06-08 at 2.52.57 PM.png,overripe,overripe,0.0,0.40182405710220337,0.5981759428977966
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.15.34 PM.png,overripe,overripe,0.0,0.7543689012527466,0.2456311285495758
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.16.18 PM.png,overripe,overripe,0.0,0.9663136005401611,0.03368639200925827
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.16.54 PM.png,overripe,overripe,0.0,0.8741502165794373,0.12584978342056274
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.18.25 PM.png,overripe,overripe,0.10810915380716324,0.7941272258758545,0.20587274432182312
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.18.57 PM.png,overripe,overripe,0.0,0.6735761165618896,0.32642385363578796
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.19.37 PM.png,overripe,overripe,0.0,0.792866587638855,0.20713339745998383
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.23.24 PM.png,overripe,overripe,0.0,0.9250963926315308,0.07490359991788864
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.23.51 PM.png,overripe,overripe,0.0,0.7818387746810913,0.21816124022006989
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.33.47 PM.png,overripe,overripe,0.0,0.5160294771194458,0.4839704930782318
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.38.13 PM.png,overripe,overripe,0.0,0.823380708694458,0.1766192764043808
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.38.28 PM.png,overripe,overripe,0.0,0.8924233317375183,0.10757669061422348
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.38.59 PM.png,overripe,overripe,0.0,0.5478559136390686,0.4521440863609314
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.39.20 PM.png,overripe,overripe,0.0,0.4860113859176636,0.5139886140823364
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.40.13 PM.png,overripe,overripe,0.0,0.43759825825691223,0.5624017119407654
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.40.55 PM.png,overripe,overripe,0.4234825074672699,0.5765174627304077,0.20679369568824768
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.41.32 PM.png,overripe,overripe,0.0,0.934971272945404,0.06502871960401535
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.43.07 PM.png,overripe,unripe,0.428395539522171,0.5716044902801514,0.0
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.43.48 PM.png,overripe,overripe,0.0,0.49207803606987,0.5079219937324524
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.44.05 PM.png,overripe,overripe,0.0,0.6750780344009399,0.32492196559906006
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.45.55 PM.png,overripe,overripe,0.0,0.4087047278881073,0.5912952423095703
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.46.22 PM.png,overripe,overripe,0.0,0.41281408071517944,0.5871859192848206
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.46.32 PM.png,overripe,overripe,0.76760333776474,0.23239664733409882,0.06069063022732735
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.47.20 PM.png,overripe,overripe,0.10444310307502747,0.7809596657752991,0.21904034912586212
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.50.52 PM.png,overripe,overripe,0.0,0.668408989906311,0.3315909802913666
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.51.01 PM.png,overripe,overripe,0.0,0.4140018820762634,0.5859981179237366
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.52.09 PM.png,overripe,overripe,0.0,0.8806607723236084,0.11933925002813339
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.52.30 PM.png,overripe,overripe,0.0,0.8620868921279907,0.13791309297084808
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.53.33 PM.png,overripe,overripe,0.0,0.9933769702911377,0.006623028311878443
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.53.57 PM.png,overripe,overripe,0.0,0.41039180755615234,0.5896081924438477
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.54.08 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.54.41 PM.png,overripe,overripe,0.0,0.4045596122741699,0.5954403877258301
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.56.09 PM.png,overripe,overripe,0.0,0.501268208026886,0.4987318217754364
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.57.05 PM.png,overripe,overripe,0.0,0.8970405459403992,0.10295943915843964
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 2.59.23 PM.png,overripe,overripe,0.7745237350463867,0.22547627985477448,0.36066946387290955
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.00.40 PM.png,overripe,overripe,0.8140609860420227,0.1859390288591385,0.057126980274915695
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.01.09 PM.png,overripe,overripe,0.0,0.54913729429245,0.45086270570755005
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.03.12 PM.png,overripe,overripe,0.0,0.40924781560897827,0.5907521843910217
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.04.04 PM.png,overripe,overripe,0.0,0.5310338139533997,0.46896615624427795
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.04.47 PM.png,overripe,overripe,0.0,0.4800986647605896,0.5199013352394104
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.05.05 PM.png,overripe,overripe,0.0,0.7839930057525635,0.21600699424743652
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.06.06 PM.png,overripe,overripe,0.0,0.8970319032669067,0.10296806693077087
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.06.30 PM.png,overripe,overripe,0.0,0.45455679297447205,0.5454431772232056
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-07 at 3.17.25 PM.png,overripe,overripe,0.0,0.8978942036628723,0.10210580378770828
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.21.33 PM.png,overripe,overripe,0.0,0.8923357725143433,0.10766425728797913
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.24.15 PM.png,overripe,overripe,0.0,0.5685101747512817,0.4314897954463959
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.24.37 PM.png,overripe,overripe,0.0,0.7581122517585754,0.24188776314258575
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.26.14 PM.png,overripe,overripe,0.0,0.6560887098312378,0.3439112603664398
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.27.15 PM.png,overripe,overripe,0.0,0.6853026151657104,0.31469735503196716
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.27.44 PM.png,overripe,overripe,0.0,0.8546470999717712,0.14535290002822876
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.29.10 PM.png,overripe,overripe,0.0,0.4671778678894043,0.5328221321105957
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.29.20 PM.png,overripe,overripe,0.0,0.6600779891014099,0.3399220108985901
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.30.03 PM.png,overripe,overripe,0.0,0.7159018516540527,0.28409814834594727
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.30.57 PM.png,overripe,overripe,0.0,0.6855120658874512,0.31448793411254883
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.31.08 PM.png,overripe,overripe,0.0,0.46906575560569763,0.53093421459198
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.34.47 PM.png,overripe,overripe,0.0,0.40459132194519043,0.5954086780548096
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.35.25 PM.png,overripe,overripe,0.0,0.9230174422264099,0.07698256522417068
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.35.37 PM.png,overripe,overripe,0.0,0.5560615658760071,0.44393840432167053
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.36.01 PM.png,overripe,overripe,0.0,0.4511595368385315,0.5488404631614685
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.36.23 PM.png,overripe,overripe,0.4390043616294861,0.5609956383705139,0.09869155287742615
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.39.02 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.39.26 PM.png,overripe,overripe,0.0,0.5676177740097046,0.4323822259902954
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.45.50 PM.png,overripe,overripe,0.0,0.5061455368995667,0.49385446310043335
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.46.36 PM.png,overripe,overripe,0.0,0.4019896984100342,0.5980103015899658
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.47.49 PM.png,overripe,overripe,0.524116575717926,0.4758833944797516,0.322188138961792
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.50.33 PM.png,overripe,overripe,0.0,0.4475027322769165,0.5524972677230835
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.51.09 PM.png,overripe,overripe,0.0,0.4356294274330139,0.5643705725669861
+apple/test/overripe/saltandpepper_Screen Shot 2018-06-08 at 2.51.28 PM.png,overripe,overripe,0.0,0.726266086101532,0.273733913898468
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.16.18 PM.png,overripe,overripe,0.0,0.9682204723358154,0.03177954629063606
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.16.41 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.17.15 PM.png,overripe,overripe,0.0,0.6220037937164307,0.3779962360858917
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.18.13 PM.png,overripe,unripe,0.7047738432884216,0.29522618651390076,0.0
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.19.37 PM.png,overripe,overripe,0.0,0.7940395474433899,0.2059604525566101
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.19.46 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.20.34 PM.png,overripe,overripe,0.0,0.7442492842674255,0.25575071573257446
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.22.00 PM.png,overripe,overripe,0.0,0.9108261466026306,0.089173823595047
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.25.16 PM.png,overripe,overripe,0.0,0.9762999415397644,0.023700030520558357
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.35.21 PM.png,overripe,overripe,0.12811650335788727,0.6971621513366699,0.3028378486633301
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.36.06 PM.png,overripe,overripe,0.11170769482851028,0.5649522542953491,0.4350477159023285
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.37.01 PM.png,overripe,overripe,0.0,0.4021989107131958,0.5978010892868042
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.38.28 PM.png,overripe,overripe,0.0,0.8853477239608765,0.11465225368738174
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.39.20 PM.png,overripe,overripe,0.0,0.449419766664505,0.5505802035331726
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.39.26 PM.png,overripe,overripe,0.0,0.4092854857444763,0.5907145142555237
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.40.48 PM.png,overripe,overripe,0.0,0.8969487547874451,0.10305122286081314
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.44.26 PM.png,overripe,overripe,0.1159982979297638,0.5823452472686768,0.41765475273132324
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.44.59 PM.png,overripe,overripe,0.0,0.47979605197906494,0.5202039480209351
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.46.32 PM.png,overripe,overripe,0.8022072315216064,0.19779276847839355,0.05516377091407776
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.47.27 PM.png,overripe,overripe,0.0,0.713334321975708,0.286665678024292
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.47.35 PM.png,overripe,overripe,0.19957226514816284,0.6870830059051514,0.31291699409484863
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.50.09 PM.png,overripe,overripe,0.0,0.4006073474884033,0.5993926525115967
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.50.52 PM.png,overripe,overripe,0.0,0.7137728929519653,0.2862270772457123
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.51.45 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.52.44 PM.png,overripe,overripe,0.0,0.7796455025672913,0.22035448253154755
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.54.49 PM.png,overripe,overripe,0.0,0.9377363920211792,0.06226362660527229
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.54.58 PM.png,overripe,overripe,0.0,0.7107579708099365,0.2892419993877411
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.56.09 PM.png,overripe,overripe,0.0,0.49930864572525024,0.5006913542747498
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.57.05 PM.png,overripe,overripe,0.0,0.9017955660820007,0.09820446372032166
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.57.13 PM.png,overripe,overripe,0.39152562618255615,0.38196709752082825,0.6180329322814941
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 2.58.47 PM.png,overripe,overripe,0.0,0.477611780166626,0.522388219833374
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.00.25 PM.png,overripe,overripe,0.0,0.7995904088020325,0.20040959119796753
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.02.02 PM.png,overripe,overripe,0.0,0.6949083209037781,0.30509164929389954
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.03.12 PM.png,overripe,overripe,0.0,0.4077388346195221,0.5922611355781555
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.03.21 PM.png,overripe,overripe,0.059224799275398254,0.6320396065711975,0.3679603934288025
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.03.31 PM.png,overripe,overripe,0.0,0.6662530303001404,0.33374693989753723
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.03.46 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.03.58 PM.png,overripe,overripe,0.0,0.45804184675216675,0.5419581532478333
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.04.10 PM.png,overripe,overripe,0.0,0.5738403797149658,0.42615965008735657
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.05.13 PM.png,overripe,overripe,0.0,0.8463939428329468,0.15360605716705322
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.06.06 PM.png,overripe,overripe,0.0,0.8928197622299194,0.10718020796775818
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.06.11 PM.png,overripe,overripe,0.0,0.44270071387290955,0.5572992563247681
+apple/test/overripe/translation_Screen Shot 2018-06-07 at 3.06.22 PM.png,overripe,overripe,0.0,0.8948938846588135,0.10510610789060593
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.24.15 PM.png,overripe,overripe,0.0,0.5553269982337952,0.44467297196388245
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.25.04 PM.png,overripe,overripe,0.6546785235404968,0.3453214466571808,0.142344668507576
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.26.34 PM.png,overripe,overripe,0.08823717385530472,0.6058476567268372,0.39415237307548523
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.26.44 PM.png,overripe,overripe,0.0,0.9600381851196289,0.0399618037045002
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.28.00 PM.png,overripe,overripe,0.0,0.7655057907104492,0.2344941943883896
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.28.12 PM.png,overripe,overripe,0.0,0.9268267154693604,0.07317330688238144
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.29.10 PM.png,overripe,overripe,0.0,0.4627687335014343,0.5372312664985657
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.30.26 PM.png,overripe,overripe,0.0,0.4296092092990875,0.5703907608985901
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.31.45 PM.png,overripe,overripe,0.0,0.5409867167472839,0.4590132534503937
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.34.42 PM.png,overripe,overripe,0.0,0.4157101809978485,0.5842898488044739
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.34.47 PM.png,overripe,overripe,0.0,0.403055340051651,0.5969446301460266
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.36.23 PM.png,overripe,overripe,0.6771324872970581,0.3228675127029419,0.12590482831001282
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.38.08 PM.png,overripe,overripe,0.0,0.8537853956222534,0.14621460437774658
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.41.44 PM.png,overripe,overripe,0.0,0.6924629807472229,0.3075370192527771
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.45.50 PM.png,overripe,overripe,0.0,0.5313133597373962,0.46868664026260376
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.46.08 PM.png,overripe,overripe,0.0,0.40154924988746643,0.598450779914856
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.47.37 PM.png,overripe,overripe,0.0,0.423509418964386,0.576490581035614
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.48.00 PM.png,overripe,overripe,0.0,0.4798479378223419,0.5201520919799805
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.48.29 PM.png,overripe,overripe,0.29401230812072754,0.6650198698043823,0.3349801003932953
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.48.43 PM.png,overripe,overripe,0.0,0.5002697706222534,0.4997302293777466
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.49.27 PM.png,overripe,overripe,0.0,0.8377478122711182,0.16225217282772064
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.50.33 PM.png,overripe,overripe,0.0,0.4478205442428589,0.5521794557571411
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.50.49 PM.png,overripe,overripe,0.0,0.7518887519836426,0.24811123311519623
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.51.28 PM.png,overripe,overripe,0.0,0.7280323505401611,0.2719676196575165
+apple/test/overripe/translation_Screen Shot 2018-06-08 at 2.52.57 PM.png,overripe,overripe,0.0,0.40210866928100586,0.5978913307189941
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.15.50 PM.png,overripe,overripe,0.6475039720535278,0.3524959981441498,0.027730442583560944
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.16.18 PM.png,overripe,overripe,0.0,0.967724084854126,0.032275937497615814
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.17.15 PM.png,overripe,overripe,0.0,0.6141247749328613,0.3858751952648163
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.20.04 PM.png,overripe,overripe,0.0,0.7978246808052063,0.2021753489971161
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.20.29 PM.png,overripe,overripe,0.0,0.48689594864845276,0.5131040811538696
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.21.09 PM.png,overripe,overripe,0.0,0.42696475982666016,0.5730352401733398
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.22.39 PM.png,overripe,overripe,0.0,0.6971606612205505,0.30283933877944946
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.31.43 PM.png,overripe,overripe,0.0,0.7345425486564636,0.2654574513435364
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.33.47 PM.png,overripe,overripe,0.0,0.5145911574363708,0.48540884256362915
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.37.43 PM.png,overripe,overripe,0.0,0.7920956611633301,0.20790430903434753
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.38.04 PM.png,overripe,overripe,0.0,0.9339483380317688,0.0660516768693924
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.38.13 PM.png,overripe,overripe,0.0,0.8242465853691101,0.1757534146308899
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.38.28 PM.png,overripe,overripe,0.0,0.8918978571891785,0.10810213536024094
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.39.20 PM.png,overripe,overripe,0.0,0.4843032956123352,0.5156967043876648
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.43.07 PM.png,overripe,unripe,0.44806912541389465,0.551930844783783,0.0
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.43.34 PM.png,overripe,overripe,0.0,0.43719637393951416,0.5628036260604858
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.44.36 PM.png,overripe,overripe,0.848612368106842,0.15138761699199677,0.23628957569599152
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.45.18 PM.png,overripe,overripe,0.8801013827323914,0.11989860236644745,0.14219418168067932
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.45.35 PM.png,overripe,overripe,0.0,0.41379278898239136,0.5862072110176086
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.46.04 PM.png,overripe,overripe,0.0,0.4046403169631958,0.5953596830368042
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.46.22 PM.png,overripe,overripe,0.0,0.4106054902076721,0.5893945097923279
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.47.01 PM.png,overripe,overripe,0.0,0.4008193612098694,0.5991806387901306
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.51.01 PM.png,overripe,overripe,0.0,0.4118858873844147,0.5881140828132629
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 2.59.23 PM.png,overripe,overripe,0.7782055139541626,0.2217945009469986,0.36183157563209534
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 3.00.00 PM.png,overripe,overripe,0.1962965428829193,0.5371797680854797,0.46282023191452026
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 3.01.09 PM.png,overripe,overripe,0.0,0.5472190380096436,0.45278096199035645
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 3.03.21 PM.png,overripe,overripe,0.0,0.6150673031806946,0.3849326968193054
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 3.03.31 PM.png,overripe,overripe,0.0,0.6624906659126282,0.3375093638896942
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 3.03.38 PM.png,overripe,overripe,0.0,0.853050172328949,0.1469498574733734
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-07 at 3.04.47 PM.png,overripe,overripe,0.0,0.4795546531677246,0.5204453468322754
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.23.40 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.24.15 PM.png,overripe,overripe,0.0,0.567679226398468,0.43232080340385437
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.24.46 PM.png,overripe,overripe,0.0,0.4821779131889343,0.5178220868110657
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.25.24 PM.png,overripe,overripe,0.0,0.5476964712142944,0.4523034989833832
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.26.09 PM.png,overripe,overripe,0.0,0.8940961956977844,0.10590382665395737
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.26.14 PM.png,overripe,overripe,0.0,0.6556635499000549,0.34433645009994507
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.28.12 PM.png,overripe,overripe,0.0,0.9323820471763611,0.0676179751753807
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.30.57 PM.png,overripe,overripe,0.0,0.6856135725975037,0.31438642740249634
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.33.28 PM.png,overripe,overripe,0.0,0.5987611413002014,0.4012388586997986
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.33.49 PM.png,overripe,overripe,0.0,0.8970608115196228,0.1029391661286354
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.34.37 PM.png,overripe,overripe,0.0,0.46794700622558594,0.5320529937744141
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.36.31 PM.png,overripe,overripe,0.6372930407524109,0.3627069890499115,0.10893480479717255
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.36.43 PM.png,overripe,overripe,0.0,0.9374876022338867,0.06251242756843567
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.37.03 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.38.54 PM.png,overripe,overripe,0.0,0.40807774662971497,0.5919222831726074
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.39.02 PM.png,overripe,ripe,0.0,1.0,0.0
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.39.21 PM.png,overripe,overripe,0.2488100677728653,0.7511899471282959,0.02317122556269169
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.40.38 PM.png,overripe,overripe,0.0,0.44486579298973083,0.5551341772079468
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.40.46 PM.png,overripe,overripe,0.0,0.40149807929992676,0.5985019207000732
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.42.06 PM.png,overripe,overripe,0.0037744492292404175,0.7638024687767029,0.23619753122329712
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.42.30 PM.png,overripe,overripe,0.0,0.6761281490325928,0.3238718509674072
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.46.50 PM.png,overripe,overripe,0.0,0.40154266357421875,0.5984573364257812
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.47.03 PM.png,overripe,overripe,0.0,0.4041697680950165,0.5958302617073059
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.48.00 PM.png,overripe,overripe,0.0,0.4795458912849426,0.5204541087150574
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.50.25 PM.png,overripe,overripe,0.0,0.45197761058807373,0.5480223894119263
+apple/test/overripe/vertical_flip_Screen Shot 2018-06-08 at 2.51.43 PM.png,overripe,overripe,0.04209024831652641,0.6678847670555115,0.3321152329444885
+apple/test/ripe/Screen Shot 2018-06-08 at 4.59.44 PM.png,ripe,unripe,0.15061892569065094,0.8493810892105103,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.01.15 PM.png,ripe,ripe,0.11630692332983017,0.8836930990219116,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.01.22 PM.png,ripe,overripe,0.0,0.9882926344871521,0.011707386001944542
+apple/test/ripe/Screen Shot 2018-06-08 at 5.01.41 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.02.43 PM.png,ripe,overripe,0.0,0.4442790448665619,0.5557209253311157
+apple/test/ripe/Screen Shot 2018-06-08 at 5.03.40 PM.png,ripe,ripe,0.0963401049375534,0.9036598801612854,0.0010483769001439214
+apple/test/ripe/Screen Shot 2018-06-08 at 5.04.16 PM.png,ripe,unripe,0.26259636878967285,0.7374036312103271,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.04.24 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.05.34 PM.png,ripe,unripe,0.2202623337507248,0.779737651348114,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.05.41 PM.png,ripe,overripe,0.0,0.40046724677085876,0.5995327234268188
+apple/test/ripe/Screen Shot 2018-06-08 at 5.07.18 PM.png,ripe,overripe,0.0,0.9187333583831787,0.08126665651798248
+apple/test/ripe/Screen Shot 2018-06-08 at 5.07.26 PM.png,ripe,unripe,0.16350586712360382,0.8364941477775574,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.07.52 PM.png,ripe,overripe,0.8902803659439087,0.10971960425376892,0.029326602816581726
+apple/test/ripe/Screen Shot 2018-06-08 at 5.08.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.09.17 PM.png,ripe,unripe,0.9623035192489624,0.0376964695751667,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.09.31 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.09.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.09.47 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.09.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.10.43 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.12.56 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.13.25 PM.png,ripe,overripe,0.11337923258543015,0.8866207599639893,0.0067711747251451015
+apple/test/ripe/Screen Shot 2018-06-08 at 5.13.31 PM.png,ripe,overripe,0.20574934780597687,0.7942506670951843,0.010814245790243149
+apple/test/ripe/Screen Shot 2018-06-08 at 5.13.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.14.01 PM.png,ripe,unripe,0.23054085671901703,0.7694591283798218,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.15.09 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.15.45 PM.png,ripe,unripe,0.5473261475563049,0.45267385244369507,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.16.06 PM.png,ripe,unripe,0.15919406712055206,0.8408059477806091,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.16.28 PM.png,ripe,ripe,0.11217188090085983,0.8878281116485596,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.16.37 PM.png,ripe,ripe,0.09617671370506287,0.9038233160972595,0.0005068683531135321
+apple/test/ripe/Screen Shot 2018-06-08 at 5.17.58 PM.png,ripe,unripe,0.3810320794582367,0.6189678907394409,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.19.58 PM.png,ripe,overripe,0.0,0.9632399678230286,0.036760035902261734
+apple/test/ripe/Screen Shot 2018-06-08 at 5.21.06 PM.png,ripe,overripe,0.0,0.5320525169372559,0.46794748306274414
+apple/test/ripe/Screen Shot 2018-06-08 at 5.21.51 PM.png,ripe,overripe,0.0,0.9012627601623535,0.09873724728822708
+apple/test/ripe/Screen Shot 2018-06-08 at 5.24.19 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.25.28 PM.png,ripe,unripe,0.23702529072761536,0.762974739074707,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.25.43 PM.png,ripe,overripe,0.0,0.6265431642532349,0.37345680594444275
+apple/test/ripe/Screen Shot 2018-06-08 at 5.26.19 PM.png,ripe,unripe,0.15389837324619293,0.8461016416549683,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.27.06 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.27.34 PM.png,ripe,unripe,0.6390444040298462,0.3609556257724762,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.27.54 PM.png,ripe,overripe,0.6459391117095947,0.3540608882904053,0.2457718402147293
+apple/test/ripe/Screen Shot 2018-06-08 at 5.28.04 PM.png,ripe,unripe,0.3078884482383728,0.6921115517616272,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.28.24 PM.png,ripe,overripe,0.0,0.7673981785774231,0.2326018214225769
+apple/test/ripe/Screen Shot 2018-06-08 at 5.28.59 PM.png,ripe,unripe,0.1997056007385254,0.8002943992614746,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.29.13 PM.png,ripe,ripe,0.09978152066469193,0.9002184867858887,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.29.18 PM.png,ripe,unripe,0.14325110614299774,0.8567488789558411,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.32.38 PM.png,ripe,unripe,0.23443204164505005,0.76556795835495,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.32.43 PM.png,ripe,overripe,0.013065463863313198,0.7481383681297302,0.2518616318702698
+apple/test/ripe/Screen Shot 2018-06-08 at 5.32.50 PM.png,ripe,unripe,0.6691665649414062,0.33083343505859375,0.0
+apple/test/ripe/Screen Shot 2018-06-08 at 5.34.07 PM.png,ripe,ripe,0.12945596873760223,0.8705440163612366,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 4.59.49 PM.png,ripe,unripe,0.45786169171333313,0.5421382784843445,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.00.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.00.43 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.01.01 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.02.08 PM.png,ripe,overripe,0.2890103757381439,0.7109896540641785,0.024732327088713646
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.02.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.03.47 PM.png,ripe,unripe,0.18591001629829407,0.8140900135040283,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.04.42 PM.png,ripe,unripe,0.2115452140569687,0.7884547710418701,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.04.59 PM.png,ripe,overripe,0.0,0.7632907629013062,0.23670923709869385
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.06.23 PM.png,ripe,ripe,0.10399141162633896,0.8960086107254028,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.06.28 PM.png,ripe,unripe,0.19720794260501862,0.8027920722961426,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.07.05 PM.png,ripe,unripe,0.21119940280914307,0.7888005971908569,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.07.52 PM.png,ripe,overripe,0.9322095513343811,0.06779047101736069,0.027013704180717468
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.08.05 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.08.46 PM.png,ripe,ripe,0.11172854900360107,0.8882714509963989,0.0021966041531413794
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.09.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.10.29 PM.png,ripe,ripe,0.26160505414009094,0.7383949756622314,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.11.02 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.14.20 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.14.48 PM.png,ripe,unripe,0.4214540719985962,0.5785459280014038,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.17.04 PM.png,ripe,unripe,0.33098089694976807,0.6690191030502319,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.17.58 PM.png,ripe,unripe,0.4431304931640625,0.5568695068359375,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.18.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.20.42 PM.png,ripe,unripe,0.1513465791940689,0.8486534357070923,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.21.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.22.53 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.24.04 PM.png,ripe,unripe,0.41051313281059265,0.589486837387085,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.24.26 PM.png,ripe,overripe,0.0,0.9359968304634094,0.06400319933891296
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.25.33 PM.png,ripe,overripe,0.0,0.78660649061203,0.21339352428913116
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.25.43 PM.png,ripe,overripe,0.0,0.6299331784248352,0.3700668513774872
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.25.49 PM.png,ripe,overripe,0.0,0.5709038972854614,0.4290961027145386
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.25.54 PM.png,ripe,unripe,0.35595038533210754,0.6440496444702148,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.26.13 PM.png,ripe,unripe,0.5388264656066895,0.46117353439331055,0.0021030826028436422
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.26.19 PM.png,ripe,unripe,0.1552460491657257,0.8447539806365967,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.27.19 PM.png,ripe,unripe,0.18965311348438263,0.8103469014167786,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.27.27 PM.png,ripe,unripe,0.1557529866695404,0.844247043132782,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.27.54 PM.png,ripe,overripe,0.6407457590103149,0.35925424098968506,0.23931367695331573
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.28.10 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_15_Screen Shot 2018-06-08 at 5.28.59 PM.png,ripe,unripe,0.19908766448497772,0.8009123206138611,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.00.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.01.08 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.02.31 PM.png,ripe,unripe,0.7033951878547668,0.29660478234291077,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.02.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.03.34 PM.png,ripe,unripe,0.16179390251636505,0.8382061123847961,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.03.40 PM.png,ripe,ripe,0.10202867537736893,0.8979713320732117,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.04.42 PM.png,ripe,unripe,0.2107408344745636,0.789259135723114,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.05.06 PM.png,ripe,overripe,0.0,0.7549250721931458,0.24507494270801544
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.05.34 PM.png,ripe,unripe,0.21971137821674347,0.7802886366844177,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.06.10 PM.png,ripe,unripe,0.24081110954284668,0.7591888904571533,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.07.05 PM.png,ripe,unripe,0.21139907836914062,0.7886009216308594,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.07.26 PM.png,ripe,unripe,0.15791091322898865,0.842089056968689,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.07.52 PM.png,ripe,unripe,0.9567007422447205,0.04329923167824745,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.08.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.08.46 PM.png,ripe,overripe,0.11104752868413925,0.8889524936676025,0.004727636463940144
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.09.10 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.10.11 PM.png,ripe,unripe,0.2632097601890564,0.7367902398109436,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.11.24 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.11.35 PM.png,ripe,unripe,0.1848573088645935,0.8151426911354065,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.16.16 PM.png,ripe,ripe,0.08036331832408905,0.9196366667747498,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.16.37 PM.png,ripe,ripe,0.0991649404168129,0.9008350372314453,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.16.49 PM.png,ripe,overripe,0.0,0.9858324527740479,0.014167574234306812
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.19.28 PM.png,ripe,unripe,0.7247400879859924,0.27525991201400757,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.20.17 PM.png,ripe,ripe,0.12858957052230835,0.8714104294776917,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.20.42 PM.png,ripe,unripe,0.1496046632528305,0.8503953218460083,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.21.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.21.56 PM.png,ripe,overripe,0.0,0.6137301325798035,0.38626986742019653
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.22.48 PM.png,ripe,overripe,0.0,0.8756043314933777,0.12439566850662231
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.23.51 PM.png,ripe,ripe,0.1044882982969284,0.8955116868019104,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.24.12 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.24.19 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.24.35 PM.png,ripe,unripe,0.1504228711128235,0.8495771288871765,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.26.13 PM.png,ripe,unripe,0.6557435393333435,0.3442564308643341,7.196767546702176e-05
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.26.41 PM.png,ripe,overripe,0.07151981443166733,0.9284802079200745,0.05119211599230766
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.27.49 PM.png,ripe,unripe,0.8298211097717285,0.1701788753271103,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.27.54 PM.png,ripe,overripe,0.6441575288772583,0.3558424711227417,0.2458137422800064
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.28.32 PM.png,ripe,overripe,0.0,0.7817329168319702,0.2182670682668686
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.28.59 PM.png,ripe,unripe,0.1988065540790558,0.8011934757232666,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.29.18 PM.png,ripe,unripe,0.15153425931930542,0.8484657406806946,0.0
+apple/test/ripe/rotated_by_30_Screen Shot 2018-06-08 at 5.32.50 PM.png,ripe,unripe,0.5249543190002441,0.47504571080207825,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.00.12 PM.png,ripe,unripe,0.24576541781425476,0.7542346119880676,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.00.26 PM.png,ripe,unripe,0.23173245787620544,0.7682675123214722,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.01.22 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.01.41 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.02.24 PM.png,ripe,unripe,0.18798217177391052,0.8120178580284119,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.02.43 PM.png,ripe,overripe,0.0,0.4370529353618622,0.5629470944404602
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.02.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.03.40 PM.png,ripe,ripe,0.10221289843320847,0.8977870941162109,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.04.05 PM.png,ripe,unripe,0.6808990240097046,0.3191010057926178,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.04.11 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.05.12 PM.png,ripe,overripe,0.0,0.8775526881217957,0.12244731187820435
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.05.18 PM.png,ripe,overripe,0.0,0.6565932035446167,0.3434067666530609
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.05.27 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.06.28 PM.png,ripe,unripe,0.19862088561058044,0.8013791441917419,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.09.25 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.10.11 PM.png,ripe,unripe,0.2453845590353012,0.7546154260635376,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.11.24 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.11.41 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.14.01 PM.png,ripe,unripe,0.27466338872909546,0.7253366112709045,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.14.44 PM.png,ripe,ripe,0.0496506467461586,0.9503493309020996,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.15.21 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.17.10 PM.png,ripe,unripe,0.15734995901584625,0.8426500558853149,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.18.26 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.18.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.18.42 PM.png,ripe,overripe,0.06953629851341248,0.8232388496398926,0.17676113545894623
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.19.47 PM.png,ripe,unripe,0.7659528255462646,0.23404718935489655,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.20.26 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.20.32 PM.png,ripe,unripe,0.7802921533584595,0.21970783174037933,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.20.51 PM.png,ripe,overripe,0.0,0.9718355536460876,0.02816443145275116
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.21.44 PM.png,ripe,unripe,0.6817477345466614,0.318252295255661,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.22.20 PM.png,ripe,overripe,0.0,0.7833824753761292,0.21661750972270966
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.24.04 PM.png,ripe,unripe,0.9791838526725769,0.020816123113036156,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.24.35 PM.png,ripe,unripe,0.14938010275363922,0.850619912147522,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.25.54 PM.png,ripe,unripe,0.35822367668151855,0.6417763233184814,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.26.19 PM.png,ripe,unripe,0.15612784028053284,0.8438721895217896,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.26.41 PM.png,ripe,overripe,0.07143846899271011,0.9285615086555481,0.05228470638394356
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.26.52 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.27.49 PM.png,ripe,unripe,0.8672584891319275,0.1327415108680725,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.28.04 PM.png,ripe,unripe,0.3276796042919159,0.6723203659057617,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.28.59 PM.png,ripe,unripe,0.19819389283657074,0.8018060922622681,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.29.24 PM.png,ripe,unripe,0.1906585544347763,0.8093414306640625,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.33.55 PM.png,ripe,ripe,0.0877552404999733,0.9122447371482849,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.34.14 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_45_Screen Shot 2018-06-08 at 5.34.21 PM.png,ripe,unripe,0.23941953480243683,0.7605804800987244,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 4.59.36 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 4.59.57 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.00.12 PM.png,ripe,unripe,0.19903016090393066,0.8009698390960693,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.01.22 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.02.48 PM.png,ripe,ripe,0.12944579124450684,0.8705542087554932,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.02.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.03.17 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.04.16 PM.png,ripe,unripe,0.2652243971824646,0.7347756028175354,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.05.18 PM.png,ripe,overripe,0.0,0.6552311778068542,0.34476882219314575
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.05.34 PM.png,ripe,unripe,0.21963034570217133,0.7803696393966675,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.05.41 PM.png,ripe,overripe,0.0,0.40058043599128723,0.5994195938110352
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.06.10 PM.png,ripe,unripe,0.24226835370063782,0.7577316761016846,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.06.54 PM.png,ripe,overripe,0.24330025911331177,0.7566997408866882,0.022537775337696075
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.07.32 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.08.05 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.08.58 PM.png,ripe,unripe,0.1762090027332306,0.823790967464447,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.09.17 PM.png,ripe,unripe,0.6703948378562927,0.3296051621437073,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.10.37 PM.png,ripe,unripe,0.611264705657959,0.3887353241443634,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.11.02 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.14.07 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.14.44 PM.png,ripe,ripe,0.06821701675653458,0.9317829608917236,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.15.28 PM.png,ripe,overripe,0.025007516145706177,0.8013089895248413,0.19869102537631989
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.16.06 PM.png,ripe,unripe,0.15736915171146393,0.8426308631896973,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.16.16 PM.png,ripe,ripe,0.05520908907055855,0.9447908997535706,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.18.51 PM.png,ripe,unripe,0.21552534401416779,0.7844746708869934,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.18.58 PM.png,ripe,overripe,0.018199164420366287,0.7595773339271545,0.24042265117168427
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.20.32 PM.png,ripe,unripe,0.8416653275489807,0.15833468735218048,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.20.51 PM.png,ripe,overripe,0.0,0.9730971455574036,0.02690286748111248
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.21.22 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.21.44 PM.png,ripe,unripe,0.6558361053466797,0.3441638946533203,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.21.56 PM.png,ripe,overripe,0.0,0.6166168451309204,0.383383184671402
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.23.07 PM.png,ripe,unripe,0.32416433095932007,0.6758356690406799,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.23.26 PM.png,ripe,unripe,0.1414884328842163,0.8585115671157837,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.25.54 PM.png,ripe,unripe,0.37101882696151733,0.6289811730384827,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.26.19 PM.png,ripe,unripe,0.15523412823677063,0.8447659015655518,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.26.24 PM.png,ripe,overripe,0.0,0.8469003438949585,0.1530996412038803
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.27.06 PM.png,ripe,ripe,0.11088629066944122,0.88911372423172,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.27.13 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.27.49 PM.png,ripe,unripe,0.8342357277870178,0.16576428711414337,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.28.32 PM.png,ripe,overripe,0.0,0.7783722281455994,0.22162774205207825
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.29.18 PM.png,ripe,unripe,0.14481689035892487,0.8551831245422363,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.32.33 PM.png,ripe,overripe,0.0,0.40230920910835266,0.597690761089325
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.32.43 PM.png,ripe,overripe,0.013051177375018597,0.748881995677948,0.251118004322052
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.33.33 PM.png,ripe,overripe,0.0,0.9065520763397217,0.09344792366027832
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.33.47 PM.png,ripe,unripe,0.185910165309906,0.814089834690094,0.0
+apple/test/ripe/rotated_by_60_Screen Shot 2018-06-08 at 5.34.07 PM.png,ripe,ripe,0.13719739019870758,0.8628026247024536,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 4.59.36 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.00.26 PM.png,ripe,unripe,0.23121313750743866,0.7687868475914001,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.00.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.00.50 PM.png,ripe,unripe,0.19325801730155945,0.8067419528961182,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.01.01 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.02.31 PM.png,ripe,unripe,0.6053993701934814,0.39460062980651855,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.04.11 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.04.42 PM.png,ripe,unripe,0.2110830545425415,0.7889169454574585,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.05.12 PM.png,ripe,overripe,0.0,0.8751780986785889,0.12482189387083054
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.05.34 PM.png,ripe,unripe,0.21934302151203156,0.7806569933891296,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.06.23 PM.png,ripe,ripe,0.10235366225242615,0.8976463079452515,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.06.28 PM.png,ripe,unripe,0.19094893336296082,0.8090510368347168,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.06.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.06.54 PM.png,ripe,overripe,0.2451619952917099,0.7548379898071289,0.02296290546655655
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.08.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.09.10 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.09.25 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.09.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.12.56 PM.png,ripe,ripe,0.056399863213300705,0.9436001181602478,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.13.54 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.14.44 PM.png,ripe,ripe,0.05328867584466934,0.9467113018035889,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.14.48 PM.png,ripe,unripe,0.42169177532196045,0.5783082246780396,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.15.01 PM.png,ripe,unripe,0.3071524202823639,0.6928476095199585,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.15.14 PM.png,ripe,unripe,0.20211414992809296,0.7978858351707458,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.16.37 PM.png,ripe,ripe,0.09719979763031006,0.9028002023696899,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.16.49 PM.png,ripe,overripe,0.0,0.9701380133628845,0.02986198477447033
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.17.22 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.18.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.19.15 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.19.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.20.08 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.20.42 PM.png,ripe,unripe,0.1498432755470276,0.8501567244529724,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.20.56 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.21.06 PM.png,ripe,overripe,0.0,0.533893883228302,0.466106116771698
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.21.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.22.27 PM.png,ripe,overripe,0.0,0.8628162145614624,0.1371837854385376
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.23.23 PM.png,ripe,ripe,0.13799533247947693,0.8620046377182007,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.25.43 PM.png,ripe,overripe,0.0,0.6316184997558594,0.3683815002441406
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.25.54 PM.png,ripe,unripe,0.37894052267074585,0.6210594773292542,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.26.05 PM.png,ripe,unripe,0.6357367038726807,0.36426329612731934,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.26.47 PM.png,ripe,overripe,0.0,0.5094195008277893,0.4905804693698883
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.28.10 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.28.59 PM.png,ripe,unripe,0.19938556849956512,0.8006144165992737,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.29.24 PM.png,ripe,unripe,0.1826012134552002,0.8173987865447998,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.32.50 PM.png,ripe,unripe,0.5907950401306152,0.40920495986938477,0.0
+apple/test/ripe/rotated_by_75_Screen Shot 2018-06-08 at 5.33.05 PM.png,ripe,overripe,0.0,0.4102914035320282,0.5897085666656494
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.00.12 PM.png,ripe,unripe,0.20571556687355042,0.7942844033241272,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.00.43 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.00.50 PM.png,ripe,unripe,0.18148674070835114,0.8185132741928101,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.01.34 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.02.38 PM.png,ripe,overripe,0.42450520396232605,0.5754948258399963,0.0058945766650140285
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.03.47 PM.png,ripe,unripe,0.1823340654373169,0.8176659345626831,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.04.48 PM.png,ripe,overripe,0.0,0.8122041821479797,0.18779584765434265
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.05.06 PM.png,ripe,overripe,0.0,0.7431919574737549,0.2568080723285675
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.05.41 PM.png,ripe,overripe,0.0,0.402192622423172,0.5978074073791504
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.06.54 PM.png,ripe,overripe,0.22216452658176422,0.777835488319397,0.03951723873615265
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.07.05 PM.png,ripe,unripe,0.20733194053173065,0.7926680445671082,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.07.26 PM.png,ripe,unripe,0.15749208629131317,0.8425078988075256,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.08.05 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.09.03 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.09.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.10.11 PM.png,ripe,unripe,0.20499257743358612,0.7950074076652527,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.11.35 PM.png,ripe,unripe,0.17600017786026,0.82399982213974,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.11.59 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.12.14 PM.png,ripe,overripe,0.0,0.9549225568771362,0.045077428221702576
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.12.41 PM.png,ripe,overripe,0.14021891355514526,0.8597810864448547,0.012000352144241333
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.12.47 PM.png,ripe,unripe,0.6739886999130249,0.3260113000869751,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.13.45 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.14.56 PM.png,ripe,unripe,0.14388902485370636,0.8561109900474548,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.15.14 PM.png,ripe,unripe,0.19325049221515656,0.8067495226860046,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.15.21 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.15.52 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.16.06 PM.png,ripe,unripe,0.15188966691493988,0.8481103181838989,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.16.28 PM.png,ripe,ripe,0.10584209859371185,0.894157886505127,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.16.57 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.18.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.18.51 PM.png,ripe,unripe,0.20990018546581268,0.7900997996330261,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.21.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.22.48 PM.png,ripe,overripe,0.0,0.8035855293273926,0.19641447067260742
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.23.31 PM.png,ripe,unripe,0.14859332144260406,0.8514066934585571,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.24.12 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.24.19 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.25.28 PM.png,ripe,unripe,0.23061221837997437,0.7693877816200256,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.25.49 PM.png,ripe,overripe,0.0,0.5686710476875305,0.4313289523124695
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.26.29 PM.png,ripe,unripe,0.23698744177818298,0.7630125284194946,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.28.10 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.28.59 PM.png,ripe,unripe,0.1933954954147339,0.8066045045852661,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.29.13 PM.png,ripe,ripe,0.09427647292613983,0.905723512172699,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.29.31 PM.png,ripe,unripe,0.21284811198711395,0.7871518731117249,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.34.01 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/saltandpepper_Screen Shot 2018-06-08 at 5.34.14 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 4.59.36 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.00.18 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.01.15 PM.png,ripe,ripe,0.11607584357261658,0.8839241862297058,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.02.43 PM.png,ripe,overripe,0.0,0.41314947605133057,0.5868505239486694
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.03.10 PM.png,ripe,unripe,0.23961539566516876,0.7603846192359924,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.03.17 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.07.05 PM.png,ripe,unripe,0.2161351591348648,0.7838648557662964,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.07.32 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.08.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.09.47 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.10.53 PM.png,ripe,unripe,0.9545884132385254,0.0454116091132164,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.11.08 PM.png,ripe,unripe,0.35480260848999023,0.6451973915100098,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.13.25 PM.png,ripe,overripe,0.10460999608039856,0.8953900337219238,0.013388816267251968
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.14.07 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.14.20 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.14.56 PM.png,ripe,unripe,0.19754354655742645,0.8024564385414124,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.15.01 PM.png,ripe,ripe,0.23189544677734375,0.7681045532226562,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.15.39 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.16.33 PM.png,ripe,unripe,0.17099793255329132,0.8290020823478699,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.16.37 PM.png,ripe,ripe,0.08747463673353195,0.9125253558158875,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.16.57 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.17.04 PM.png,ripe,unripe,0.34844353795051575,0.6515564918518066,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.18.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.18.51 PM.png,ripe,unripe,0.19694001972675323,0.803059995174408,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.19.28 PM.png,ripe,unripe,0.5799127817153931,0.42008718848228455,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.20.51 PM.png,ripe,overripe,0.0,0.9786150455474854,0.021384965628385544
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.21.51 PM.png,ripe,overripe,0.0,0.9843376874923706,0.015662286430597305
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.21.56 PM.png,ripe,overripe,0.0,0.660161554813385,0.339838445186615
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.23.26 PM.png,ripe,unripe,0.14422036707401276,0.8557796478271484,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.24.04 PM.png,ripe,unripe,0.41025641560554504,0.5897436141967773,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.24.19 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.25.28 PM.png,ripe,unripe,0.2268822193145752,0.7731177806854248,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.25.54 PM.png,ripe,unripe,0.29766714572906494,0.7023328542709351,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.26.52 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.29.07 PM.png,ripe,unripe,0.21080996096134186,0.7891900539398193,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.32.50 PM.png,ripe,unripe,0.5416188836097717,0.45838111639022827,0.0
+apple/test/ripe/translation_Screen Shot 2018-06-08 at 5.33.05 PM.png,ripe,overripe,0.0,0.41264867782592773,0.5873513221740723
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 4.59.49 PM.png,ripe,unripe,0.6871214509010315,0.3128785192966461,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.00.35 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.00.43 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.01.01 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.01.08 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.03.59 PM.png,ripe,unripe,0.15849345922470093,0.8415065407752991,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.04.24 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.04.42 PM.png,ripe,unripe,0.21249507367610931,0.7875049114227295,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.04.48 PM.png,ripe,overripe,0.0,0.811631977558136,0.18836800754070282
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.04.59 PM.png,ripe,overripe,0.0,0.7645598649978638,0.23544016480445862
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.05.12 PM.png,ripe,overripe,0.0,0.885143518447876,0.11485645920038223
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.06.10 PM.png,ripe,unripe,0.2373959869146347,0.7626039981842041,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.06.40 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.06.47 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.07.05 PM.png,ripe,unripe,0.21381215751171112,0.7861878275871277,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.08.46 PM.png,ripe,ripe,0.11054175347089767,0.8894582390785217,0.0029736622236669064
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.08.52 PM.png,ripe,unripe,0.16331833600997925,0.8366816639900208,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.09.47 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.10.53 PM.png,ripe,unripe,0.8821280598640442,0.11787191033363342,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.11.02 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.12.56 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.13.02 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.13.31 PM.png,ripe,overripe,0.20729374885559082,0.7927062511444092,0.011411337181925774
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.14.56 PM.png,ripe,unripe,0.14572639763355255,0.8542736172676086,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.15.21 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.15.28 PM.png,ripe,overripe,0.025421353057026863,0.8022709488868713,0.19772902131080627
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.16.28 PM.png,ripe,ripe,0.11217540502548218,0.8878245949745178,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.18.26 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.18.37 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.20.56 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.21.31 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.21.51 PM.png,ripe,overripe,0.0,0.9021816253662109,0.09781838953495026
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.23.14 PM.png,ripe,ripe,0.10182032734155655,0.8981796503067017,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.24.04 PM.png,ripe,unripe,0.4119238555431366,0.5880761742591858,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.26.13 PM.png,ripe,unripe,0.49217575788497925,0.5078242421150208,0.003110304707661271
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.26.29 PM.png,ripe,unripe,0.24407386779785156,0.7559261322021484,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.26.36 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.26.58 PM.png,ripe,overripe,0.0,0.417335569858551,0.582664430141449
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.28.10 PM.png,ripe,ripe,0.0,1.0,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.28.42 PM.png,ripe,overripe,0.0,0.6675575375556946,0.33244243264198303
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.28.48 PM.png,ripe,overripe,0.0,0.6907384991645813,0.3092614710330963
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.29.13 PM.png,ripe,ripe,0.0994064137339592,0.9005935788154602,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.29.18 PM.png,ripe,unripe,0.14643268287181854,0.8535673022270203,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.32.38 PM.png,ripe,unripe,0.2337462306022644,0.7662537693977356,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.32.43 PM.png,ripe,overripe,0.01307489164173603,0.7481704950332642,0.25182950496673584
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.32.50 PM.png,ripe,unripe,0.6698821783065796,0.3301178514957428,0.0
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.33.05 PM.png,ripe,overripe,0.0,0.41085970401763916,0.5891402959823608
+apple/test/ripe/vertical_flip_Screen Shot 2018-06-08 at 5.33.27 PM.png,ripe,unripe,0.7241566777229309,0.2758433520793915,0.0
+apple/test/unripe/1.jpg,unripe,unripe,0.4562946856021881,0.5437052845954895,0.0
+apple/test/unripe/10.jpg,unripe,unripe,0.8575348258018494,0.14246518909931183,0.0
+apple/test/unripe/100.jpg,unripe,overripe,0.1169804111123085,0.7063207626342773,0.29367923736572266
+apple/test/unripe/101.jpg,unripe,overripe,0.21292909979820251,0.6346324682235718,0.3653675317764282
+apple/test/unripe/102.jpg,unripe,unripe,0.2646982967853546,0.735301673412323,0.0
+apple/test/unripe/103.jpg,unripe,unripe,0.34291598200798035,0.657084047794342,0.0
+apple/test/unripe/104.jpg,unripe,overripe,0.8787909746170044,0.12120901793241501,0.28130730986595154
+apple/test/unripe/105.jpg,unripe,ripe,0.09330707043409348,0.9066929221153259,0.0
+apple/test/unripe/106.jpg,unripe,overripe,0.5518814921379089,0.44811853766441345,0.12091794610023499
+apple/test/unripe/107.jpg,unripe,overripe,0.1337684839963913,0.8662315011024475,0.024314910173416138
+apple/test/unripe/108.jpg,unripe,overripe,0.3316829204559326,0.6683170795440674,0.007372100371867418
+apple/test/unripe/109.jpg,unripe,overripe,0.23637332022190094,0.7636266946792603,0.053370267152786255
+apple/test/unripe/11.jpg,unripe,overripe,0.061089012771844864,0.8497782945632935,0.15022173523902893
+apple/test/unripe/110.jpg,unripe,overripe,0.14138276875019073,0.8432128429412842,0.15678714215755463
+apple/test/unripe/111.jpg,unripe,unripe,0.676794707775116,0.32320529222488403,0.0
+apple/test/unripe/112.jpg,unripe,ripe,0.0,0.9970352649688721,0.002964708721265197
+apple/test/unripe/113.jpg,unripe,overripe,0.2644622325897217,0.7355377674102783,0.10996738076210022
+apple/test/unripe/114.jpg,unripe,unripe,0.6766818761825562,0.32331812381744385,0.0024987375363707542
+apple/test/unripe/115.jpg,unripe,overripe,0.0,0.7436784505844116,0.25632157921791077
+apple/test/unripe/116.jpg,unripe,overripe,0.27026891708374023,0.5800999402999878,0.4199000298976898
+apple/test/unripe/117.jpg,unripe,ripe,0.09980292618274689,0.9001970887184143,0.0
+apple/test/unripe/118.jpg,unripe,overripe,0.40660953521728516,0.5933904647827148,0.17969784140586853
+apple/test/unripe/119.jpg,unripe,overripe,0.441668838262558,0.5583311319351196,0.08933515101671219
+apple/test/unripe/12.jpg,unripe,overripe,0.4263456463813782,0.5736543536186218,0.061614248901605606
+apple/test/unripe/120.jpg,unripe,overripe,0.5968891382217407,0.4031108319759369,0.14588871598243713
+apple/test/unripe/121.jpg,unripe,ripe,0.09330707043409348,0.9066929221153259,0.0
+apple/test/unripe/122.jpg,unripe,overripe,0.5609573125839233,0.4390426576137543,0.05988815426826477
+apple/test/unripe/123.jpg,unripe,overripe,0.5075750350952148,0.49242496490478516,0.14630261063575745
+apple/test/unripe/124.jpg,unripe,overripe,0.0,0.7571467161178589,0.24285326898097992
+apple/test/unripe/125.jpg,unripe,overripe,0.3605206310749054,0.6394793391227722,0.0135036064311862
+apple/test/unripe/126.jpg,unripe,overripe,0.5968891382217407,0.4031108319759369,0.14588871598243713
+apple/test/unripe/127.jpg,unripe,unripe,0.25359612703323364,0.7464038729667664,0.0
+apple/test/unripe/128.jpg,unripe,unripe,0.26322489976882935,0.7367751002311707,0.0
+apple/test/unripe/129.jpg,unripe,unripe,0.721885621547699,0.2781144082546234,0.0
+apple/test/unripe/13.jpg,unripe,overripe,0.3759039044380188,0.6240960955619812,0.1720503717660904
+apple/test/unripe/130.jpg,unripe,overripe,0.32950806617736816,0.6704919338226318,0.0996701642870903
+apple/test/unripe/131.jpg,unripe,unripe,0.6881263256072998,0.3118736743927002,0.0
+apple/test/unripe/132.jpg,unripe,overripe,0.6969317197799683,0.30306828022003174,0.1498396396636963
+apple/test/unripe/133.jpg,unripe,overripe,0.5509782433509827,0.4490217864513397,0.20707941055297852
+apple/test/unripe/134.jpg,unripe,overripe,0.0,0.7863151431083679,0.2136848419904709
+apple/test/unripe/135.jpg,unripe,overripe,0.0,0.43277978897094727,0.5672202110290527
+apple/test/unripe/136.jpg,unripe,overripe,0.5468539595603943,0.4531460404396057,0.1706162989139557
+apple/test/unripe/137.jpg,unripe,ripe,0.1080668568611145,0.8919331431388855,0.0
+apple/test/unripe/138.jpg,unripe,overripe,0.40660953521728516,0.5933904647827148,0.17969784140586853
+apple/test/unripe/139.jpg,unripe,overripe,0.40390151739120483,0.5960984826087952,0.10162189602851868
+apple/test/unripe/14.jpg,unripe,overripe,0.0,0.8517522215843201,0.14824777841567993
+apple/test/unripe/140.jpg,unripe,ripe,0.06341296434402466,0.9365870356559753,0.0
+apple/test/unripe/141.jpg,unripe,overripe,0.02171250246465206,0.7965848445892334,0.2034151554107666
+apple/test/unripe/142.jpg,unripe,overripe,0.0,0.43277978897094727,0.5672202110290527
+apple/test/unripe/143.jpg,unripe,overripe,0.22761428356170654,0.7723857164382935,0.01358797773718834
+apple/test/unripe/144.jpg,unripe,overripe,0.4724130630493164,0.5275869369506836,0.03172523155808449
+apple/test/unripe/145.jpg,unripe,unripe,0.4055708050727844,0.5944291949272156,0.0
+apple/test/unripe/146.jpg,unripe,overripe,0.7483404278755188,0.2516595423221588,0.14118358492851257
+apple/test/unripe/147.jpg,unripe,unripe,0.23561282455921173,0.7643871903419495,0.0
+apple/test/unripe/148.jpg,unripe,overripe,0.0,0.6267208456993103,0.3732791543006897
+apple/test/unripe/149.jpg,unripe,overripe,0.5609573125839233,0.4390426576137543,0.05988815426826477
+apple/test/unripe/15.jpg,unripe,overripe,0.2976350486278534,0.702364981174469,0.1369284838438034
+apple/test/unripe/150.jpg,unripe,overripe,0.0,0.9547246694564819,0.04527535289525986
+apple/test/unripe/151.jpg,unripe,overripe,0.0,0.7571467161178589,0.24285326898097992
+apple/test/unripe/152.jpg,unripe,overripe,0.0,0.6096661686897278,0.3903338611125946
+apple/test/unripe/153.jpg,unripe,overripe,0.0,0.7863151431083679,0.2136848419904709
+apple/test/unripe/154.jpg,unripe,overripe,0.0,0.6613271236419678,0.33867284655570984
+apple/test/unripe/155.jpg,unripe,overripe,0.4781794250011444,0.5218205451965332,0.04777054116129875
+apple/test/unripe/156.jpg,unripe,ripe,0.0,1.0,0.0
+apple/test/unripe/157.jpg,unripe,overripe,0.042827293276786804,0.7693110108375549,0.23068897426128387
+apple/test/unripe/158.jpg,unripe,unripe,0.2094212770462036,0.7905787229537964,0.0
+apple/test/unripe/159.jpg,unripe,overripe,0.2574476897716522,0.7425523400306702,0.04399367421865463
+apple/test/unripe/16.jpg,unripe,overripe,0.3519147038459778,0.6480852961540222,0.12527358531951904
+apple/test/unripe/160.jpg,unripe,overripe,0.28467851877212524,0.7153214812278748,0.18043844401836395
+apple/test/unripe/161.jpg,unripe,overripe,0.792772114276886,0.20722787082195282,0.05176100507378578
+apple/test/unripe/162.jpg,unripe,overripe,0.0,0.694049060344696,0.30595090985298157
+apple/test/unripe/163.jpg,unripe,overripe,0.019914530217647552,0.7310185432434082,0.2689814865589142
+apple/test/unripe/164.jpg,unripe,unripe,0.2585027813911438,0.7414972186088562,0.0
+apple/test/unripe/165.jpg,unripe,unripe,0.2598665654659271,0.7401334047317505,0.0
+apple/test/unripe/166.jpg,unripe,unripe,0.32363268733024597,0.6763673424720764,0.0
+apple/test/unripe/167.jpg,unripe,overripe,0.0,0.6683453917503357,0.3316546082496643
+apple/test/unripe/168.jpg,unripe,unripe,0.2716045677661896,0.7283954620361328,0.0
+apple/test/unripe/169.jpg,unripe,unripe,0.19273841381072998,0.80726158618927,0.0
+apple/test/unripe/17.jpg,unripe,overripe,0.10964018851518631,0.7979750037193298,0.20202498137950897
+apple/test/unripe/170.jpg,unripe,overripe,0.46620360016822815,0.5337963700294495,0.1002807691693306
+apple/test/unripe/171.jpg,unripe,overripe,0.8821958899497986,0.11780412495136261,0.1638989895582199
+apple/test/unripe/172.jpg,unripe,overripe,0.0,0.36236488819122314,0.6376351118087769
+apple/test/unripe/173.jpg,unripe,unripe,0.5061986446380615,0.4938013553619385,0.0
+apple/test/unripe/174.jpg,unripe,overripe,0.9793816208839417,0.020618358626961708,0.25366684794425964
+apple/test/unripe/175.jpg,unripe,overripe,0.9839369654655457,0.01606305129826069,0.025081967934966087
+apple/test/unripe/176.jpg,unripe,overripe,0.5075750350952148,0.49242496490478516,0.14630261063575745
+apple/test/unripe/177.jpg,unripe,overripe,0.8575008511543274,0.142499178647995,0.0838087797164917
+apple/test/unripe/178.jpg,unripe,unripe,0.34137967228889465,0.658620297908783,0.0
+apple/test/unripe/179.jpg,unripe,unripe,0.25255608558654785,0.7474439144134521,0.0
+apple/test/unripe/18.jpg,unripe,overripe,0.09139034152030945,0.7553049325942993,0.2446950525045395
+apple/test/unripe/180.jpg,unripe,unripe,0.2258203625679016,0.7741796374320984,0.0
+apple/test/unripe/181.jpg,unripe,overripe,0.28467851877212524,0.7153214812278748,0.18043844401836395
+apple/test/unripe/182.jpg,unripe,unripe,0.5511739253997803,0.4488260746002197,0.0
+apple/test/unripe/183.jpg,unripe,overripe,0.9793816208839417,0.020618358626961708,0.25366684794425964
+apple/test/unripe/184.jpg,unripe,overripe,0.2254330962896347,0.7745668888092041,0.19265125691890717
+apple/test/unripe/185.jpg,unripe,unripe,0.32363268733024597,0.6763673424720764,0.0
+apple/test/unripe/186.jpg,unripe,unripe,0.8745660185813904,0.1254339963197708,0.0
+apple/test/unripe/187.jpg,unripe,overripe,0.0,0.6683453917503357,0.3316546082496643
+apple/test/unripe/188.jpg,unripe,unripe,0.5061986446380615,0.4938013553619385,0.0
+apple/test/unripe/189.jpg,unripe,overripe,0.4024812877178192,0.5975187420845032,0.027204278856515884
+apple/test/unripe/19.jpg,unripe,unripe,0.1612040102481842,0.8387959599494934,0.0
+apple/test/unripe/190.jpg,unripe,unripe,0.2716045677661896,0.7283954620361328,0.0
+apple/test/unripe/191.jpg,unripe,overripe,0.07690806686878204,0.8049864768981934,0.19501355290412903
+apple/test/unripe/192.jpg,unripe,overripe,0.3924318552017212,0.6075681447982788,0.019969431683421135
+apple/test/unripe/193.jpg,unripe,unripe,0.9476281404495239,0.05237183719873428,0.0
+apple/test/unripe/194.jpg,unripe,unripe,0.720232367515564,0.27976763248443604,0.0
+apple/test/unripe/195.jpg,unripe,unripe,0.2258203625679016,0.7741796374320984,0.0
+apple/test/unripe/196.jpg,unripe,overripe,0.8821958899497986,0.11780412495136261,0.1638989895582199
+apple/test/unripe/197.jpg,unripe,overripe,0.15885965526103973,0.8175365328788757,0.18246346712112427
+apple/test/unripe/198.jpg,unripe,unripe,0.19273841381072998,0.80726158618927,0.0
+apple/test/unripe/199.jpg,unripe,overripe,0.035680610686540604,0.8789664506912231,0.12103352695703506
+apple/test/unripe/2.jpg,unripe,overripe,0.2583926022052765,0.7416074275970459,0.15277934074401855
+apple/test/unripe/20.jpg,unripe,overripe,0.6253235936164856,0.3746764361858368,0.024918096140027046
+apple/test/unripe/200.jpg,unripe,unripe,0.3478304147720337,0.6521695852279663,0.0
+apple/test/unripe/202.jpg,unripe,overripe,0.18158775568008423,0.8184122443199158,0.17945589125156403
+apple/test/unripe/203.jpg,unripe,unripe,0.8745660185813904,0.1254339963197708,0.0
+apple/test/unripe/205.jpg,unripe,overripe,0.8119770884513855,0.1880229115486145,0.20083031058311462
+apple/test/unripe/206.jpg,unripe,overripe,0.4266219735145569,0.5111111402511597,0.4888888895511627
+apple/test/unripe/207.jpg,unripe,overripe,0.2783106863498688,0.7216893434524536,0.17936572432518005
+apple/test/unripe/208.jpg,unripe,unripe,0.163314089179039,0.8366858959197998,0.0
+apple/test/unripe/209.jpg,unripe,overripe,0.5682976245880127,0.4317023754119873,0.05905454605817795
+apple/test/unripe/21.jpg,unripe,overripe,0.862949013710022,0.13705098628997803,0.11493568122386932
+apple/test/unripe/210.jpg,unripe,overripe,0.0,0.9139112234115601,0.08608875423669815
+apple/test/unripe/211.jpg,unripe,overripe,0.2437860518693924,0.7562139630317688,0.009395972825586796
+apple/test/unripe/212.jpg,unripe,unripe,0.26579931378364563,0.734200656414032,0.0
+apple/test/unripe/213.jpg,unripe,unripe,0.5511739253997803,0.4488260746002197,0.0
+apple/test/unripe/214.jpg,unripe,unripe,0.2683529257774353,0.7316470742225647,0.0
+apple/test/unripe/215.jpg,unripe,overripe,0.1151958703994751,0.6463474035263062,0.35365256667137146
+apple/test/unripe/216.jpg,unripe,overripe,0.2254330962896347,0.7745668888092041,0.19265125691890717
+apple/test/unripe/217.jpg,unripe,unripe,0.9588117599487305,0.04118826240301132,0.0
+apple/test/unripe/218.jpg,unripe,ripe,0.0,1.0,0.0
+apple/test/unripe/219.jpg,unripe,unripe,0.3478304147720337,0.6521695852279663,0.0
+apple/test/unripe/22.jpg,unripe,unripe,0.8487420082092285,0.15125802159309387,0.0
+apple/test/unripe/220.jpg,unripe,overripe,0.24493707716464996,0.7550629377365112,0.1288294494152069
+apple/test/unripe/221.jpg,unripe,overripe,0.17755930125713348,0.8224406838417053,0.13624915480613708
+apple/test/unripe/222.jpg,unripe,overripe,0.23199278116226196,0.768007218837738,0.030652230605483055
+apple/test/unripe/223.jpg,unripe,overripe,0.028291983529925346,0.7384061813354492,0.26159384846687317
+apple/test/unripe/224.jpg,unripe,overripe,0.1930294930934906,0.806970477104187,0.04066774994134903
+apple/test/unripe/225.jpg,unripe,ripe,0.0,1.0,0.0
+apple/test/unripe/226.jpg,unripe,unripe,0.3768221437931061,0.6231778860092163,0.0
+apple/test/unripe/227.jpg,unripe,overripe,0.0,0.6868883967399597,0.31311163306236267
+apple/test/unripe/229.jpg,unripe,overripe,0.019914530217647552,0.7310185432434082,0.2689814865589142
+apple/test/unripe/23.jpg,unripe,overripe,0.23961520195007324,0.7603847980499268,0.044185664504766464
+apple/test/unripe/230.jpg,unripe,unripe,0.22234804928302765,0.7776519656181335,0.0
+apple/test/unripe/231.jpg,unripe,overripe,0.0,0.7818809151649475,0.2181190699338913
+apple/test/unripe/232.jpg,unripe,overripe,0.0818558856844902,0.8162839412689209,0.1837160587310791
+apple/test/unripe/233.jpg,unripe,overripe,0.14620132744312286,0.6797456741333008,0.3202543258666992
+apple/test/unripe/235.jpg,unripe,unripe,0.21744121611118317,0.782558798789978,0.0
+apple/test/unripe/236.jpg,unripe,overripe,0.5019802451133728,0.4980197548866272,0.05093478038907051
+apple/test/unripe/237.jpg,unripe,unripe,0.200740247964859,0.7992597222328186,0.0
+apple/test/unripe/238.jpg,unripe,overripe,0.0,0.7660926580429077,0.23390734195709229
+apple/test/unripe/239.jpg,unripe,overripe,0.6433060765266418,0.35669392347335815,0.058849845081567764
+apple/test/unripe/24.jpg,unripe,overripe,0.2685256004333496,0.7314743995666504,0.21776285767555237
+apple/test/unripe/240.jpg,unripe,overripe,0.2491900473833084,0.7508099675178528,0.1133333370089531
+apple/test/unripe/241.jpg,unripe,overripe,0.16602320969104767,0.8339768052101135,0.02986903302371502
+apple/test/unripe/242.jpg,unripe,ripe,0.12806035578250885,0.8719396591186523,0.0
+apple/test/unripe/243.jpg,unripe,unripe,0.8745660185813904,0.1254339963197708,0.0
+apple/test/unripe/244.jpg,unripe,unripe,0.5511739253997803,0.4488260746002197,0.0
+apple/test/unripe/245.jpg,unripe,overripe,0.2680613398551941,0.7319386601448059,0.2042388767004013
+apple/test/unripe/246.jpg,unripe,overripe,0.008209873922169209,0.7508772015571594,0.24912281334400177
+apple/test/unripe/247.jpg,unripe,overripe,0.0,0.5815761685371399,0.4184238016605377
+apple/test/unripe/248.jpg,unripe,overripe,0.964070200920105,0.03592976927757263,0.24980033934116364
+apple/test/unripe/249.jpg,unripe,overripe,0.6823517084121704,0.3176482617855072,0.266000896692276
+apple/test/unripe/25.jpg,unripe,overripe,0.6784923672676086,0.32150763273239136,0.09330445528030396
+apple/test/unripe/250.jpg,unripe,unripe,0.6107896566390991,0.3892103433609009,0.0
+apple/test/unripe/251.jpg,unripe,overripe,0.1115613654255867,0.8884386420249939,0.030110575258731842
+apple/test/unripe/253.jpg,unripe,unripe,0.3768221437931061,0.6231778860092163,0.0
+apple/test/unripe/254.jpg,unripe,overripe,0.6763089299201965,0.32369107007980347,0.23937903344631195
+apple/test/unripe/255.jpg,unripe,overripe,0.8071257472038269,0.1928742527961731,0.15498970448970795
+apple/test/unripe/256.jpg,unripe,unripe,0.9553197026252747,0.044680316001176834,0.0
+apple/test/unripe/257.jpg,unripe,unripe,0.7620083093643188,0.23799166083335876,0.003935629967600107
+apple/test/unripe/258.jpg,unripe,unripe,0.17766821384429932,0.8223317861557007,0.0
+apple/test/unripe/259.jpg,unripe,overripe,0.7236660718917847,0.2763339579105377,0.1929619312286377
+apple/test/unripe/26.jpg,unripe,overripe,0.0,0.7187002301216125,0.28129976987838745
+apple/test/unripe/261.jpg,unripe,overripe,0.0,0.6778004169464111,0.32219961285591125
+apple/test/unripe/262.jpg,unripe,overripe,0.4697762429714203,0.5302237272262573,0.24247796833515167
+apple/test/unripe/263.jpg,unripe,overripe,0.22324194014072418,0.6582126021385193,0.3417873680591583
+apple/test/unripe/264.jpg,unripe,overripe,0.06737788021564484,0.9326221346855164,0.05678063631057739
+apple/test/unripe/265.jpg,unripe,unripe,0.27200382947921753,0.7279961705207825,0.0
+apple/test/unripe/266.jpg,unripe,overripe,0.07615312933921814,0.8176464438438416,0.18235355615615845
+apple/test/unripe/267.jpg,unripe,unripe,0.4391004145145416,0.560899555683136,0.0
+apple/test/unripe/268.jpg,unripe,ripe,0.0,0.6000000238418579,0.4000000059604645
+apple/test/unripe/269.jpg,unripe,overripe,0.20231778919696808,0.7976822257041931,0.020581182092428207
+apple/test/unripe/27.jpg,unripe,unripe,0.9388843774795532,0.06111561134457588,0.0
+apple/test/unripe/270.jpg,unripe,overripe,0.09822190552949905,0.786083459854126,0.21391655504703522
+apple/test/unripe/271.jpg,unripe,overripe,0.5682976245880127,0.4317023754119873,0.05905454605817795
+apple/test/unripe/272.jpg,unripe,overripe,0.1151958703994751,0.6463474035263062,0.35365256667137146
+apple/test/unripe/273.jpg,unripe,overripe,0.0,0.6123222708702087,0.38767772912979126
+apple/test/unripe/274.jpg,unripe,overripe,0.8844173550605774,0.11558262258768082,0.050327885895967484
+apple/test/unripe/275.jpg,unripe,unripe,0.3478304147720337,0.6521695852279663,0.0
+apple/test/unripe/276.jpg,unripe,overripe,0.5298927426338196,0.4701072573661804,0.07491987198591232
+apple/test/unripe/277.jpg,unripe,unripe,0.9868588447570801,0.013141131028532982,0.0
+apple/test/unripe/278.jpg,unripe,overripe,0.28550708293914795,0.714492917060852,0.09802958369255066
+apple/test/unripe/279.jpg,unripe,overripe,0.2437860518693924,0.7562139630317688,0.009395972825586796
+apple/test/unripe/28.jpg,unripe,unripe,0.3301398456096649,0.6698601245880127,0.0
+apple/test/unripe/281.jpg,unripe,overripe,0.7986234426498413,0.2013765424489975,0.0812024176120758
+apple/test/unripe/282.jpg,unripe,overripe,0.0,0.7005393505096436,0.29946064949035645
+apple/test/unripe/283.jpg,unripe,unripe,0.36341744661331177,0.6365825533866882,0.0
+apple/test/unripe/284.jpg,unripe,unripe,0.33728471398353577,0.6627153158187866,0.0
+apple/test/unripe/285.jpg,unripe,overripe,0.12015693634748459,0.8798430562019348,0.11472069472074509
+apple/test/unripe/286.jpg,unripe,unripe,0.6631767749786377,0.3368232250213623,0.0
+apple/test/unripe/287.jpg,unripe,ripe,0.10725508630275726,0.8927448987960815,0.0
+apple/test/unripe/288.jpg,unripe,unripe,0.9868588447570801,0.013141131028532982,0.0
+apple/test/unripe/289.jpg,unripe,overripe,0.6823517084121704,0.3176482617855072,0.266000896692276
+apple/test/unripe/29.jpg,unripe,unripe,0.45876994729042053,0.5412300229072571,0.0
+apple/test/unripe/290.jpg,unripe,ripe,0.12806035578250885,0.8719396591186523,0.0
+apple/test/unripe/291.jpg,unripe,overripe,0.0,0.5815761685371399,0.4184238016605377
+apple/test/unripe/292.jpg,unripe,overripe,0.0,0.9056942462921143,0.09430573880672455
+apple/test/unripe/293.jpg,unripe,overripe,0.0,0.6778004169464111,0.32219961285591125
+apple/test/unripe/294.jpg,unripe,ripe,0.0845990777015686,0.9154009222984314,0.0
+apple/test/unripe/295.jpg,unripe,overripe,0.964070200920105,0.03592976927757263,0.24980033934116364
+apple/test/unripe/297.jpg,unripe,unripe,0.6107896566390991,0.3892103433609009,0.0
+apple/test/unripe/298.jpg,unripe,overripe,0.6763089299201965,0.32369107007980347,0.23937903344631195
+apple/test/unripe/3.jpg,unripe,overripe,0.6315003633499146,0.36849966645240784,0.06869198381900787
+apple/test/unripe/30.jpg,unripe,overripe,0.0,0.5106074213981628,0.48939257860183716
+apple/test/unripe/300.jpg,unripe,overripe,0.0,0.5374586582183838,0.4625413417816162
+apple/test/unripe/301.jpg,unripe,overripe,0.0,0.7039387822151184,0.2960612177848816
+apple/test/unripe/302.jpg,unripe,overripe,0.7236660718917847,0.2763339579105377,0.1929619312286377
+apple/test/unripe/303.jpg,unripe,overripe,0.1115613654255867,0.8884386420249939,0.030110575258731842
+apple/test/unripe/304.jpg,unripe,unripe,0.2206224650144577,0.7793775200843811,0.0
+apple/test/unripe/305.jpg,unripe,unripe,0.3206839859485626,0.679315984249115,0.0
+apple/test/unripe/306.jpg,unripe,overripe,0.1522647589445114,0.8477352261543274,0.037831153720617294
+apple/test/unripe/307.jpg,unripe,overripe,0.008209873922169209,0.7508772015571594,0.24912281334400177
+apple/test/unripe/308.jpg,unripe,overripe,0.5194303393363953,0.4805696904659271,0.3019236624240875
+apple/test/unripe/309.jpg,unripe,unripe,0.46237480640411377,0.5376251935958862,0.0028612304013222456
+apple/test/unripe/31.jpg,unripe,overripe,0.32581856846809387,0.6741814017295837,0.024983027949929237
+apple/test/unripe/310.jpg,unripe,unripe,0.2921709418296814,0.7078290581703186,0.0
+apple/test/unripe/311.jpg,unripe,overripe,0.06737788021564484,0.9326221346855164,0.05678063631057739
+apple/test/unripe/312.jpg,unripe,unripe,0.27200382947921753,0.7279961705207825,0.0
+apple/test/unripe/313.jpg,unripe,overripe,0.07615312933921814,0.8176464438438416,0.18235355615615845
+apple/test/unripe/314.jpg,unripe,unripe,0.4391004145145416,0.560899555683136,0.0
+apple/test/unripe/315.jpg,unripe,overripe,0.1469171941280365,0.8436419367790222,0.1563580334186554
+apple/test/unripe/317.jpg,unripe,overripe,0.605247437953949,0.394752562046051,0.15099723637104034
+apple/test/unripe/318.jpg,unripe,overripe,0.5327056050300598,0.4672944247722626,0.046914514154195786
+apple/test/unripe/32.jpg,unripe,overripe,0.803074836730957,0.19692519307136536,0.0645146518945694
+apple/test/unripe/321.jpg,unripe,overripe,0.30141481757164,0.6985852122306824,0.05563022941350937
+apple/test/unripe/322.jpg,unripe,overripe,0.22324194014072418,0.6582126021385193,0.3417873680591583
+apple/test/unripe/323.jpg,unripe,overripe,0.2026379108428955,0.7973620891571045,0.13464820384979248
+apple/test/unripe/324.jpg,unripe,overripe,0.1268782764673233,0.7774947881698608,0.22250519692897797
+apple/test/unripe/325.jpg,unripe,overripe,0.0,0.9341046810150146,0.06589533388614655
+apple/test/unripe/326.jpg,unripe,overripe,0.2945747673511505,0.7054252028465271,0.17639435827732086
+apple/test/unripe/327.jpg,unripe,overripe,0.5504721403121948,0.44952788949012756,0.02704734168946743
+apple/test/unripe/328.jpg,unripe,overripe,0.8071257472038269,0.1928742527961731,0.15498970448970795
+apple/test/unripe/329.jpg,unripe,overripe,0.9731762409210205,0.026823759078979492,0.22781512141227722
+apple/test/unripe/33.jpg,unripe,overripe,0.07012369483709335,0.7181022763252258,0.28189772367477417
+apple/test/unripe/330.jpg,unripe,overripe,0.0,0.8454614877700806,0.15453852713108063
+apple/test/unripe/331.jpg,unripe,unripe,0.3331201672554016,0.6668798327445984,0.0
+apple/test/unripe/332.jpg,unripe,overripe,0.6348162889480591,0.3651837110519409,0.23759552836418152
+apple/test/unripe/333.jpg,unripe,overripe,0.20231778919696808,0.7976822257041931,0.020581182092428207
+apple/test/unripe/334.jpg,unripe,overripe,0.0,0.5442968010902405,0.45570316910743713
+apple/test/unripe/335.jpg,unripe,unripe,0.16643919050693512,0.8335608243942261,0.0
+apple/test/unripe/336.jpg,unripe,overripe,0.34639573097229004,0.65360426902771,0.1259162873029709
+apple/test/unripe/337.jpg,unripe,ripe,0.13831567764282227,0.8616843223571777,0.0
+apple/test/unripe/338.jpg,unripe,overripe,0.6034168004989624,0.39658322930336,0.23549281060695648
+apple/test/unripe/339.jpg,unripe,overripe,0.39456719160079956,0.4690593481063843,0.5309406518936157
+apple/test/unripe/34.jpg,unripe,overripe,0.4957881569862366,0.5042118430137634,0.2591221332550049
+apple/test/unripe/342.jpg,unripe,overripe,0.2344590425491333,0.6367193460464478,0.36328062415122986
+apple/test/unripe/343.jpg,unripe,overripe,0.05144602805376053,0.5269381999969482,0.47306180000305176
+apple/test/unripe/344.jpg,unripe,overripe,0.0,0.8312223553657532,0.16877762973308563
+apple/test/unripe/346.jpg,unripe,overripe,0.6697567105293274,0.3302432596683502,0.20385321974754333
+apple/test/unripe/347.jpg,unripe,overripe,0.4674018323421478,0.5325981974601746,0.03137117996811867
+apple/test/unripe/348.jpg,unripe,overripe,0.210279181599617,0.7304760217666626,0.269523948431015
+apple/test/unripe/349.jpg,unripe,overripe,0.5927074551582336,0.40729254484176636,0.09056790173053741
+apple/test/unripe/35.jpg,unripe,overripe,0.5958924293518066,0.40410757064819336,0.0316644124686718
+apple/test/unripe/350.jpg,unripe,overripe,0.9731762409210205,0.026823759078979492,0.22781512141227722
+apple/test/unripe/351.jpg,unripe,overripe,0.7614172101020813,0.2385827898979187,0.30010196566581726
+apple/test/unripe/353.jpg,unripe,unripe,0.3331201672554016,0.6668798327445984,0.0
+apple/test/unripe/354.jpg,unripe,overripe,0.09822190552949905,0.786083459854126,0.21391655504703522
+apple/test/unripe/355.jpg,unripe,unripe,0.7252961993217468,0.2747037708759308,0.0
+apple/test/unripe/356.jpg,unripe,overripe,0.8844173550605774,0.11558262258768082,0.050327885895967484
+apple/test/unripe/357.jpg,unripe,overripe,0.4005996584892273,0.5994003415107727,0.2255244255065918
+apple/test/unripe/358.jpg,unripe,unripe,0.41939324140548706,0.5806067585945129,0.0
+apple/test/unripe/359.jpg,unripe,overripe,0.32994186878204346,0.6700581312179565,0.13608315587043762
+apple/test/unripe/36.jpg,unripe,overripe,0.9901036620140076,0.009896308183670044,0.12035609036684036
+apple/test/unripe/361.jpg,unripe,overripe,0.5002100467681885,0.4997899532318115,0.03794838860630989
+apple/test/unripe/362.jpg,unripe,overripe,0.2955261468887329,0.7044738531112671,0.18082484602928162
+apple/test/unripe/363.jpg,unripe,overripe,0.18312303721904755,0.8118589520454407,0.18814103305339813
+apple/test/unripe/364.jpg,unripe,overripe,0.10927099734544754,0.7755218744277954,0.22447814047336578
+apple/test/unripe/365.jpg,unripe,overripe,0.5417800545692444,0.4582199454307556,0.09183943271636963
+apple/test/unripe/366.jpg,unripe,unripe,0.14998960494995117,0.8500103950500488,0.0
+apple/test/unripe/367.jpg,unripe,overripe,0.5749366879463196,0.4250633120536804,0.21835541725158691
+apple/test/unripe/368.jpg,unripe,overripe,0.0,0.504466712474823,0.495533287525177
+apple/test/unripe/369.jpg,unripe,overripe,0.3924318552017212,0.6075681447982788,0.019969431683421135
+apple/test/unripe/37.jpg,unripe,overripe,0.4144032597541809,0.5855967402458191,0.26506394147872925
+apple/test/unripe/370.jpg,unripe,overripe,0.2454131692647934,0.7545868158340454,0.12231694906949997
+apple/test/unripe/371.jpg,unripe,overripe,0.6145668029785156,0.38543322682380676,0.12256770581007004
+apple/test/unripe/373.jpg,unripe,overripe,0.4516255855560303,0.5483744144439697,0.1143302470445633
+apple/test/unripe/374.jpg,unripe,unripe,0.36341744661331177,0.6365825533866882,0.0
+apple/test/unripe/375.jpg,unripe,ripe,0.11548598855733871,0.8845140337944031,0.0
+apple/test/unripe/376.jpg,unripe,overripe,0.16521161794662476,0.8347883820533752,0.11612240970134735
+apple/test/unripe/377.jpg,unripe,overripe,0.8512060642242432,0.14879396557807922,0.05421403422951698
+apple/test/unripe/378.jpg,unripe,unripe,0.3331201672554016,0.6668798327445984,0.0
+apple/test/unripe/38.jpg,unripe,unripe,0.1729108989238739,0.8270891308784485,0.0
+apple/test/unripe/381.jpg,unripe,unripe,0.2684388756752014,0.7315611243247986,0.0
+apple/test/unripe/383.jpg,unripe,overripe,0.0,0.7396394610404968,0.2603605389595032
+apple/test/unripe/384.jpg,unripe,overripe,0.19977840781211853,0.8002216219902039,0.1861814260482788
+apple/test/unripe/385.jpg,unripe,overripe,0.0,0.9877793192863464,0.01222070213407278
+apple/test/unripe/386.jpg,unripe,overripe,0.0,0.4003346860408783,0.5996653437614441
+apple/test/unripe/387.jpg,unripe,overripe,0.919425368309021,0.08057462424039841,0.0852731466293335
+apple/test/unripe/388.jpg,unripe,overripe,0.13282713294029236,0.86717289686203,0.028865208849310875
+apple/test/unripe/389.jpg,unripe,overripe,0.5504721403121948,0.44952788949012756,0.02704734168946743
+apple/test/unripe/39.jpg,unripe,overripe,0.0,0.6811038255691528,0.31889617443084717
+apple/test/unripe/390.jpg,unripe,unripe,0.9102437496185303,0.08975625783205032,0.0
+apple/test/unripe/391.jpg,unripe,overripe,0.015670301392674446,0.5447131395339966,0.4552868902683258
+apple/test/unripe/394.jpg,unripe,overripe,0.5794589519500732,0.42054104804992676,0.016631370410323143
+apple/test/unripe/4.jpg,unripe,unripe,0.38204386830329895,0.6179561018943787,0.0
+apple/test/unripe/40.jpg,unripe,unripe,0.17397251725196838,0.8260274529457092,0.0
+apple/test/unripe/41.jpg,unripe,overripe,0.4957881569862366,0.5042118430137634,0.2591221332550049
+apple/test/unripe/42.jpg,unripe,unripe,0.9744408130645752,0.025559160858392715,0.0
+apple/test/unripe/43.jpg,unripe,overripe,0.3126939833164215,0.6873060464859009,0.30619946122169495
+apple/test/unripe/44.jpg,unripe,unripe,0.3232458829879761,0.6767541170120239,0.0
+apple/test/unripe/45.jpg,unripe,overripe,0.34018588066101074,0.6598141193389893,0.005861182697117329
+apple/test/unripe/46.jpg,unripe,overripe,0.803074836730957,0.19692519307136536,0.0645146518945694
+apple/test/unripe/47.jpg,unripe,unripe,0.5818778276443481,0.41812220215797424,0.0
+apple/test/unripe/48.jpg,unripe,overripe,0.0,0.9571385979652405,0.04286138340830803
+apple/test/unripe/49.jpg,unripe,overripe,0.7608014941215515,0.2391984909772873,0.11866859346628189
+apple/test/unripe/5.jpg,unripe,unripe,0.17705081403255463,0.8229491710662842,0.0
+apple/test/unripe/50.jpg,unripe,overripe,0.3604099452495575,0.6395900249481201,0.16999538242816925
+apple/test/unripe/51.jpg,unripe,overripe,0.6517556309700012,0.3482443690299988,0.025304686278104782
+apple/test/unripe/52.jpg,unripe,overripe,0.17680276930332184,0.8217520117759705,0.17824798822402954
+apple/test/unripe/53.jpg,unripe,overripe,0.28522032499313354,0.7147796750068665,0.05435536429286003
+apple/test/unripe/54.jpg,unripe,overripe,0.6540864109992981,0.3459135591983795,0.10407754778862
+apple/test/unripe/55.jpg,unripe,overripe,0.23298689723014832,0.7414582371711731,0.2585417628288269
+apple/test/unripe/56.jpg,unripe,overripe,0.18667112290859222,0.8133288621902466,0.05177734047174454
+apple/test/unripe/57.jpg,unripe,overripe,0.0,0.6353126168251038,0.36468738317489624
+apple/test/unripe/58.jpg,unripe,overripe,0.08225616812705994,0.9177438020706177,0.0260869562625885
+apple/test/unripe/59.jpg,unripe,overripe,0.8121151328086853,0.18788489699363708,0.10679282248020172
+apple/test/unripe/6.jpg,unripe,overripe,0.8092182874679565,0.19078168272972107,0.16221322119235992
+apple/test/unripe/60.jpg,unripe,overripe,0.5777950286865234,0.4222049415111542,0.03603040426969528
+apple/test/unripe/61.jpg,unripe,overripe,0.08225616812705994,0.9177438020706177,0.0260869562625885
+apple/test/unripe/62.jpg,unripe,overripe,0.5777950286865234,0.4222049415111542,0.03603040426969528
+apple/test/unripe/63.jpg,unripe,overripe,0.5732793807983398,0.42672064900398254,0.08194014430046082
+apple/test/unripe/64.jpg,unripe,unripe,0.2412596195936203,0.7587403655052185,0.0
+apple/test/unripe/65.jpg,unripe,overripe,0.882760763168335,0.11723925918340683,0.023948902264237404
+apple/test/unripe/66.jpg,unripe,unripe,0.3641514480113983,0.6358485817909241,0.0
+apple/test/unripe/67.jpg,unripe,overripe,0.35948479175567627,0.6405152082443237,0.006496966350823641
+apple/test/unripe/68.jpg,unripe,overripe,0.11719897389411926,0.8828010559082031,0.09892863035202026
+apple/test/unripe/69.jpg,unripe,unripe,0.21123431622982025,0.7887656688690186,0.0
+apple/test/unripe/7.jpg,unripe,unripe,0.6398563385009766,0.36014366149902344,0.0
+apple/test/unripe/70.jpg,unripe,unripe,0.8616527318954468,0.13834728300571442,0.0
+apple/test/unripe/71.jpg,unripe,unripe,0.6592984199523926,0.3407016098499298,0.0
+apple/test/unripe/72.jpg,unripe,overripe,0.0,0.4629233479499817,0.5370766520500183
+apple/test/unripe/73.jpg,unripe,overripe,0.32523050904273987,0.6747694611549377,0.202961727976799
+apple/test/unripe/74.jpg,unripe,overripe,0.4938494861125946,0.506150484085083,0.1499136984348297
+apple/test/unripe/75.jpg,unripe,overripe,0.0,0.7277829647064209,0.2722170650959015
+apple/test/unripe/76.jpg,unripe,overripe,0.8581738471984863,0.14182618260383606,0.06792185455560684
+apple/test/unripe/77.jpg,unripe,unripe,0.5566670298576355,0.4433329999446869,0.0
+apple/test/unripe/78.jpg,unripe,overripe,0.9345239400863647,0.06547604501247406,0.09636905044317245
+apple/test/unripe/79.jpg,unripe,overripe,0.12789495289325714,0.7969533801078796,0.20304659008979797
+apple/test/unripe/8.jpg,unripe,unripe,0.3938978612422943,0.6061021089553833,0.0003565062361303717
+apple/test/unripe/80.jpg,unripe,overripe,0.059317946434020996,0.656404435634613,0.3435955345630646
+apple/test/unripe/81.jpg,unripe,overripe,0.014219650998711586,0.6397760510444641,0.3602239191532135
+apple/test/unripe/82.jpg,unripe,unripe,0.3232458829879761,0.6767541170120239,0.0
+apple/test/unripe/83.jpg,unripe,overripe,0.8787909746170044,0.12120901793241501,0.28130730986595154
+apple/test/unripe/84.jpg,unripe,ripe,0.0,0.9970352649688721,0.002964708721265197
+apple/test/unripe/85.jpg,unripe,overripe,0.0,0.43945884704589844,0.5605411529541016
+apple/test/unripe/86.jpg,unripe,overripe,0.6823858618736267,0.3176141679286957,0.1762472242116928
+apple/test/unripe/87.jpg,unripe,overripe,0.41439878940582275,0.5856012105941772,0.025455240160226822
+apple/test/unripe/88.jpg,unripe,unripe,0.16133993864059448,0.8386600613594055,0.0
+apple/test/unripe/89.jpg,unripe,unripe,0.2728308141231537,0.7271691560745239,0.0
+apple/test/unripe/9.jpg,unripe,unripe,0.2904469966888428,0.7095530033111572,0.0
+apple/test/unripe/90.jpg,unripe,overripe,0.2687247693538666,0.7312752604484558,0.026356589049100876
+apple/test/unripe/91.jpg,unripe,overripe,0.12789495289325714,0.7969533801078796,0.20304659008979797
+apple/test/unripe/92.jpg,unripe,unripe,0.3699452579021454,0.630054771900177,0.0
+apple/test/unripe/93.jpg,unripe,overripe,0.9939587712287903,0.006041241344064474,0.07385757565498352
+apple/test/unripe/94.jpg,unripe,overripe,0.11670073121786118,0.8222458362579346,0.17775416374206543
+apple/test/unripe/95.jpg,unripe,overripe,0.1852056086063385,0.8147944211959839,0.1289488524198532
+apple/test/unripe/96.jpg,unripe,overripe,0.5682976245880127,0.4317023754119873,0.05905454605817795
+apple/test/unripe/97.jpg,unripe,unripe,0.20131805539131165,0.7986819744110107,0.0
+apple/test/unripe/98.jpg,unripe,overripe,0.0,0.7736557722091675,0.2263442575931549
+apple/test/unripe/99.jpg,unripe,unripe,0.6766818761825562,0.32331812381744385,0.0024987375363707542
