@@ -151,3 +151,17 @@ SELECT ARRAY(
 )
 FROM generate_series(1, 1000)
 ON CONFLICT DO NOTHING;
+
+-- === Seed בסיסי לטבלת task_thresholds ===
+INSERT INTO task_thresholds (task, label, threshold, updated_by)
+VALUES
+    (CAST('ripeness' AS task_type_enum), '', 0.75, 'seed'),
+    (CAST('disease'  AS task_type_enum), '', 0.60, 'seed'),
+    (CAST('size'     AS task_type_enum), '', 0.55, 'seed'),
+    (CAST('color'    AS task_type_enum), '', 0.65, 'seed'),
+    (CAST('quality'  AS task_type_enum), '', 0.80, 'seed')
+ON CONFLICT (task, label)
+DO UPDATE SET
+    threshold  = EXCLUDED.threshold,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = NOW();
