@@ -11,7 +11,7 @@ from home_view import HomeView
 from views.sensors_view import SensorsView
 from views.notification_view import NotificationView
 from dashboard_api import DashboardApi
-
+from views.fruits_view import FruitsView
 
 class MainWindow(QMainWindow):
     logoutRequested = pyqtSignal()
@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
         self.home = HomeView(api, self)
         self.sensors_view = SensorsView(api, self)
         self.notification_view = NotificationView(self)
+        self.fruits_view = FruitsView(api,self)
 
         # Stack for switching between views
         self.stack = QStackedWidget()
@@ -55,6 +56,7 @@ class MainWindow(QMainWindow):
             "Home": self.home,
             "Sensors": self.sensors_view,
             "Notifications": self.notification_view,
+            "Fruits": self.fruits_view
         }
         
         for view in self.views.values():
