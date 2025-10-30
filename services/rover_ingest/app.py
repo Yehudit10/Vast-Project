@@ -5,7 +5,8 @@ import json, time
 from prometheus_client import Counter, Histogram, start_http_server
 from .schema import ImageMeta
 from .validators import validate_semantics
-from .db import upsert
+# from .db import upsert
+from . import db
 
 INGEST_OK   = Counter("ingest_success_total", "successful ingestions")
 INGEST_FAIL = Counter("ingest_fail_total", "failed ingestions")
@@ -16,7 +17,8 @@ def handle_message(payload: dict):
         try:
             meta = ImageMeta.model_validate(payload)
             validate_semantics(meta)  # schema + business checks
-            upsert(meta)              # idempotent write
+            # upsert(meta)     
+            db.upsert(meta)         # idempotent write
             INGEST_OK.inc()
         except Exception as e:
             INGEST_FAIL.inc()
