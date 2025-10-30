@@ -87,7 +87,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - ADDR=0.0.0.0
-      - PORT=8001
+      - PORT=8005
       - USE_UTC=false
       - WINDOW_MIN=1
       - STABLE_SEC=1
@@ -101,7 +101,7 @@ services:
 
     command: ["python","-u","src/metrics.py"]  
     ports:
-      - "8001:8001"
+      - "8005:8005"
     depends_on:
       - minio-hot
     networks:
@@ -627,10 +627,18 @@ services:
       REFRESH_TTL_DAYS: 14
       DEV_SA_NAME: my-ingest-service
     ports:
-      - "8003:8001"
+      - "8001:8001"
+    volumes:
+      - contracts:/app/app/contracts
+    depends_on:
+      contracts-gen:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     networks:
       - ag_cloud
     restart: unless-stopped
+
 
   notification_api:
     build:
