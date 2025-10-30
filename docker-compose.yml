@@ -435,6 +435,36 @@ services:
       - mqtt_ingest
     networks:
       - ag_cloud
+  
+  mqtt_gateway:
+    build:
+      context: ./services/mqtt_gateway
+      dockerfile: Dockerfile
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: imagery
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: rover.images.meta.v1
+      MQTT_HOST: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/imagery/#
+      MQTT_TOPIC_TEL: MQTT/telemetry/#
+      TELEMETRY_TTL_SEC: 10
+      MQTT_CLIENT_ID: mqtt-gateway
+      METRICS_PORT: 9110
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
 
   # --------------------------
   # DB API Service

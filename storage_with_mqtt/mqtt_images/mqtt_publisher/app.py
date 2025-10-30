@@ -2,6 +2,8 @@
 import os, time, glob, random, pathlib
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import CallbackAPIVersion
+import json
+import random
 
 HOST = os.getenv("MQTT_HOST", "large-mosquitto")
 PORT = int(os.getenv("MQTT_PORT", "1885"))
@@ -65,6 +67,28 @@ def main():
             r = client.publish(topic, payload=data, qos=QOS)
             r.wait_for_publish()
             sent += 1
+            # --- Telemetry publish (same ts_ms & sensor) ---
+            # Configurable base position via env (optional):
+            BASE_LAT = float(os.getenv("BASE_LAT", "32.061"))
+            BASE_LON = float(os.getenv("BASE_LON", "34.772"))
+            BASE_HDG = float(os.getenv("BASE_HDG", "180"))
+            BASE_SPD = float(os.getenv("BASE_SPD", "2.0"))
+
+            def _jitter(base: float, j: float = 0.0005) -> float:
+                # ~50m random jitter around the base point
+                import random
+                return base + random.uniform(-j, j)
+
+            telemetry = {
+                "lat": round(_jitter(BASE_LAT), 6),
+                "lon": round(_jitter(BASE_LON), 6),
+                "heading": round(BASE_HDG + __import__("random").uniform(-10, 10), 1),
+                "speed_mps": round(max(0.0, __import__("random").gauss(BASE_SPD, 0.5)), 2),
+            }
+            telemetry_topic = f"{TOPIC_BASE.replace('imagery', 'telemetry')}/{CAMERA_ID}/{ts_ms}"
+            client.publish(telemetry_topic, payload=json.dumps(telemetry).encode("utf-8"), qos=QOS)
+            # --- end telemetry publish ---
+
             if DELAY_MS > 0:
                 time.sleep(DELAY_MS / 1000.0)
         except Exception as e:
