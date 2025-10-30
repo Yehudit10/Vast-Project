@@ -208,28 +208,26 @@ class FruitsView(QWidget):
         self.btn_add.setEnabled(False)
         self.btn_delete.setEnabled(False)
 
-        def _normalize_fail_list(fail_raw) -> List[Tuple[str, str]]:
-            """
-            Normalize to list of (key, reason) as strings for message box.
-            """
-            pairs: List[Tuple[str, str]] = []
+        def _normalize_ok_set(ok_raw) -> set[tuple[str, str]]:
+            ok: set[tuple[str, str]] = set()
+            for item in ok_raw or []:
+                if isinstance(item, (list, tuple)):
+                    ok.add((str(item[0]) if len(item)>0 else "", str(item[1]) if len(item)>1 else ""))
+            return ok
+
+        def _normalize_fail_list(fail_raw):
+            pairs = []
             for item in fail_raw or []:
-                # expected formats can vary; keep it defensive
                 if isinstance(item, (list, tuple)) and len(item) >= 1:
-                    key = str(item[0])
-                    reason = str(item[1]) if len(item) > 1 else "unknown"
-                elif isinstance(item, dict):
-                    # try generic fields
-                    key = (
-                        item.get("key")
-                        or item.get("id")
-                        or f"{item.get('task')},{item.get('label','')}"
-                    )
-                    reason = str(item.get("reason") or item.get("detail") or "unknown")
+                    key = item[0]
+                    reason = item[1] if len(item) > 1 else "unknown"
+                    if isinstance(key, (list, tuple)) and len(key) >= 1:
+                        key_str = f"{key[0]},{key[1] if len(key)>1 else ''}"
+                    else:
+                        key_str = str(key)
+                    pairs.append((key_str, str(reason)))
                 else:
-                    key = str(item)
-                    reason = "unknown"
-                pairs.append((key, reason))
+                    pairs.append((str(item), "unknown"))
             return pairs
 
         try:
@@ -241,8 +239,7 @@ class FruitsView(QWidget):
             # and rely on server-side to accept it. Alternatively, expose a
             # dedicated bulk that accepts per-row updated_by list.
             report = self.api.bulk_set_task_thresholds_labeled(mapping, updated_by="gui")
-
-            ok_keys = set(report.get("ok", []))  # may contain tuples or strings per API
+            ok_keys = _normalize_ok_set(report.get("ok", []))
             fail_pairs = _normalize_fail_list(report.get("fail", []))
 
             total = len(mapping)
