@@ -15,7 +15,7 @@ DB_API_SERVICE_NAME = os.getenv("DB_API_SERVICE_NAME", "flink-writer-db")
 DUMMY_DB = int(os.getenv("DUMMY_DB", "0")) == 1
 
 KAFKA_BROKERS = os.getenv("KAFKA_BROKERS", "kafka:9092")
-TOPICS = [t.strip() for t in os.getenv("TOPICS", "files").split(",") if t.strip()]
+TOPICS = [t.strip() for t in os.getenv("TOPICS", "incidents.create,incidents.update").split(",") if t.strip()]
 
 
 # ---------- Token Bootstrap ----------
@@ -91,30 +91,78 @@ _http.mount("https://", HTTPAdapter(max_retries=Retry(total=5, backoff_factor=0.
 
 
 # ---------- DB Writer ----------
-def write_to_db_api(table: str, payload: dict) -> bool:
+def write_to_db_api(topic: str, payload: dict) -> bool:
+    """
+    Write JSON payload to DB API based on Kafka topic naming:
+      <table>.<action>
+
+    Examples:
+      "incidents.create" -> POST /api/incidents   (body = payload)
+      "incidents.update" -> PATCH /api/incidents  (body = {"keys": {"incident_id": ...}, "data": {...}})
+    """
     if DUMMY_DB:
-        print(f"[DB-DUMMY] would POST to {DB_API_BASE or 'N/A'}/api/{table}: {json.dumps(payload, ensure_ascii=False)[:250]}", flush=True)
+        print(f"[DB-DUMMY] {topic}: {json.dumps(payload, ensure_ascii=False)[:250]}", flush=True)
         return True
 
     if not DB_API_BASE:
         print("[DB][WARN] DB_API_BASE not set; skipping DB write.", flush=True)
         return False
 
-    base = DB_API_BASE.rstrip("/")
-    try:
-        r = _http.post(f"{base}/api/{table}", json=payload, timeout=10)
-        if 200 <= r.status_code < 300:
-            print(f"[DB] wrote to {table} ", flush=True)
-            return True
-        print(f"[DB] POST failed ({table}): {r.status_code} {r.text[:200]}", flush=True)
+    # Parse topic
+    parts = topic.split(".")
+    if len(parts) < 2:
+        print(f"[DB][WARN] Topic '{topic}' missing action suffix (.create/.update)", flush=True)
         return False
-    except requests.ConnectionError as e:
-        print(f"[DB][WARN] API not reachable ({base}): {e}", flush=True)
-    except requests.Timeout as e:
-        print(f"[DB][WARN] API timeout ({base}): {e}", flush=True)
+
+    table, action = parts[0], parts[1].lower()
+    url = f"{DB_API_BASE.rstrip('/')}/api/{table}"
+
+    # ─────────────── Decide method ───────────────
+    if action in ("create", "post", "insert"):
+        method = "POST"
+        body = payload
+
+    elif action in ("update", "patch"):
+        method = "PATCH"
+
+        # If already structured as {"keys": {...}, "data": {...}}, send as-is
+        if isinstance(payload, dict) and "keys" in payload and "data" in payload:
+            body = payload
+        else:
+            incident_id = payload.get("incident_id")
+            if not incident_id:
+                print(f"[DB][WARN] Missing 'incident_id' in payload for topic {topic}", flush=True)
+                return False
+
+            # Remove the key from update data
+            data = {k: v for k, v in payload.items() if k != "incident_id"}
+
+            body = {
+                "keys": {"incident_id": incident_id},
+                "data": data,
+            }
+    else:
+        print(f"[DB][WARN] Unsupported action '{action}' in topic {topic}", flush=True)
+        return False
+
+    # ─────────────── Perform HTTP request ───────────────
+    try:
+        print(f"[DB] {method} {url} → {json.dumps(body, ensure_ascii=False)[:200]}", flush=True)
+        r = _http.request(method, url, json=body, timeout=10)
+
+        if 200 <= r.status_code < 300:
+            print(f"[DB] {method} OK {topic}", flush=True)
+            return True
+
+        print(f"[DB] {method} failed ({topic}): {r.status_code} {r.text[:200]}", flush=True)
+        return False
+
     except requests.RequestException as e:
-        print(f"[DB][ERROR] {e}", flush=True)
-    return False
+        print(f"[DB][ERROR] {method} {url}: {e}", flush=True)
+        return False
+
+
+
 
 
 # ---------- Flink Job ----------

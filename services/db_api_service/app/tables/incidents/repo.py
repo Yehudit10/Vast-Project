@@ -1,18 +1,19 @@
 import os, json, time, pathlib
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 from sqlalchemy import text
 from app.db import session_scope
 
 DRY_RUN = os.getenv("DB_DRY_RUN", "0") == "1"
 SPOOL_DIR = os.getenv("DRY_RUN_SPOOL", "/tmp/api_spool")
 
-# ✅ Added ack to tracked fields
+# ✅ Added ack and consistent fields
 ALL_FIELDS = [
-    "incident_id","mission_id","device_id","anomaly",
-    "started_at","ended_at","duration_sec","frame_start","frame_end",
-    "severity","is_real","ack",
-    "roi_pixels","footprint","clip_file_id","poster_file_id","frames_manifest","meta",
+    "incident_id", "mission_id", "device_id", "anomaly",
+    "started_at", "ended_at", "duration_sec", "frame_start", "frame_end",
+    "severity", "is_real", "ack",
+    "roi_pixels", "footprint", "clip_file_id", "poster_file_id", "frames_manifest", "meta",
 ]
+
 
 def _normalize_incident_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     p = dict(payload)
@@ -23,10 +24,13 @@ def _normalize_incident_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     p["meta"] = _ensure_json_text(p.get("meta"))
     return p
 
+
 def _spool(name: str, payload: Any):
-    p = pathlib.Path(SPOOL_DIR); p.mkdir(parents=True, exist_ok=True)
+    p = pathlib.Path(SPOOL_DIR)
+    p.mkdir(parents=True, exist_ok=True)
     ts = int(time.time() * 1000)
     (p / f"{ts}-{name}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
 
 def _ensure_json_text(obj: Any) -> Optional[str]:
     if obj is None:
@@ -35,11 +39,13 @@ def _ensure_json_text(obj: Any) -> Optional[str]:
         return json.dumps(obj, ensure_ascii=False)
     return obj
 
+
 # ---------- Incidents ----------
 
 def create_incident(payload: Dict[str, Any]) -> None:
     if DRY_RUN:
-        _spool("incidents_insert", payload); return
+        _spool("incidents_insert", payload)
+        return
     payload = _normalize_incident_payload(payload)
     q = text("""
         INSERT INTO incidents (
@@ -67,9 +73,11 @@ def create_incident(payload: Dict[str, Any]) -> None:
     with session_scope() as s:
         s.execute(q, payload)
 
+
 def upsert_incident(payload: Dict[str, Any]) -> None:
     if DRY_RUN:
-        _spool("incidents_upsert", payload); return
+        _spool("incidents_upsert", payload)
+        return
     payload = _normalize_incident_payload(payload)
     q = text("""
         INSERT INTO incidents (
@@ -115,6 +123,7 @@ def upsert_incident(payload: Dict[str, Any]) -> None:
     with session_scope() as s:
         s.execute(q, payload)
 
+
 def update_incident(incident_id: str, updates: Dict[str, Any]) -> bool:
     if DRY_RUN:
         _spool("incidents_update", {"incident_id": incident_id, **updates})
@@ -125,8 +134,8 @@ def update_incident(incident_id: str, updates: Dict[str, Any]) -> bool:
 
     def add(name, val, expr=None, cast=None):
         if val is None and name not in (
-            "ended_at","duration_sec","frame_end",
-            "clip_file_id","poster_file_id","severity","is_real","ack"
+            "ended_at", "duration_sec", "frame_end",
+            "clip_file_id", "poster_file_id", "severity", "is_real", "ack"
         ):
             return
         params[name] = val
@@ -148,14 +157,15 @@ def update_incident(incident_id: str, updates: Dict[str, Any]) -> bool:
     add("frame_end", updates.get("frame_end"))
     add("severity", updates.get("severity"))
     add("is_real", updates.get("is_real"))
-    add("ack", updates.get("ack"))  # ✅ NEW
-    # geo/json
+    add("ack", updates.get("ack"))
+
+    # geo/json fields
     if "roi_pixels" in updates:
         params["roi_pixels"] = _ensure_json_text(updates["roi_pixels"])
         sets.append("roi_pixels=CAST(:roi_pixels AS jsonb)")
     if "footprint" in updates:
         fp = updates["footprint"]
-        params["footprint"] = (None if not fp else fp)
+        params["footprint"] = None if not fp else fp
         sets.append(
             "footprint = CASE "
             "WHEN NULLIF(CAST(:footprint AS text), '') IS NULL THEN NULL::geometry "
@@ -183,23 +193,52 @@ def update_incident(incident_id: str, updates: Dict[str, Any]) -> bool:
         row = s.execute(q, params).first()
         return bool(row)
 
-def list_incidents(device_id: Optional[str], mission_id: Optional[int],
-                   anomaly: Optional[int],
-                   time_from: Optional[str], time_to: Optional[str],
-                   limit: int) -> List[Dict[str, Any]]:
+
+
+def get_incident(incident_id: str) -> Optional[Dict[str, Any]]:
+    q = text("""
+        SELECT *
+        FROM incidents
+        WHERE incident_id = :incident_id
+    """)
+    with session_scope() as s:
+        row = s.execute(q, {"incident_id": incident_id}).mappings().first()
+        return dict(row) if row else None
+
+
+def delete_incident(incident_id: str) -> bool:
+    q = text("""
+        DELETE FROM incidents
+        WHERE incident_id = :incident_id
+        RETURNING incident_id
+    """)
+    with session_scope() as s:
+        row = s.execute(q, {"incident_id": incident_id}).first()
+        return bool(row)
+
+
+def list_incidents(
+    device_id: Optional[str],
+    mission_id: Optional[int],
+    anomaly: Optional[int],
+    time_from: Optional[str],
+    time_to: Optional[str],
+    limit: int
+) -> List[Dict[str, Any]]:
     if DRY_RUN:
         return []
+
     filters, params = [], {"limit": limit}
     if device_id:
-        filters.append("i.device_id=:device_id"); params["device_id"]=device_id
+        filters.append("i.device_id=:device_id"); params["device_id"] = device_id
     if mission_id:
-        filters.append("i.mission_id=:mission_id"); params["mission_id"]=mission_id
+        filters.append("i.mission_id=:mission_id"); params["mission_id"] = mission_id
     if anomaly:
-        filters.append("i.anomaly=:anomaly"); params["anomaly"]=anomaly
+        filters.append("i.anomaly=:anomaly"); params["anomaly"] = anomaly
     if time_from:
-        filters.append("i.started_at>=CAST(:time_from AS timestamptz)"); params["time_from"]=time_from
+        filters.append("i.started_at>=CAST(:time_from AS timestamptz)"); params["time_from"] = time_from
     if time_to:
-        filters.append("i.started_at<CAST(:time_to AS timestamptz)"); params["time_to"]=time_to
+        filters.append("i.started_at<CAST(:time_to AS timestamptz)"); params["time_to"] = time_to
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
 
     q = text(f"""
@@ -214,4 +253,10 @@ def list_incidents(device_id: Optional[str], mission_id: Optional[int],
     """)
     with session_scope() as s:
         rows = s.execute(q, params).mappings().all()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            if "severity" in d and d["severity"] is not None:
+                d["severity"] = int(round(d["severity"]))   # ← ensure integer
+            result.append(d)
+        return result

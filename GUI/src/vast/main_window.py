@@ -1,12 +1,13 @@
 from __future__ import annotations
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
-
 from PyQt6.QtWidgets import (
     QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar, QStackedWidget
 )
 from PyQt6.QtGui import QAction, QIcon
+
 from home_view import HomeView
 from views.sensors_view import SensorsView
+from views.security.incident_player_vlc import IncidentPlayerVLC
 from dashboard_api import DashboardApi
 
 
@@ -34,12 +35,11 @@ class MainWindow(QMainWindow):
         self.logout_action.triggered.connect(self._logout)
         file_menu.addAction(self.logout_action)
 
-        #  Toolbar 
+        # Toolbar
         toolbar = self.addToolBar("Main Toolbar")
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
         toolbar.setIconSize(QSize(24, 24))
-
         toolbar.addAction(self.back_action)
         toolbar.addAction(self.logout_action)
 
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         self.nav_list = QListWidget(self.nav_dock)
         self.nav_dock.setWidget(self.nav_list)
         for name in [
-            "Home", "Sensors", "Sound", "Ground Image", 
+            "Home", "Sensors", "Sound", "Ground Image",
             "Aerial Image", "Fruits", "Security", "Settings"
         ]:
             QListWidgetItem(name, self.nav_list)
@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
         # ---------- Views ----------
         self.home = HomeView(api, self)
         self.sensors_view = SensorsView(api, self)
+        # self.security_view = IncidentPlayerVLC(api, self)
 
         # Stack for switching between views without destroying them
         self.stack = QStackedWidget()
@@ -68,21 +69,22 @@ class MainWindow(QMainWindow):
         self.views = {
             "Home": self.home,
             "Sensors": self.sensors_view,
+            # "Security": self.security_view,
         }
         for view in self.views.values():
             self.stack.addWidget(view)
         self.stack.setCurrentWidget(self.home)
 
-        # ---------- History for Back ----------
+        # ---------- History ----------
         self.history: list = []
 
         # ---------- Connect signals ----------
         connections = [
-            ("openSensorsRequested",    lambda: self._select_nav("Sensors")),
-            ("openAlertsRequested",     lambda: self.statusBar().showMessage("Alerts not implemented yet.")),
+            ("openSensorsRequested", lambda: self._select_nav("Sensors")),
+            ("openAlertsRequested", lambda: self.statusBar().showMessage("Alerts not implemented yet.")),
             ("openProcessingRequested", lambda: self.statusBar().showMessage("Processing not implemented yet.")),
-            ("openPredictionsRequested",lambda: self.statusBar().showMessage("Predictions not implemented yet.")),
-            ("openSettingsRequested",   lambda: self._select_nav("Settings")),
+            ("openPredictionsRequested", lambda: self.statusBar().showMessage("Predictions not implemented yet.")),
+            ("openSettingsRequested", lambda: self._select_nav("Settings")),
         ]
         for attr, slot in connections:
             sig = getattr(self.home, attr, None)
