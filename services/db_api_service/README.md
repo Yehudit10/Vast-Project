@@ -2,17 +2,11 @@
 
 A FastAPI microservice for managing image/file metadata in the **AgCloud** platform.
 
-## Quickstart (Dockerfile)
+## Quickstart (Docker Compose)
 
 Build:
 ```bash
-docker build -t db-api-service:latest ./services/db_api_service
-```
-
-Run:
-**Host access (publish port, for development only):**
-```bash
-docker run --rm -d --name db-api-service-run   -p 8001:8001   --env-file .env   db-api-service:latest
+docker compose up -d --build
 ```
 
 Check health:
@@ -20,6 +14,18 @@ Check health:
 curl http://localhost:8001/healthz
 curl http://localhost:8001/ready
 ```
+
+Stop and clean up:
+```bash
+docker compose down
+```
+
+## Generic API Support
+The service now includes a Generic API layer that automatically exposes CRUD endpoints for allowed database tables.
+
+To enable a table:
+
+Add the table name under the ALLOWED_TABLES list in the ENV file
 
 ## Authentication
 
@@ -87,25 +93,6 @@ Invoke-WebRequest "http://localhost:8001/api/files?limit=2" `
 
 ---
 
-## Networking & Access
-
-**Host access (publish port, for development only):**
-```bash
-docker run --rm -d --name db-api-service-run   -p 127.0.0.1:8001:8001   --env-file .env   db-api-service:latest
-```
-Use `http://localhost:8001`. Bind to `127.0.0.1` for local-only, or change the host port (e.g. `8081`) to avoid conflicts.
-
-**Inter-container access (same network, no published port required):**
-```bash
-docker network create api_net || true
-
-docker run -d --name db-api --network api_net --env-file .env db-api-service:latest
-docker run --rm --network api_net curlimages/curl:8.9.1 curl -s http://db-api:8001/healthz
-```
-Both containers must be on the same Docker network to resolve `db-api` by name.
-
----
-
 ## Testing readme in /test
 
 
@@ -115,3 +102,98 @@ Both containers must be on the same Docker network to resolve `db-api` by name.
 - Changing `JWT_SECRET` invalidates all existing JWTs.
 - Service tokens are **write-once**: only the raw token (from bootstrap or rotation) can be used; the DB only stores its SHA-256 hash.
 - `/auth/_dev_bootstrap` is intended for development only – do not enable in production.
+
+## API Examples (CRUD)
+
+### Available endpoints
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| GET | `/api/tables/{resource}/schema` | Get table schema |
+| GET | `/api/tables/{resource}` | List rows |
+| POST | `/api/tables/{resource}` | Create a single row |
+| POST | `/api/tables/{resource}/rows:batch` | Create multiple rows in one request |
+
+Base URL: http://localhost:8001 (adjust if different)
+Prefix used below: /api/tables/{resource}
+
+Replace `{resource}` with the table name (e.g. `event_logs_sensors`). Ensure `Content-Type: application/json` header.
+
+Create — single row (POST /api/tables/{resource})
+```bash
+curl -X POST "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "log_id": 4,
+    "device_id": "dev-c",
+    "status": "ok",
+    "value": 12.3
+  }'
+# Response: {"affected_rows":1,"returning":{...}}
+```
+
+Create — batch (POST /api/tables/{resource}/rows:batch)
+```bash
+curl -X POST "http://localhost:8001/api/tables/event_logs_sensors/rows:batch" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"log_id": 5, "device_id":"dev-a", "status":"ok"},
+    {"log_id": 6, "device_id":"dev-b", "status":"error"}
+  ]'
+# Response: {"affected_rows":2}
+```
+
+Read — list rows (GET /api/tables/{resource})
+```bash
+curl "http://localhost:8001/api/tables/event_logs_sensors?limit=20&offset=0&order_by=log_id&order_dir=asc"
+# Response: {"rows":[...],"count":N}
+```
+
+Read — describe table / schema (GET /api/tables/{resource}/schema)
+```bash
+curl "http://localhost:8001/api/tables/event_logs_sensors/schema"
+# Response: {"table":"event_logs_sensors","contract":{...},"columns":[...]}
+```
+
+Update — partial (PATCH /api/tables/{resource})
+- body must include `keys` (identifying fields) and `data` (fields to update)
+```bash
+curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "keys": {"log_id": 4, "device_id": "dev-c"},
+    "data": {"status": "resolved", "value": 15.0}
+  }'
+# Response: {"affected_rows":1,"returning":{...}}
+```
+
+Replace / full update (PUT /api/tables/{resource})
+- body includes `keys` and a full `data` payload validated against the contract
+```bash
+curl -X PUT "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "keys": {"log_id": 4, "device_id": "dev-c"},
+    "data": {
+      "log_id": 4,
+      "device_id": "dev-c",
+      "status": "resolved",
+      "value": 15.0,
+      "ts": "2025-10-22T10:00:00Z"
+    }
+  }'
+# Response: {"affected_rows":1,"returning":{...}}
+```
+
+Delete (DELETE /api/tables/{resource})
+- body must include `keys` object
+```bash
+curl -X DELETE "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{"keys": {"log_id": 4, "device_id": "dev-c"}}'
+# Response: {"affected_rows":1}
+```
+
+Notes
+- `keys` fields are determined by the contract's `x-keyFields` (fallback to `id` if not present). Use the schema endpoint to confirm.
+- All validation is performed against the JSON contract; unknown fields are rejected.
+- Adjust base URL, auth headers and query params as needed for your deployment.
