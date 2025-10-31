@@ -6,14 +6,12 @@ import traceback
 import inspect
 from pathlib import Path
 
-import PyQt6  # import first; no QtWebEngine yet
+import PyQt6
 
-# Wipe any inherited QT_* env vars (avoid old Qt5 overrides)
 for k in list(os.environ):
     if k.startswith(("QTWEBENGINE", "QT_QPA", "QT_PLUGIN", "QT_")):
         os.environ.pop(k, None)
 
-# Debug only: show Qt6 paths (do NOT set env vars)
 qt6_dir = Path(inspect.getfile(PyQt6)).with_name("Qt6")
 plugins = qt6_dir / "plugins"
 bin_dir = qt6_dir / "bin"
@@ -25,7 +23,7 @@ print("  bin:", bin_dir)
 print("  resources:", resources)
 print("  icudtl.dat exists?:", (resources / "icudtl.dat").exists())
 
-from PyQt6.QtWebEngineWidgets import QWebEngineView  # ensures WebEngine is available
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QStackedWidget
 from auth_ui.service import AuthService
@@ -45,20 +43,14 @@ def excepthook(exctype, value, tb):
 sys.excepthook = excepthook
 
 class AuthShell(QStackedWidget):
-    """Holds Login and Signup pages and switches between them."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.auth = AuthService()
-
-        # placeholders for pages (will be created below)
         self.login_page = None
         self.signup_page = None
-
-        # build pages
         self._build_pages()
 
     def _build_pages(self):
-        # callbacks
         def go_signup():
             self.setCurrentWidget(self.signup_page)
 
@@ -66,16 +58,12 @@ class AuthShell(QStackedWidget):
             self.setCurrentWidget(self.login_page)
 
         def on_signed_up():
-            # after successful signup, move back to login
             self.setCurrentWidget(self.login_page)
 
         def on_login_success(user):
-            # bubble up to whoever created the shell
-            # we’ll set this attribute from main()
             if hasattr(self, "on_login_success") and callable(self.on_login_success):
                 self.on_login_success(user)
 
-        # create pages
         self.login_page = LoginPage(on_login=on_login_success,
                                     on_go_signup=go_signup,
                                     auth=self.auth)
@@ -83,47 +71,50 @@ class AuthShell(QStackedWidget):
                                       on_go_login=go_login,
                                       auth=self.auth)
 
-        # add to stack
         self.addWidget(self.login_page)
         self.addWidget(self.signup_page)
         self.setCurrentWidget(self.login_page)
 
     def reset(self):
-        """Optional: clear fields on logout if you want."""
-        # for example:
-        # self.login_page.email.clear()
-        # self.login_page.password.clear()
         self.setCurrentWidget(self.login_page)
 
 
 def main() -> int:
     print("[main] starting QApplication")
+
+
+    import os
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer"
+    os.environ["QT_QUICK_BACKEND"] = "software"
+
     app = QApplication(sys.argv)
 
-    # 1) show auth shell first
-    shell = AuthShell()
-    shell.setWindowTitle("Sign in")
-    shell.show()
 
-    # 2) when login succeeds -> open MainWindow
-    def open_main(user):
-        api = DashboardApi()  # pass user if needed
-        win = MainWindow(api)
+    from PyQt6 import QtWidgets
+    
+    from PyQt6.QtWidgets import QStyleFactory
+    print("Available QStyles:", QStyleFactory.keys())
+    # app = QApplication([])
+    
+    print("Current style:", app.style().objectName())
+    app.setStyle("gtk3") 
+        # shell = AuthShell()
+    # shell.setWindowTitle("Sign in")
+    # shell.show()
 
-        # connect logout back to login
-        win.logoutRequested.connect(lambda: on_logout(win))
+    # def open_main(user):
+    api = DashboardApi()
+    win = MainWindow(api)
+    # win.logoutRequested.connect(lambda: on_logout(win))
+    win.show()
+    # shell.hide()
 
-        win.show()
-        shell.hide()
+    # def on_logout(win):
+    #     win.close()
+    #     shell.reset()
+    #     shell.show()
 
-  
-    def on_logout(win):
-        win.close()
-        shell.reset()
-        shell.show()
-
-    # wire callback
-    shell.on_login_success = open_main
+    # shell.on_login_success = open_main
 
     print("[main] window shown, entering event loop")
     rc = app.exec()

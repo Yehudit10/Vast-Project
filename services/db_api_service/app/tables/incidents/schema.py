@@ -16,9 +16,9 @@ class IncidentBase(BaseModel):
     frame_start: Optional[NonNegativeInt] = None
     frame_end: Optional[NonNegativeInt] = None
 
-    severity: Optional[float] = None
+    severity: Optional[int] = None      # ✅ integer now
     is_real: Optional[bool] = None
-    ack: Optional[bool] = None  # ✅ NEW: farmer acknowledged or not
+    ack: Optional[bool] = None          # ✅ farmer acknowledged
 
     roi_pixels: Optional[Dict[str, Any]] = None
     footprint: Optional[str] = None
@@ -27,14 +27,18 @@ class IncidentBase(BaseModel):
     frames_manifest: Optional[List[Dict[str, Any]]] = None
     meta: Optional[Dict[str, Any]] = None
 
+
 class IncidentCreate(IncidentBase):
     incident_id: UUID = Field(..., description="UUID")
+
 
 class IncidentUpsert(IncidentCreate):
     pass
 
+
 class IncidentUpdate(IncidentBase):
     pass
+
 
 class IncidentRow(BaseModel):
     incident_id: UUID
@@ -44,11 +48,12 @@ class IncidentRow(BaseModel):
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
     duration_sec: Optional[float] = None
-    severity: Optional[float] = None
+    severity: Optional[int] = None
     is_real: Optional[bool] = None
-    ack: Optional[bool] = None  # ✅ NEW
+    ack: Optional[bool] = None
     clip_file_id: Optional[int] = None
     poster_file_id: Optional[int] = None
+
 
 # ---------- Frames ----------
 
@@ -63,8 +68,10 @@ class FrameCreate(BaseModel):
     file_id: Optional[int] = None
     meta: Optional[Dict[str, Any]] = None
 
+
 class FramesBulk(BaseModel):
     frames: List[FrameCreate]
+
 
 class FrameRow(BaseModel):
     frame_idx: int

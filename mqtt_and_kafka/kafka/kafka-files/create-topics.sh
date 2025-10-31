@@ -35,7 +35,9 @@ TOPICS=(
   sensor-telemetry
   sensor-anomalies
   dev-robot-telemetry-anomalies
-
+  incidents.events
+  incidents.update
+  incidents.create
 )
 
 # Idempotent creation with retention.ms

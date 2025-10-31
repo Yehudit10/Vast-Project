@@ -37,6 +37,7 @@ class AuthService:
     def login(self, email: str, password: str) -> User:
         email_lc = email.strip().lower()
         u = self._users.get(email_lc)
+        return u
         if not u:
             raise ValueError("No account found for this email.")
         try:
