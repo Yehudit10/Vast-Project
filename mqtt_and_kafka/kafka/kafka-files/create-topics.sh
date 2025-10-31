@@ -31,6 +31,7 @@ TOPICS=(
   dev-robot-status
   dev-robot-telemetry-raw
   dev-robot-state
+
   dev-camera-security
   sensor-telemetry
   sensor-anomalies
@@ -38,6 +39,19 @@ TOPICS=(
   incidents.events
   incidents.update
   incidents.create
+
+  sensor_anomalies
+  sensor_zone_stats
+  dev-robot-telemetry-anomalies
+  irrigation.control
+  irrigation.control.dlq
+  sound.new
+  image.new
+  summaries.5m
+  dev-aerial-images-keys
+  image.new.aerial
+  image.new.aerial.connections
+
 )
 
 # Idempotent creation with retention.ms
