@@ -297,8 +297,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libnspr4 libdbus-1-3 libkrb5-3 libgssapi-krb5-2 libasound2 libpulse0 \
     fluxbox x11vnc xvfb wget net-tools python3-tk ca-certificates \
     procps iproute2 xauth git vlc libvlc5 libvlccore9 \
-    fonts-dejavu-core fonts-noto-core fonts-noto-color-emoji
-    && rm -rf /var/lib/apt/lists/*
+    fonts-dejavu-core fonts-noto-core fonts-noto-color-emoji\
+&& rm -rf /var/lib/apt/lists/*
 
 # (optional) minimal extra XCB deps for PyQt
 RUN apt-get update && apt-get install -y --no-install-recommends \

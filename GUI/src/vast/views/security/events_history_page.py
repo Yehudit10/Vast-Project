@@ -258,19 +258,40 @@ class EventsHistoryPage(QtWidgets.QWidget):
         return t.replace("T", " ").split(".")[0] if t else "-"
 
     def load_from_api(self):
-        print("[API] Fetching incidents from:", f"{self.api.base}/api/incidents")
+        print("[API] Fetching alerts from:", f"{self.api.base}/api/tables/alerts")
         try:
-            url = f"{self.api.base}/api/incidents"
+            url = f"{self.api.base}/api/tables/alerts"
             resp = self.api.http.get(url, timeout=8)
             resp.raise_for_status()
-            self.all_rows = resp.json()
-            print(f"[API] Loaded {len(self.all_rows)} incidents.")
+            data = resp.json()
+
+            # Expect structure: {"rows": [...], "count": N}
+            if isinstance(data, dict) and "rows" in data:
+                rows = data["rows"]
+                count = data.get("count", len(rows))
+                print(f"[API] Loaded {count} total alerts.")
+            else:
+                rows = data if isinstance(data, list) else []
+                print(f"[API][WARN] Unexpected format, using raw list of {len(rows)} items.")
+
+            # ───── Filter only relevant alert types ─────
+            allowed_types = {"climbing_fence", "masked_person", "intruding_animal"}
+            filtered = [r for r in rows if (r.get("alert_type") or "").strip() in allowed_types]
+
+            print(f"[API] Filtered {len(filtered)} / {len(rows)} alerts matching allowed types {allowed_types}.")
+
+            self.all_rows = filtered
+
         except Exception as e:
             print("[API][ERROR]", e)
-            QtWidgets.QMessageBox.warning(self, "Error", f"Failed to fetch incidents:\n{e}")
+            QtWidgets.QMessageBox.warning(self, "Error", f"Failed to fetch alerts:\n{e}")
             return
+
+        # Update the table and filters
         self.populate_table(self.all_rows)
         self.populate_filters()
+
+
 
     def populate_filters(self):
         devices = sorted({it.get("device_id") or "-" for it in self.all_rows})
@@ -406,83 +427,26 @@ class EventsHistoryPage(QtWidgets.QWidget):
 
 
 
-
-
     def populate_table(self, rows):
-        print(f"[TABLE] Populating table with {len(rows)} rows.")
+        print(f"[TABLE] Populating table with {len(rows)} alerts.")
         self.table.setRowCount(len(rows))
 
         for r, it in enumerate(rows):
-            sid = (str(it.get("incident_id") or "")[:8] + "...") if it.get("incident_id") else "-"
+            sid = (str(it.get("alert_id") or "")[:8] + "...") if it.get("alert_id") else "-"
             self.table.setItem(r, 0, QtWidgets.QTableWidgetItem(sid))
             self.table.setItem(r, 1, QtWidgets.QTableWidgetItem(it.get("device_id") or "-"))
-            anomaly_label = (it.get("anomaly") or "-").replace("_", " ").title()
-            self.table.setItem(r, 2, QtWidgets.QTableWidgetItem(anomaly_label))
+            self.table.setItem(r, 2, QtWidgets.QTableWidgetItem(it.get("alert_type") or "-"))
             self.table.setItem(r, 3, QtWidgets.QTableWidgetItem(self._fmt_time(it.get("started_at"))))
             self.table.setItem(r, 4, QtWidgets.QTableWidgetItem(self._fmt_time(it.get("ended_at"))))
-            self.table.setItem(r, 5, QtWidgets.QTableWidgetItem(str(it.get("duration_sec") or 0)))
+            self.table.setItem(r, 5, QtWidgets.QTableWidgetItem(f"{it.get('confidence') or 0:.2f}"))
 
-           # ────── SEVERITY BAR (layout-based, reliable) ──────
-            sev = self._safe_int(it.get("severity"))
-            sev = max(1, min(sev, 9))
-            fill = sev / 9.0
+            # ACK Checkbox indicator
+            ack_value = it.get("ack", False)
+            ack_label = QtWidgets.QLabel("✅" if ack_value else "❌")
+            ack_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            self.table.setCellWidget(r, 6, ack_label)
 
-            if sev <= 3:
-                label_text = "Low"
-                color = "#a7f3d0"
-            elif sev <= 6:
-                label_text = "Medium"
-                color = "#34d399"
-            else:
-                label_text = "High"
-                color = "#059669"
-
-            # Background container (taller bar)
-            container = QtWidgets.QFrame()
-            container.setFixedHeight(22)  # taller
-            container.setStyleSheet("""
-                QFrame {
-                    background: #e5e7eb;
-                    border: 1px solid #d1d5db;
-                    border-radius: 10px;
-                }
-            """)
-
-            # Grid layout (bar + label overlay)
-            layout = QtWidgets.QGridLayout(container)
-            layout.setContentsMargins(1, 1, 1, 1)
-            layout.setSpacing(0)
-
-            # Fill bar (shorter horizontal width, rounded edges)
-            fill_bar = QtWidgets.QFrame(container)
-            fill_bar.setStyleSheet(f"background-color: {color}; border-radius: 9px;")
-
-            # Compute proportional pixel width (shorter bar)
-            container_width = 90
-            fill_bar.setFixedWidth(int(container_width * fill))
-
-            layout.addWidget(fill_bar, 0, 0)
-            layout.setColumnStretch(0, 0)
-            layout.setColumnStretch(1, 1)
-
-            # Centered transparent label overlay
-            label = QtWidgets.QLabel(label_text, container)
-            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            label.setStyleSheet("font-weight:600; color:#064e3b; background:transparent; font-size:13px;")
-            layout.addWidget(label, 0, 0, 1, 2)
-
-            # Wrap container for centering in cell
-            wrapper = QtWidgets.QWidget()
-            outer = QtWidgets.QHBoxLayout(wrapper)
-            outer.setContentsMargins(4, 0, 4, 0)
-            outer.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            outer.addWidget(container)
-            self.table.setCellWidget(r, 6, wrapper)
-
-
-
-
-            # ────── CENTERED VIEW BUTTON ──────
+            # Centered “View” button for vod
             btn = QtWidgets.QPushButton("View")
             btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
             btn.setFixedHeight(26)
@@ -509,7 +473,13 @@ class EventsHistoryPage(QtWidgets.QWidget):
             btn_layout.addWidget(btn)
             self.table.setCellWidget(r, 7, btn_container)
 
-        print("[TABLE] Done populating table.")
+        print("[TABLE] Done populating alerts table.")
+
+
+
+
+
+           
 
 
 
@@ -517,11 +487,13 @@ class EventsHistoryPage(QtWidgets.QWidget):
 
 
     def _open_video_player(self, info):
-        print(f"[VIDEO] Opening video player for incident={info.get('incident_id')} device={info.get('device_id')}")
-        cam, iid = info.get("device_id") or "unknown", info.get("incident_id") or "0"
-        url = f"{self.media_proxy_base}/vod/{cam}/{iid}/final.mp4"
-        final_url = f"{self.proxy_local_base}/vod?u={url}"
-        self._show_vlc_popup(final_url)
+        print(f"[VIDEO] Opening video player for alert={info.get('alert_id')}")
+        url = info.get("vod")
+        if not url:
+            QtWidgets.QMessageBox.warning(self, "No Video", "This alert has no VOD URL.")
+            return
+        self._show_vlc_popup(url)
+
 
     def _show_vlc_popup(self, url):
         print(f"[VIDEO] Playing URL: {url}")

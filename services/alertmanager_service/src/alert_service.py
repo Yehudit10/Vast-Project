@@ -56,7 +56,7 @@ class AlertManagerService:
 
     def process_alert(self, data: dict):
         """Validate, render, and send an alert to Alertmanager."""
-        required_fields = ["alert_id", "alert_type", "device_id", "started_at", "lat", "lon"]
+        required_fields = ["alert_id", "alert_type", "device_id", "started_at"]
         for field in required_fields:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
@@ -68,6 +68,7 @@ class AlertManagerService:
             "alertname": data["alert_type"],
             "alert_id": data["alert_id"],
             "device": data["device_id"],
+            "source": "agcloud-alerts", 
         }
 
         # ───── Descriptive annotations ─────

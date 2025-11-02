@@ -13,10 +13,9 @@ async def ws_alerts(ws: WebSocket):
     await ws.accept()
     CLIENTS.add(ws)
     log.info("Client connected.")
-
+    # active = await fetch_active_alerts()
     try:
         # Send initial snapshot
-        await ws.send_json({"type": "snapshot", "items": []})
 
         while True:
             # Wait for pings or keepalive from client
@@ -35,7 +34,6 @@ async def ws_alerts(ws: WebSocket):
         CLIENTS.discard(ws)
 
 
-
 @app.post("/internal/alert")
 async def internal_alert(request: Request):
     """Called by alert_service when a new alert is received."""
@@ -51,10 +49,7 @@ async def internal_alert(request: Request):
         CLIENTS.discard(ws)
     return {"status": "broadcasted"}
 
-@app.get("/active")
-async def get_active():
-    active = []#await fetch_active_alerts()
-    return JSONResponse({"items": active})
+
 
 @app.get("/health")
 async def health():
