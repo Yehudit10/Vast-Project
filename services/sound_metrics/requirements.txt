@@ -1,0 +1,5 @@
+numpy
+soundfile
+prometheus_client
+pydub      # MP3/M4A/AAC
+minio
