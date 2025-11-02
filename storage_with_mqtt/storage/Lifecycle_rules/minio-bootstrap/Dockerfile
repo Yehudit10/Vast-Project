@@ -1,10 +1,20 @@
 FROM alpine:3.19
 # ===== Deps & Binaries =====
 RUN apk add --no-cache bash curl ca-certificates supervisor && \
-    update-ca-certificates && \
-    curl -k -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && \
-    curl -k -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && \
-    chmod +x /usr/local/bin/minio /usr/local/bin/mc
+  update-ca-certificates
+
+# Download MinIO binaries with retry logic
+RUN for i in 1 2 3 4 5; do \
+  curl -k -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && break || \
+  (echo "Retry $i/5 for minio..." && sleep 5); \
+  done && \
+  chmod +x /usr/local/bin/minio
+
+RUN for i in 1 2 3 4 5; do \
+  curl -k -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && break || \
+  (echo "Retry $i/5 for mc..." && sleep 5); \
+  done && \
+  chmod +x /usr/local/bin/mc
 # ===== Dirs =====
 RUN mkdir -p /data/hot /data/cold /entrypoint /config /var/log/supervisor
 # ===== init.sh (Bootstrap) =====
@@ -27,10 +37,12 @@ echo "[bootstrap] waiting for hot (${HOT_ENDPOINT})..."
 until mc ls "${MC_ALIAS_HOT}"  >/dev/null 2>&1; do sleep 2; done
 echo "[bootstrap] waiting for cold (${COLD_ENDPOINT})..."
 until mc ls "${MC_ALIAS_COLD}" >/dev/null 2>&1; do sleep 2; done
+
 # Enable versioning on HOT buckets
 echo "[bootstrap] enabling versioning..."
 mc version enable "${MC_ALIAS_HOT}/imagery"   || true
 mc version enable "${MC_ALIAS_HOT}/telemetry" || true
+
 echo "[bootstrap] ensuring remote tiers exist on HOT..."
 # imagery → COLD/imagery
 if ! mc ilm tier ls "${MC_ALIAS_HOT}" --json | grep -q '"Name":"COLD_IMAGERY"'; then
@@ -50,6 +62,7 @@ if ! mc ilm tier ls "${MC_ALIAS_HOT}" --json | grep -q '"Name":"COLD_TELEMETRY"'
     --bucket telemetry \
     --region us-east-1 || true
 fi
+
 echo "[bootstrap] applying lifecycle policies (per bucket)..."
 # --- IMAGERY ---
 mc ilm rule rm "${MC_ALIAS_HOT}/imagery" --all --force || true
@@ -71,11 +84,58 @@ else
     --transition-days 7 \
     --transition-tier COLD_TELEMETRY || true
 fi
+
 echo "[bootstrap] current rules:"
 mc ilm rule ls "${MC_ALIAS_HOT}/imagery"   || true
 mc ilm rule ls "${MC_ALIAS_HOT}/telemetry" || true
+
+# ===============================================
+# Kafka Event Notifications
+# ===============================================
+echo "[bootstrap] waiting for Kafka broker..."
+until nc -z kafka 9092 >/dev/null 2>&1; do sleep 3; done
+echo "[bootstrap] Kafka is reachable."
+
+echo "[bootstrap] waiting for MinIO Kafka notifiers to load..."
+until mc admin config get "${MC_ALIAS_HOT}" notify_kafka | grep -q "notify_kafka:primary" && \
+      mc admin config get "${MC_ALIAS_HOT}" notify_kafka | grep -q "notify_kafka:images"; do
+  echo "[bootstrap] Kafka notifiers not ready yet... retrying..."
+  sleep 3
+done
+echo "[bootstrap] Kafka notifiers 'primary' and 'images' are loaded."
+
+echo "[bootstrap] removing old event rules..."
+mc event remove "${MC_ALIAS_HOT}/imagery" --force >/dev/null 2>&1 || true
+mc event remove "${MC_ALIAS_HOT}/telemetry" --force >/dev/null 2>&1 || true
+
+echo "[bootstrap] adding Kafka event rules..."
+# Rule 1: sound/ prefix → topic sound.new (via notifier 'primary')
+mc event add "${MC_ALIAS_HOT}/imagery" \
+  arn:minio:sqs::primary:kafka \
+  --event put \
+  --prefix "sound/" || echo "[WARN] Failed to add sound/ rule"
+
+# Rule 2: image/ prefix → topic image.new (via notifier 'images')
+mc event add "${MC_ALIAS_HOT}/imagery" \
+  arn:minio:sqs::images:kafka \
+  --event put \
+  --prefix "image/" || echo "[WARN] Failed to add image/ rule"
+
+# Rule 3: telemetry bucket → sound.new
+mc event add "${MC_ALIAS_HOT}/telemetry" \
+  arn:minio:sqs::primary:kafka \
+  --event put || echo "[WARN] Failed to add telemetry rule"
+
+echo "[bootstrap] verifying event rules..."
+mc event list "${MC_ALIAS_HOT}/imagery" || true
+mc event list "${MC_ALIAS_HOT}/telemetry" || true
+
 echo "[bootstrap] DONE."
 SH
+
+# --- Ensure init.sh has UNIX line endings ---
+RUN apk add --no-cache dos2unix && dos2unix /entrypoint/init.sh
+
 # ===== supervisord.conf =====
 RUN cat > /etc/supervisord.conf <<'CONF'
 [supervisord]

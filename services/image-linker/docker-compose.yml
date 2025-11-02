@@ -1,0 +1,56 @@
+services:
+  jobmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    networks:
+      - flink-net
+      - agcloud_ag_cloud
+
+  taskmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    depends_on:
+      jobmanager:
+        condition: service_started
+    networks:
+      - flink-net
+      - agcloud_ag_cloud
+
+  submitter:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-submit
+    depends_on:
+      jobmanager:
+        condition: service_started
+    command: >
+      bash -lc "sleep 10 &&
+                flink run -m jobmanager:8081 -py /opt/app/job_linker.py &&
+                echo 'Job submitted successfully' &&
+                sleep 1"
+    networks:
+      - flink-net
+      - agcloud_ag_cloud
+
+networks:
+  flink-net:
+    driver: bridge
+  agcloud_ag_cloud:
+    external: true
