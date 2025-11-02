@@ -5,7 +5,7 @@ USER root
 
 # Add local CA (place *.crt next to this Dockerfile before building)
 COPY *.crt /usr/local/share/ca-certificates/
-RUN chmod 644 /usr/local/share/ca-certificates/ && update-ca-certificates
+RUN chmod 644 /usr/local/share/ca-certificates/*.crt && update-ca-certificates
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt

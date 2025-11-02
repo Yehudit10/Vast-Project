@@ -20,11 +20,10 @@ from classification.core.model_io import (
     SAMPLE_RATE,
     _to_numpy,
     load_audio,           # returns 1-D float32 mono @ SAMPLE_RATE
-    # segment_waveform,     # returns List[np.ndarray] after our fix
     segment_waveform_2d_view,
     aggregate_matrix,
 )
-from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embedding, run_cnn14_embeddings_batch
+from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embeddings_batch
 from classification.scripts import alerts
 
 # -----------------------------
