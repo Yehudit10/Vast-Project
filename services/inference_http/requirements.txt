@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+minio
+pillow
+numpy==1.26.4
+pydantic
