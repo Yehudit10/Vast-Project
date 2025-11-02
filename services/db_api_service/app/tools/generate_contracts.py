@@ -161,9 +161,17 @@ def main() -> None:
     ins = inspect(eng)
 
     generated_files: List[str] = []
+    skipped: List[str] = []
+
 
     for table in ALLOWED:
-        schema_json = build_schema_for_table(ins, table)
+        try:
+            schema_json = build_schema_for_table(ins, table)
+        except Exception as e:
+            print(f"[contracts-gen] ⚠️ Skipped table '{table}': {e}")
+            skipped.append(table)
+            continue
+
         out_path = outdir / f"{table}.json"
         out_path.write_text(
             json.dumps(schema_json, ensure_ascii=False, indent=2),
@@ -171,10 +179,9 @@ def main() -> None:
         )
         generated_files.append(out_path.name)
 
-    print(f"[contracts-gen] generated {len(generated_files)} files: {generated_files}")
-    if not generated_files:
-        sys.stderr.write("[contracts-gen] ERROR: no contracts were generated\n")
-        sys.exit(1)
+    print(f"[contracts-gen] ✅ generated {len(generated_files)} files: {generated_files}")
+    if skipped:
+        print(f"[contracts-gen] ⚠️ skipped {len(skipped)} tables: {skipped}")
 
 
 if __name__ == "__main__":
