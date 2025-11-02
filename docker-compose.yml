@@ -4,16 +4,12 @@
 # ==========================
 
 version: "3.9"
-
 # --------------------------
 # Networks
 # --------------------------
 networks:
   ag_cloud:
     driver: bridge
-  # storage_minionet:
-  #   external: true
-  #   name: storage_with_mqtt_minionet
 
 
 # --------------------------
