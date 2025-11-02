@@ -1,0 +1,19 @@
+FROM flink:1.18-scala_2.12-java11
+
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv curl && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir \
+    "apache-flink==1.18.1" \
+    aiohttp==3.9.5 \
+    minio==7.2.7 \
+    requests==2.32.3 \
+    protobuf==3.20.3 \
+    cloudpickle==2.2.1
+
+ENV PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+ENV FLINK_PYTHON=/usr/bin/python3
+
+USER flink
