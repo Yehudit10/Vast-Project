@@ -42,6 +42,7 @@ TOPICS=(
   dev-aerial-images-keys
   image.new.aerial
   image.new.aerial.connections
+  alerts
 )
 
 # Idempotent creation with retention.ms
