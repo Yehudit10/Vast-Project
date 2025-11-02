@@ -1,7 +1,7 @@
 import yaml
 from string import Template
 from PyQt6.QtCore import QObject, pyqtSignal
-from alert_client import AlertClient
+from vast.alerts.alert_client import AlertClient
 from concurrent.futures import ThreadPoolExecutor
 
 class AlertService(QObject):
@@ -9,7 +9,7 @@ class AlertService(QObject):
     alertAdded = pyqtSignal(dict)
     alertRemoved = pyqtSignal(str)
 
-    def __init__(self, ws_url, api, templates_path="src/vast/templates.yml"):
+    def __init__(self, ws_url, api, templates_path="/app/templates/templates.yml"):
         super().__init__()
         self.api = api
         self.device_locations = {}
@@ -99,6 +99,57 @@ class AlertService(QObject):
     # ────────────────────────────────
     # Handle incoming WebSocket alerts
     # ────────────────────────────────
+    # def _on_realtime(self, alert_msg):
+    #     alerts = alert_msg.get("alerts", [])
+    #     print("[AlertService] Realtime message:", alert_msg)
+
+    #     for a in alerts:
+    #         labels = a.get("labels", {})
+    #         ann = a.get("annotations", {})
+    #         alert_id = labels.get("alert_id")
+    #         device_id = labels.get("device")
+    #         alert_type = labels.get("alertname")
+    #         ends_at = a.get("endsAt")
+    #         is_resolved = ends_at and not ends_at.startswith("0001-01-01")
+
+    #         if is_resolved:
+    #             self.alerts = [al for al in self.alerts if al.get("alert_id") != alert_id]
+    #             self.alertRemoved.emit(alert_id)
+    #             continue
+
+    #         lat = ann.get("lat")
+    #         lon = ann.get("lon")
+
+    #         # Fill missing coordinates
+    #         if (not lat or not lon) and device_id in self.device_locations:
+    #             lat, lon = self.device_locations[device_id]
+    #             print(f"[AlertService] Filled missing coords for {device_id}: ({lat}, {lon})")
+
+    #         # Enrich with template
+    #         tmpl = self.templates.get(alert_type, {})
+    #         summary = Template(tmpl.get("summary", "")).safe_substitute(
+    #             device_id=device_id, area=ann.get("area", ""), confidence=ann.get("confidence", "")
+    #         )
+    #         recommendation = tmpl.get("recommendation", "")
+    #         category = tmpl.get("category")
+
+    #         normalized = {
+    #             "alert_id": alert_id,
+    #             "alert_type": alert_type,
+    #             "device_id": device_id,
+    #             "lat": lat,
+    #             "lon": lon,
+    #             "severity": int(ann.get("severity", 1)),
+    #             "summary": summary,
+    #             "recommendation": recommendation,
+    #             "category": category,
+    #             "hls": ann.get("hls"),
+    #             "vod": ann.get("vod"),
+    #             "image_url": ann.get("image_url"),
+    #             "startsAt": a.get("startsAt"),
+    #         }
+    #         self.alerts.append(normalized)
+    #         self.alertAdded.emit(normalized)
     def _on_realtime(self, alert_msg):
         alerts = alert_msg.get("alerts", [])
         print("[AlertService] Realtime message:", alert_msg)
@@ -112,11 +163,25 @@ class AlertService(QObject):
             ends_at = a.get("endsAt")
             is_resolved = ends_at and not ends_at.startswith("0001-01-01")
 
+            # Find existing alert in memory
+            existing = next((al for al in self.alerts if al.get("alert_id") == alert_id), None)
+
             if is_resolved:
-                self.alerts = [al for al in self.alerts if al.get("alert_id") != alert_id]
-                self.alertRemoved.emit(alert_id)
+                # ✅ Don't delete — update existing alert with endedAt timestamp
+                if existing:
+                    existing["endedAt"] = ends_at
+                    self.alertRemoved.emit(alert_id)
+                else:
+                    # If not in memory (e.g. loaded from DB earlier)
+                    # create a minimal record so the UI can update
+                    fake_alert = {"alert_id": alert_id, "endedAt": ends_at}
+                    self.alerts.append(fake_alert)
+                    self.alertRemoved.emit(alert_id)
                 continue
 
+            # ────────────────────────────────
+            # ACTIVE alert (new or ongoing)
+            # ────────────────────────────────
             lat = ann.get("lat")
             lon = ann.get("lon")
 
@@ -128,7 +193,9 @@ class AlertService(QObject):
             # Enrich with template
             tmpl = self.templates.get(alert_type, {})
             summary = Template(tmpl.get("summary", "")).safe_substitute(
-                device_id=device_id, area=ann.get("area", ""), confidence=ann.get("confidence", "")
+                device_id=device_id,
+                area=ann.get("area", ""),
+                confidence=ann.get("confidence", ""),
             )
             recommendation = tmpl.get("recommendation", "")
             category = tmpl.get("category")
@@ -148,8 +215,15 @@ class AlertService(QObject):
                 "image_url": ann.get("image_url"),
                 "startsAt": a.get("startsAt"),
             }
-            self.alerts.append(normalized)
+
+            # Update if it already exists, else append
+            if existing:
+                existing.update(normalized)
+            else:
+                self.alerts.append(normalized)
+
             self.alertAdded.emit(normalized)
+
             
     def mark_all_acknowledged(self):
         """Mark all alerts as acknowledged both locally and in DB (PATCH /api/tables/alerts)."""

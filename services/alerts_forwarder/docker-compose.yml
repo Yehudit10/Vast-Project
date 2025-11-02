@@ -4,9 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile.flink
     container_name: alerts-forwarder
-    # depends_on:
-    #   - kafka
-    #   - alertmanager_service
+    depends_on:
+      - kafka
+      - alertmanager_service
     environment:
       - PYTHONPATH=/opt/app
       - KAFKA_BROKERS=kafka:9092

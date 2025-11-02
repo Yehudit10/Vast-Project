@@ -7,7 +7,7 @@ from vast.orthophoto_canvas.ui.sensors_layer import SensorLayer, add_sensors_by_
 from orthophoto_canvas.ag_io import sensors_api
 import os
 
-from alert_client import AlertClient
+from vast.alerts.alert_client import AlertClient
 from vast.orthophoto_canvas.ui.alert_layer import AlertLayer
 
 class HomeView(QWidget):
@@ -57,9 +57,6 @@ class HomeView(QWidget):
         )
 
         self.alert_layer = AlertLayer(self.viewer)
-        alerts = self.fetch_active_alerts()
-        for alert in alerts:
-            self.alert_layer.add_or_update_alert(alert)
 
         # Subscribe to centralized AlertService updates
         self.alert_service.alertsUpdated.connect(self._on_alerts_updated)
@@ -69,8 +66,6 @@ class HomeView(QWidget):
         # Load initial alerts
         self.alert_service.load_initial()
 
-        # print(f"[HomeView] Connected to alerts gateway: {gateway_ws}")
-
         self.sensor_types_btn = QPushButton("Sensor Types")
         self.sensor_types_btn.clicked.connect(self.openSensorsRequested.emit)
         root.addWidget(self.sensor_types_btn)
@@ -78,9 +73,20 @@ class HomeView(QWidget):
     def _on_alerts_updated(self, alerts: list):
         """Called when AlertService emits a full update list."""
         print(f"[HomeView] Full alert update: {len(alerts)} alerts")
-        self.alert_layer.clear_alerts()  # assuming you have clear() or reset() on AlertLayer
-        for alert in alerts:
+
+        # 🔹 Keep only active (unresolved) alerts for the map
+        active_alerts = [
+            a for a in alerts
+            if not a.get("ended_at") and not a.get("endedAt")
+        ]
+
+        print(f"[HomeView] Displaying {len(active_alerts)} active alerts on map")
+
+        # Clear and redraw only active alerts
+        self.alert_layer.clear_alerts()
+        for alert in active_alerts:
             self.alert_layer.add_or_update_alert(alert)
+
 
     def _on_alert_added(self, alert: dict):
         """Called when a new alert arrives."""
@@ -93,30 +99,6 @@ class HomeView(QWidget):
         self.alert_layer.remove_alert(alert_id)
 
     
-    def fetch_active_alerts(self):
-        try:
-            print("[HomeView] Fetching active alerts from dashboard API...")
-            url = f"{self.api.base}/api/tables/alerts"
-            r = self.api.http.get(url, timeout=10)
-            if r.status_code != 200:
-                print(f"[HomeView] Failed to fetch alerts: {r.status_code}")
-                return []
-
-            data = r.json()
-            # ✅ Unwrap 'rows' if present
-            if isinstance(data, dict) and "rows" in data:
-                alerts = data["rows"]
-            else:
-                alerts = data
-
-            print(f"[HomeView] Loaded {len(alerts)} active alerts from DB.")
-            return alerts
-
-        except Exception as e:
-            print(f"[HomeView] Failed to fetch alerts: {e}")
-            return []
-
-
 
 
     def _on_alert_realtime(self, alert: dict):

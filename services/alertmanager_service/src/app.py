@@ -6,7 +6,9 @@ import os, logging
 app = FastAPI(title="AgGuard AlertManager Service", version="1.3")
 log = logging.getLogger(__name__)
 
-CFG_PATH = os.getenv("CFG_PATH", "templates.yml")
+# CFG_PATH = os.getenv("CFG_PATH", "templates.yml")
+CFG_PATH = os.getenv("CFG_PATH", "/app/templates/templates.yml")
+
 ALERTMANAGER_URL = os.getenv("ALERTMANAGER_URL", "http://alertmanager:9093")
 
 service = AlertManagerService(CFG_PATH, ALERTMANAGER_URL)
