@@ -521,7 +521,7 @@ services:
   # ------------------------
   sounds_classifier:
     build:
-      context: ./services/sounds/sounds_classifier
+      context: ./services/sounds_classifier
       dockerfile: Dockerfile.classifier-svc
     container_name: sounds_classifier
     restart: unless-stopped
