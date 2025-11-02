@@ -99,57 +99,6 @@ class AlertService(QObject):
     # ────────────────────────────────
     # Handle incoming WebSocket alerts
     # ────────────────────────────────
-    # def _on_realtime(self, alert_msg):
-    #     alerts = alert_msg.get("alerts", [])
-    #     print("[AlertService] Realtime message:", alert_msg)
-
-    #     for a in alerts:
-    #         labels = a.get("labels", {})
-    #         ann = a.get("annotations", {})
-    #         alert_id = labels.get("alert_id")
-    #         device_id = labels.get("device")
-    #         alert_type = labels.get("alertname")
-    #         ends_at = a.get("endsAt")
-    #         is_resolved = ends_at and not ends_at.startswith("0001-01-01")
-
-    #         if is_resolved:
-    #             self.alerts = [al for al in self.alerts if al.get("alert_id") != alert_id]
-    #             self.alertRemoved.emit(alert_id)
-    #             continue
-
-    #         lat = ann.get("lat")
-    #         lon = ann.get("lon")
-
-    #         # Fill missing coordinates
-    #         if (not lat or not lon) and device_id in self.device_locations:
-    #             lat, lon = self.device_locations[device_id]
-    #             print(f"[AlertService] Filled missing coords for {device_id}: ({lat}, {lon})")
-
-    #         # Enrich with template
-    #         tmpl = self.templates.get(alert_type, {})
-    #         summary = Template(tmpl.get("summary", "")).safe_substitute(
-    #             device_id=device_id, area=ann.get("area", ""), confidence=ann.get("confidence", "")
-    #         )
-    #         recommendation = tmpl.get("recommendation", "")
-    #         category = tmpl.get("category")
-
-    #         normalized = {
-    #             "alert_id": alert_id,
-    #             "alert_type": alert_type,
-    #             "device_id": device_id,
-    #             "lat": lat,
-    #             "lon": lon,
-    #             "severity": int(ann.get("severity", 1)),
-    #             "summary": summary,
-    #             "recommendation": recommendation,
-    #             "category": category,
-    #             "hls": ann.get("hls"),
-    #             "vod": ann.get("vod"),
-    #             "image_url": ann.get("image_url"),
-    #             "startsAt": a.get("startsAt"),
-    #         }
-    #         self.alerts.append(normalized)
-    #         self.alertAdded.emit(normalized)
     def _on_realtime(self, alert_msg):
         alerts = alert_msg.get("alerts", [])
         print("[AlertService] Realtime message:", alert_msg)
