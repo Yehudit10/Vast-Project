@@ -2,6 +2,7 @@
 import json
 import time
 import pathlib
+from typing import Dict, List
 import requests
 from urllib.parse import quote
 from requests.adapters import HTTPAdapter
@@ -100,3 +101,36 @@ class DashboardApi:
         except Exception as e:
             print(f"[API FAIL] {e}")
         return []
+
+    # ---------- THRESHOLDS ----------
+    def bulk_set_task_thresholds_labeled(
+        self,
+        mapping: dict[tuple[str, str], float] | list[dict],
+        updated_by: str = "gui",
+    ) -> dict:
+        
+        if isinstance(mapping, dict):
+            items = [
+                {"task": t, "label": l or "", "threshold": thr, "updated_by": updated_by}
+                for (t, l), thr in mapping.items()
+            ]
+        else:
+            items = mapping
+
+        url = f"{self.base}/api/thresholds/batch"
+        try:
+            
+            r = self.http.post(url, json=items, timeout=20)
+            if r.status_code in (200, 201):
+                data = r.json()
+                # ודאי שמבנה ok/fail תואם
+                return {
+                    "ok": list(data.get("ok", [])),
+                    "fail": list(data.get("fail", [])),
+                }
+            return {
+                "ok": [],
+                "fail": [[ [i.get("task"), i.get("label","")], f"http-{r.status_code} {r.text[:200]}"] for i in items],
+            }
+        except Exception as e:
+            return {"ok": [], "fail": [[ [i.get("task"), i.get("label","")], str(e)] for i in items]}
