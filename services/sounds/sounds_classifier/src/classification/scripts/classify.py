@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from cProfile import label
 import logging
 import os
 import tempfile
@@ -12,6 +13,9 @@ import joblib
 
 from minio import Minio
 from minio.error import S3Error
+import re
+from datetime import datetime, timezone
+import uuid
 
 from classification.core.model_io import (
     SAMPLE_RATE,
@@ -56,7 +60,7 @@ ALLOWED_CONTENT_TYPES: List[str] = [t.strip() for t in os.getenv(
 MAX_BYTES = int(os.getenv("MAX_BYTES", str(50 * 1024 * 1024)))
 
 KAFKA_BROKERS = os.getenv("KAFKA_BROKERS", "kafka:9092")
-ALERTS_TOPIC = os.getenv("ALERTS_TOPIC", "dev-robot-alerts")
+ALERTS_TOPIC = os.getenv("ALERTS_TOPIC", "alerts")
 
 # -----------------------------
 # Lazy runtime (model/head/labels)
@@ -77,6 +81,64 @@ def _get_minio():
             MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE
         )
     return _MINIO_CLIENT
+
+_TS_PATTERNS = (
+    # ISO-like with Z or without Z, with or without 'T'
+    r"(?P<iso>\d{4}-?\d{2}-?\d{2}[T ]?\d{2}:?\d{2}:?\d{2}Z?)",
+    # Compact: YYYYMMDDTHHMMSSZ or YYYYMMDDHHMMSS
+    r"(?P<compact>\d{8}T?\d{6}Z?)",
+    # Epoch seconds or millis
+    r"(?P<epoch>\d{10}|\d{13})",
+)
+
+def _parse_started_at_from_token(token: str) -> Optional[str]:
+    """Return ISO8601 UTC Z string if token looks like a timestamp; else None."""
+    t = token.strip()
+    # epoch
+    if re.fullmatch(r"\d{13}", t):
+        dt = datetime.fromtimestamp(int(t)/1000.0, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if re.fullmatch(r"\d{10}", t):
+        dt = datetime.fromtimestamp(int(t), tz=timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # compact YYYYMMDD[ T]?HHMMSS[Z]?
+    m = re.fullmatch(r"(\d{8})T?(\d{6})Z?", t)
+    if m:
+        d, h = m.groups()
+        dt = datetime.strptime(d + h, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # ISO-ish (allow missing separators)
+    # normalize: keep only digits and Z, then rebuild
+    if re.fullmatch(r"\d{4}-?\d{2}-?\d{2}[T ]?\d{2}:?\d{2}:?\d{2}Z?", t):
+        # try a few formats
+        for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%SZ",
+                    "%Y-%m-%dT%H:%M:%S", "%Y%m%dT%H%M%SZ", "%Y%m%d%H%M%S"):
+            try:
+                if t.endswith("Z") and fmt.endswith("Z"):
+                    dt = datetime.strptime(t.replace(" ", "T"), fmt).replace(tzinfo=timezone.utc)
+                    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                if not t.endswith("Z") and not fmt.endswith("Z"):
+                    dt = datetime.strptime(t.replace(" ", "T").replace("-", "").replace(":", ""), "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+                    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            except Exception:
+                pass
+    return None
+
+def _extract_device_and_started_at_from_key(s3_key: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Expect filenames like 'sensorId_timestamp.*' (timestamp token can be in a few formats).
+    Return (device_id, started_at_isoZ) or (None, None) if not confident.
+    """
+    name = Path(s3_key).name
+    m = re.match(r"(?P<dev>[^_/]+)_(?P<ts>[^_.]+)", name)
+    if not m:
+        return None, None
+    device_id = m.group("dev").strip()
+    ts_token = m.group("ts").strip()
+    started_at = _parse_started_at_from_token(ts_token)
+    if not device_id or not started_at:
+        return None, None
+    return device_id, started_at
 
 def _load_backbone_once() -> None:
     if R.model is not None:
@@ -253,8 +315,8 @@ def run_classification_job(
     sk_pipeline: Optional[Any] = None            
 ) -> Dict[str, object]:
     """
-    Download from MinIO → classify_file → (optional) write DB → (optional) Kafka alert.
-    Returns a dict with 'label' and 'probs'.
+    Download from MinIO → classify_file → (optional) Kafka alert.
+    Returns a dict with 'label', 'probs, and alert send status.
     """
     _load_head_once()
     if ALLOWED_BUCKETS and s3_bucket not in ALLOWED_BUCKETS:
@@ -280,20 +342,78 @@ def run_classification_job(
     os.close(fd)
     try:
         client.fget_object(s3_bucket, s3_key, tmp_path)
-
         result = classify_file(tmp_path, pann_model=pann_model, sk_pipeline=sk_pipeline)
-        
+        # default alert flags
+        result.setdefault("sent_alert", False)
+        result.setdefault("alert_topic", None)
+        result.setdefault("alert_skip_reason", None)
+        if result.get("processing_ms") is not None:
+            try:
+                result["processing_ms"] = int(result["processing_ms"])
+            except Exception:
+                pass
         if result["label"] != "another" and KAFKA_BROKERS and ALERTS_TOPIC:
-            alerts.send_alert(
-                brokers=KAFKA_BROKERS,
-                topic=ALERTS_TOPIC,
-                label=str(result["label"]),
-                probs=dict(result["probs"]),
-                meta={"bucket": s3_bucket, "key": s3_key},
-            )
+            device_id, started_at = _extract_device_and_started_at_from_key(s3_key)
+            if device_id and started_at:
+                try:
+                    label = str(result["label"])
+                    alert_type = f"suspicious_sound-{label}"
 
+                    severity = None
+                    sev_map_env = os.getenv("ALERT_SEVERITY_MAP", "").strip()
+                    if sev_map_env:
+                        try:
+                            _sev_map = __import__("json").loads(sev_map_env)
+                            if isinstance(_sev_map, dict) and label in _sev_map:
+                                _s = _sev_map[label]
+                                if isinstance(_s, (int, np.integer)):
+                                    severity = int(_s)
+                        except Exception:
+                            pass
+                    
+                    confidence = float(result.get("pred_prob") or 0.0)
+                    
+                    meta = {
+                        "bucket": s3_bucket,
+                        "key": s3_key,
+                        "processing_ms": result.get("procssing_ms"),
+                    }
+                    if meta["processing_ms"] is None:
+                        meta.pop("processing_ms")
+                    message_key = f"{device_id}|{started_at}"
+                    
+                    ok = alerts.send_structured_alert(
+                        brokers=KAFKA_BROKERS,
+                        topic=ALERTS_TOPIC,
+                        alert_type=alert_type,
+                        device_id=device_id,
+                        started_at=started_at,
+                        confidence=confidence,
+                        severity=severity,
+                        meta=meta,
+                        message_key=message_key,
+                    )
+                    perf_logger.info("About to send alert: topic=%s key=%s type=%s",
+                                     ALERTS_TOPIC, message_key, alert_type)
+                    if ok:
+                        result["sent_alert"] = True
+                        result["alert_topic"] = ALERTS_TOPIC
+                    else:
+                        perf_logger.warning("Alert send returned False (topic=%s key=%s)", ALERTS_TOPIC, s3_key)
+                        result["alert_skip_reason"] = "kafka_produce_returned_false"
+                except Exception as e:
+                    perf_logger.warning("Alert send failed: %s (key=%s)", e, s3_key)
+                    result["alert_skip_reason"] = "kafka_exception"
+            else:
+                perf_logger.warning(
+                    "Skip alert (missing device_id/started_at) for key=%s", s3_key
+                )
+                result["alert_skip_reason"] = "missing_device_or_started_at"
+        elif result["label"] == "another":
+            result["alert_skip_reason"] = "label_is_another"
+        elif not KAFKA_BROKERS or not ALERTS_TOPIC:
+            result["alert_skip_reason"] = "missing_env_brokers_or_topic"
         return result
-    
     finally:
         try:
             os.remove(tmp_path)
