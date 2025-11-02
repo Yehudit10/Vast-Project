@@ -6,8 +6,36 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 from datetime import datetime, timezone
 import re
-from datetime import datetime
 
+
+# ────────────────────────────────────────────────
+# Helper: parse timestamps from DB or realtime
+# ────────────────────────────────────────────────
+def _parse_time(value: str):
+    """Safely parse a timestamp from DB or Alertmanager format."""
+    if not value:
+        return None
+
+    v = value.strip().replace("Z", "+00:00")
+
+    # Try ISO format first
+    try:
+        return datetime.fromisoformat(v)
+    except Exception:
+        pass
+
+    # Try common fallback formats (Postgres or plain)
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(v.split("+")[0], fmt)
+        except Exception:
+            continue
+    return None
+
+
+# ────────────────────────────────────────────────
+# AlertItem Widget
+# ────────────────────────────────────────────────
 class AlertItem(QFrame):
     """Compact alert box with one-line layout that expands for longer text."""
 
@@ -17,17 +45,7 @@ class AlertItem(QFrame):
         self._build_ui()
 
     def _build_ui(self):
-        sev = int(self.alert.get("severity", 1))
-        # Updated color map — no purple, cleaner tones
-        color_map = {
-            1: "#4CAF50",  # green
-            2: "#FFC107",  # amber
-            3: "#FF9800",  # orange
-            4: "#F44336",  # red
-            5: "#E53935",  # darker red
-            6: "#1976D2",  # blue instead of purple
-        }
-        color = color_map.get(sev, "#2196F3")
+        color = "#FFC107"  # default amber tone
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 6, 10, 6)
@@ -43,22 +61,22 @@ class AlertItem(QFrame):
         alert_type = self.alert.get("alert_type", "Unknown")
         device = self.alert.get("device_id", "")
         summary = self.alert.get("summary", "No summary")
+
         # Remove ISO timestamps from summary text
-        summary = re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\+\d{2}:\d{2}|Z)?", "", summary).strip()
+        summary = re.sub(
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\+\d{2}:\d{2}|Z)?",
+            "",
+            summary
+        ).strip()
 
-        # --- Format the time separately from startsAt ---
-        start = self.alert.get("startsAt", "")
-        try:
-            if start:
-                cleaned = re.sub(r"(\.\d+)?(\+|\-)\d{2}:\d{2}$", "", start)  # remove milliseconds/timezone
-                cleaned = cleaned.replace("T", " ")
-                dt = datetime.fromisoformat(cleaned)
-                time_str = dt.strftime("%Y-%m-%d %H:%M")  # ✅ clean date + hour
-            else:
-                time_str = "–"
-        except Exception:
-            time_str = "–"
-
+        # --- Parse and format time ---
+        start_raw = (
+            self.alert.get("startsAt")
+            or self.alert.get("started_at")
+            or self.alert.get("startedAt")
+        )
+        dt = _parse_time(start_raw)
+        time_str = dt.strftime("%Y-%m-%d %H:%M") if dt else "–"
 
         # --- Alert text ---
         is_unack = not self.alert.get("ack", False)
@@ -68,7 +86,6 @@ class AlertItem(QFrame):
             f"on <i>{device}</i> — {summary} "
             f"<span style='color:#666;font-size:9pt;'>🕒 {time_str}</span>"
         )
-
         text.setWordWrap(True)
         text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         text.setFont(QFont("Segoe UI", 9))
@@ -93,15 +110,28 @@ class AlertItem(QFrame):
             }
         """)
 
+    # ────────────────────────────────────────────────
+    # Mark alert as resolved
+    # ────────────────────────────────────────────────
     def mark_resolved(self, ended_at):
         """Change color and show duration when resolved."""
         try:
-            start = datetime.fromisoformat(self.alert["startsAt"].replace("Z", "+00:00"))
-            end = datetime.fromisoformat(ended_at.replace("Z", "+00:00"))
-            dur = end - start
-            mins = int(dur.total_seconds() // 60)
-            secs = int(dur.total_seconds() % 60)
-            duration = f"{mins}m {secs}s"
+            start_str = (
+                self.alert.get("startsAt")
+                or self.alert.get("started_at")
+                or self.alert.get("startedAt")
+            )
+            end_str = ended_at or self.alert.get("endedAt") or self.alert.get("ended_at")
+            start = _parse_time(start_str)
+            end = _parse_time(end_str)
+
+            if start and end:
+                dur = end - start
+                mins = int(dur.total_seconds() // 60)
+                secs = int(dur.total_seconds() % 60)
+                duration = f"{mins}m {secs}s"
+            else:
+                duration = ""
         except Exception:
             duration = ""
 
@@ -116,6 +146,9 @@ class AlertItem(QFrame):
         """)
 
 
+# ────────────────────────────────────────────────
+# AlertsPanel Widget
+# ────────────────────────────────────────────────
 class AlertsPanel(QWidget):
     """Floating list of alert boxes (like a modern notification dropdown)."""
 
@@ -170,23 +203,47 @@ class AlertsPanel(QWidget):
         # Load initial alerts
         QTimer.singleShot(500, self.alert_service.load_initial)
 
+    # ────────────────────────────────────────────────
+    # Populate panel
+    # ────────────────────────────────────────────────
     def _populate(self, alerts):
+        # Remove all existing widgets
+        for i in reversed(range(self.vbox.count())):
+            widget = self.vbox.itemAt(i).widget()
+            if widget:
+                widget.deleteLater()
+        self.items.clear()
+
+        # Add in reverse chronological order
         for a in reversed(alerts):
             self._add_alert(a)
 
+    # ────────────────────────────────────────────────
+    # Add single alert
+    # ────────────────────────────────────────────────
     def _add_alert(self, alert):
-        if alert["alert_id"] in self.items:
+        alert_id = alert.get("alert_id")
+        if not alert_id or alert_id in self.items:
             return
+
         item = AlertItem(alert)
         self.vbox.insertWidget(0, item)
-        self.items[alert["alert_id"]] = item
+        self.items[alert_id] = item
 
+        # ✅ If alert is resolved already, mark as resolved
+        ended_at = alert.get("ended_at") or alert.get("endedAt")
+        if ended_at:
+            item.mark_resolved(ended_at)
+
+    # ────────────────────────────────────────────────
+    # Mark resolved by ID
+    # ────────────────────────────────────────────────
     def _mark_resolved(self, alert_id):
         item = self.items.get(alert_id)
         if item:
             for a in self.alert_service.alerts:
                 if a.get("alert_id") == alert_id:
-                    ended_at = a.get("endedAt")
+                    ended_at = a.get("endedAt") or a.get("ended_at")
                     break
             else:
                 ended_at = datetime.now(timezone.utc).isoformat()

@@ -6,14 +6,14 @@ WORKDIR /app
 ARG USE_NETFREE=false
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-# COPY certs /app/certs
-# System CA + add NetFree certs
+COPY certs /app/certs
+System CA + add NetFree certs
 
-# RUN if [ "$USE_NETFREE" = "true" ] && [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-#         echo "Configuring NetFree certificates..."; \
-#         cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-#         update-ca-certificates; \
-#     fi
+RUN if [ "$USE_NETFREE" = "true" ] && [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+        echo "Configuring NetFree certificates..."; \
+        cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+        update-ca-certificates; \
+    fi
 
 # SSL certs env   
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
@@ -23,12 +23,12 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 
 
 # # System CA + add NetFree certs
-# RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-# COPY certs/*.crt /usr/local/share/ca-certificates/
-# RUN update-ca-certificates || true
-# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-#     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-#     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates || true
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Python deps
 COPY requirements.txt /app/requirements.txt
