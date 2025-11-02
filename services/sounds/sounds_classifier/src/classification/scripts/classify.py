@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from cProfile import label
 import logging
 import os
 import tempfile
