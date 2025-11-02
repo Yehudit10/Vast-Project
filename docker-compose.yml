@@ -851,7 +851,7 @@ services:
     volumes:
       - ./templates:/app/templates:ro
     environment:
-      - CFG_PATH=/app/templates.yml
+      - CFG_PATH=/app/templates/templates.yml
       - ALERTMANAGER_URL=http://alertmanager:9093
       - GATEWAY_URL=http://alerts-gateway:8000/internal/alert
     depends_on:
