@@ -732,7 +732,6 @@ services:
   # --------------------------
   # Inference HTTP Service
   # --------------------------
-
   fruit-inference-http:
     build:
       context: ./services/inference_http   
