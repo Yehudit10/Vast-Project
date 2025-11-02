@@ -508,7 +508,7 @@ services:
 
       # Kafka 
       - KAFKA_BROKERS=kafka:9092
-      - ALERTS_TOPIC=dev-robot-alerts
+      - ALERTS_TOPIC=alerts
       - ENABLE_ALERTS=true
 
       # MinIO 
