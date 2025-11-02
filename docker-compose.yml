@@ -509,6 +509,7 @@ services:
       # Kafka 
       - KAFKA_BROKERS=kafka:9092
       - ALERTS_TOPIC=dev-robot-alerts
+      - ENABLE_ALERTS=true
 
       # MinIO 
       - MINIO_ENDPOINT=minio-hot:9000

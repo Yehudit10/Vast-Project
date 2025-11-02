@@ -39,6 +39,9 @@ class ClassifyIn(BaseModel):
 class ClassifyOut(BaseModel):
     label: str
     probs: Dict[str, float]
+    sent_alert: bool = True
+    alert_topic: Optional[str] = None
+    alert_skip_reason: Optional[str] = None
 
 
 @app.on_event("startup")
@@ -146,8 +149,13 @@ def classify(body: ClassifyIn):
             "processing_ms": result.get("processing_ms"),
         })
 
-        # 4) Build API response
-        out = {"label": result.get("label", ""), "probs": result.get("probs", {})}
+        # 4) Build API response (include alert status if exists)
+        out = {"label": result.get("label", ""),
+               "probs": result.get("probs", {}),
+               "sent_alert": bool(result.get("sent_alert", False)),
+               "alert_topic": result.get("alert_topic"),
+               "alert_skip_reason": result.get("alert_skip_reason"),
+               }
         if not body.return_probs:
             out["probs"] = {}
         return ClassifyOut(**out)
