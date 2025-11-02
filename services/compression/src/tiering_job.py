@@ -9,7 +9,8 @@ from prototype_lib import (
     replace_with_compressed,
     delete_object,
     get_file_age_seconds,
-    is_older_than
+    is_older_than,
+    RAW_PREFIX  # Import the prefix to ensure consistency
 )
 from minio_client import client, BUCKET_NAME
 
@@ -63,37 +64,50 @@ def encode_and_replace(obj_name: str, codec: str) -> str:
 def cleanup_compressed(max_age_days: int, dry_run: bool) -> int:
     """
     Delete very old compressed files that exceeded retention period.
-    Uses MinIO last_modified timestamp (when file was uploaded/compressed).
+    Uses timestamp from filename (same logic as compression).
     """
     if max_age_days <= 0:
         print("[INFO] Compressed cleanup disabled (max_age_days <= 0)")
         return 0
     
-    from datetime import datetime, timezone
     cutoff_sec = max_age_days * 86400
     deleted = 0
     
-    print(f"[CLEANUP] Checking for compressed files older than {max_age_days} days...")
+    print(f"\n[CLEANUP] Checking for compressed files older than {max_age_days} days...")
+    print(f"[CLEANUP] Looking in prefix: {RAW_PREFIX}")
+    print(f"[CLEANUP] Using timestamp from filename")
     
-    for obj in client.list_objects(BUCKET_NAME, recursive=True):
+    # Only check files in the RAW_PREFIX (sound/) directory
+    for obj in client.list_objects(BUCKET_NAME, prefix=RAW_PREFIX, recursive=True):
         # Only consider compressed files
         if not obj.object_name.lower().endswith(('.opus', '.flac')):
             continue
         
-        # Use MinIO's last_modified time (when file was actually uploaded)
-        now = datetime.now(timezone.utc)
-        file_age_sec = (now - obj.last_modified).total_seconds()
+        # Use timestamp from filename (consistent with compression logic)
+        file_age_sec = get_file_age_seconds(obj.object_name)
+        
+        if file_age_sec == 0:
+            print(f"[SKIP] {obj.object_name} - Cannot parse timestamp from filename")
+            continue
+        
         file_age_days = file_age_sec / 86400
         
-        print(f"[CHECK] {obj.object_name}: {file_age_days:.1f} days old")
+        print(f"[CHECK] {obj.object_name}: {file_age_days:.1f} days old (from filename)")
         
         if file_age_sec >= cutoff_sec:
             if dry_run:
-                print(f"[DRY] Would delete: {obj.object_name} (stored for {file_age_days:.1f} days)")
-            else:
-                delete_object(obj.object_name)
+                print(f"[DRY] Would delete: {obj.object_name} (age={file_age_days:.1f} days)")
                 deleted += 1
-                print(f"[DEL] Deleted: {obj.object_name} (stored for {file_age_days:.1f} days)")
+            else:
+                try:
+                    delete_object(obj.object_name)
+                    deleted += 1
+                    print(f"[DEL] ✓ Deleted: {obj.object_name} (age={file_age_days:.1f} days)")
+                except Exception as e:
+                    print(f"[ERROR] Failed to delete {obj.object_name}: {e}")
+        else:
+            remaining_days = max_age_days - file_age_days
+            print(f"[KEEP] {obj.object_name} - will be deleted in {remaining_days:.1f} days")
     
     return deleted
 
