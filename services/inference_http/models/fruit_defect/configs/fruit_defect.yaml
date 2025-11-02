@@ -1,4 +1,3 @@
-# קובץ: configs/fruit_defect.yaml
 data:
   train_dir: "C:/Users/משתמש/Desktop/vectordb_efrat/Datasets/Fruit and Vegetable Disease - Healthy vs Rotten/train"
   val_dir:   "C:/Users/משתמש/Desktop/vectordb_efrat/Datasets/Fruit and Vegetable Disease - Healthy vs Rotten/val"
