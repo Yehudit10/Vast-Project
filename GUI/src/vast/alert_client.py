@@ -50,11 +50,8 @@ class AlertClient(QObject):
 
     def _on_message(self, msg: str):
         try:
-            print(msg)
             payload = json.loads(msg)
-            if payload["type"] == "snapshot":
-                self.snapshotReceived.emit(payload["items"])
-            elif payload["type"] == "alert":
+            if payload["type"] == "alert":
                 self.alertReceived.emit(payload["data"])
         except Exception as e:
             print("[AlertClient] Invalid message:", e, msg)

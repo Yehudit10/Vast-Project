@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS devices (
   device_id text PRIMARY KEY,
   model     text,
   owner     text,
-  active    boolean DEFAULT true
+  active    boolean DEFAULT true,
+  location_lat DOUBLE PRECISION,
+  location_lon DOUBLE PRECISION
 );
 
 -- Predefined regions (optional: for missions crossing multiple regions)
@@ -269,18 +271,18 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
 
 --- Alerts table
 
-CREATE TABLE IF NOT EXISTS public.alerts (
-  id bigserial PRIMARY KEY,
-  entity_id text NOT NULL,
-  rule text NOT NULL,
-  window_start timestamptz NOT NULL,
-  window_end   timestamptz NOT NULL,
-  score double precision NOT NULL,
-  first_seen timestamptz NOT NULL,
-  last_seen  timestamptz NOT NULL,
-  status text NOT NULL CHECK (status IN ('OPEN','ACK','RESOLVED')),
-  meta_json jsonb
-);
+-- CREATE TABLE IF NOT EXISTS public.alerts (
+--   id bigserial PRIMARY KEY,
+--   entity_id text NOT NULL,
+--   rule text NOT NULL,
+--   window_start timestamptz NOT NULL,
+--   window_end   timestamptz NOT NULL,
+--   score double precision NOT NULL,
+--   first_seen timestamptz NOT NULL,
+--   last_seen  timestamptz NOT NULL,
+--   status text NOT NULL CHECK (status IN ('OPEN','ACK','RESOLVED')),
+--   meta_json jsonb
+-- );
 
 
 --- === Soil moisture irrigation tables ===
@@ -318,6 +320,36 @@ CREATE TABLE IF NOT EXISTS irrigation_schedule_audit (
   updated_by TEXT NOT NULL,
   update_reason TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS alerts (
+
+    -- Required fields
+    alert_id TEXT PRIMARY KEY,
+    alert_type TEXT,
+    device_id TEXT,
+    started_at TIMESTAMPTZ,
+
+    -- Optional / dynamic fields
+    ended_at TIMESTAMPTZ,
+    confidence DOUBLE PRECISION,
+    area TEXT,
+    lat DOUBLE PRECISION,
+    lon DOUBLE PRECISION,
+    severity INT DEFAULT 1,
+    image_url TEXT,
+    vod TEXT,
+    hls TEXT,
+
+    -- Acknowledgment field
+    ack BOOLEAN DEFAULT FALSE,  -- TRUE when the alert was acknowledged
+
+    -- Flexible metadata for anything else
+    meta JSONB,
+
+    -- System fields
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- === Task thresholds (enum + table) ===
@@ -493,7 +525,7 @@ CREATE INDEX IF NOT EXISTS ix_incident_frames_detections_gin                    
 ALTER TABLE incident_frames                                                                                                          -- [ADDED]
   ADD COLUMN IF NOT EXISTS num_tracks int                                                                                            -- [ADDED]
   GENERATED ALWAYS AS (jsonb_array_length(detections)) STORED;                                                                       -- [ADDED]
-=======
-CREATE INDEX IF NOT EXISTS ix_alerts_entity_rule ON public.alerts(entity_id, rule);
-CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
+
+-- CREATE INDEX IF NOT EXISTS ix_alerts_entity_rule ON public.alerts(entity_id, rule);
+-- CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
 

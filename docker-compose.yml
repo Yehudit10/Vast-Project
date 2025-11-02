@@ -81,55 +81,55 @@ services:
   # Sound Metrics Service
   # -------------------------
 
-  sound_metrics:
-    build:
-      context: ./services/sound_metrics
-      dockerfile: Dockerfile
-    environment:
-      - ADDR=0.0.0.0
-      - PORT=8005
-      - USE_UTC=false
-      - WINDOW_MIN=1
-      - STABLE_SEC=1
-      - PYTHONUNBUFFERED=1
+  # sound_metrics:
+  #   build:
+  #     context: ./services/sound_metrics
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - ADDR=0.0.0.0
+  #     - PORT=8005
+  #     - USE_UTC=false
+  #     - WINDOW_MIN=1
+  #     - STABLE_SEC=1
+  #     - PYTHONUNBUFFERED=1
 
-      - MINIO_ENDPOINT=minio-hot:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin123
-      - MINIO_BUCKET=telemetry         
-      - MINIO_PREFIX=sounds/           
+  #     - MINIO_ENDPOINT=minio-hot:9000
+  #     - MINIO_ACCESS_KEY=minioadmin
+  #     - MINIO_SECRET_KEY=minioadmin123
+  #     - MINIO_BUCKET=telemetry         
+  #     - MINIO_PREFIX=sounds/           
 
-    command: ["python","-u","src/metrics.py"]  
-    ports:
-      - "8005:8005"
-    depends_on:
-      - minio-hot
-    networks:
-      - ag_cloud 
-    restart: unless-stopped
+  #   command: ["python","-u","src/metrics.py"]  
+  #   ports:
+  #     - "8005:8005"
+  #   depends_on:
+  #     - minio-hot
+  #   networks:
+  #     - ag_cloud 
+  #   restart: unless-stopped
 
-  # -------------------------
-  # Plant Stress Detector
-  # -------------------------
+  # # -------------------------
+  # # Plant Stress Detector
+  # # -------------------------
 
-  plant_stress:
-    build: ./services/plant_stress
-    environment:
-      - INPUT_DIR=/data/inbox
-      - MODEL_DIR=/models
-      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0           
-      - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0   # Disable oneDNN optimizations (for CPU compatibility)
-    volumes:
-      - "./services/plant_stress/models:/models:ro"
-      - "./services/plant_stress/samples:/data/inbox:ro"
+  # plant_stress:
+  #   build: ./services/plant_stress
+  #   environment:
+  #     - INPUT_DIR=/data/inbox
+  #     - MODEL_DIR=/models
+  #     - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+  #     - PERIOD_DAYS=0           
+  #     - CONFIDENCE_THRESHOLD=0.6
+  #     # - TF_ENABLE_ONEDNN_OPTS=0   # Disable oneDNN optimizations (for CPU compatibility)
+  #   volumes:
+  #     - "./services/plant_stress/models:/models:ro"
+  #     - "./services/plant_stress/samples:/data/inbox:ro"
 
-    depends_on:
-      - postgres
-    command: ["python", "-u", "/app/app.py"]
-    networks:
-      - ag_cloud
+  #   depends_on:
+  #     - postgres
+  #   command: ["python", "-u", "/app/app.py"]
+  #   networks:
+  #     - ag_cloud
     
 
   flink_writer_db:
@@ -139,7 +139,7 @@ services:
       container_name: flink_writer_db
       environment:
         - KAFKA_BROKERS=kafka:9092
-        - TOPICS=sensor_zone_stats,sensor_anomalies
+        - TOPICS=sensor_zone_stats,sensor_anomalies,alerts
         - DB_API_BASE=http://db_api_service:8001
         - DB_API_AUTH_MODE=service
         - DB_API_SERVICE_NAME=flink-writer-db
@@ -525,70 +525,70 @@ services:
   # ------------------------
   # Classifier - Sounds
   # ------------------------
-  sounds_classifier:
-    build:
-      context: ./services/sounds/sounds_classifier
-      dockerfile: Dockerfile.classifier-svc
-      # args:
-        # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
-    container_name: sounds_classifier
-    restart: unless-stopped
-    # env_file:
-      # - ./services/sounds/sounds_classifier/src/classification/.env
-    environment:
-      # Runtime mode
-      - DEVICE=cpu
-      - BACKBONE=cnn14
+  # sounds_classifier:
+  #   build:
+  #     context: ./services/sounds/sounds_classifier
+  #     dockerfile: Dockerfile.classifier-svc
+  #     # args:
+  #       # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
+  #   container_name: sounds_classifier
+  #   restart: unless-stopped
+  #   # env_file:
+  #     # - ./services/sounds/sounds_classifier/src/classification/.env
+  #   environment:
+  #     # Runtime mode
+  #     - DEVICE=cpu
+  #     - BACKBONE=cnn14
 
-      # Model artifacts (must exist inside the image)
-      - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
-      - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
-      - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
+  #     # Model artifacts (must exist inside the image)
+  #     - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
+  #     - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
+  #     - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
 
-      # DB 
-      - WRITE_DB=false
-      - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - DB_SCHEMA=agcloud_audio
-      - DB_RUN_ID=api-default
+  #     # DB 
+  #     - WRITE_DB=false
+  #     - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
+  #     - DB_SCHEMA=agcloud_audio
+  #     - DB_RUN_ID=api-default
 
-      # Kafka 
-      - KAFKA_BROKERS=kafka:9092
-      - ALERTS_TOPIC=dev-robot-alerts
+  #     # Kafka 
+  #     - KAFKA_BROKERS=kafka:9092
+  #     - ALERTS_TOPIC=dev-robot-alerts
 
-      # MinIO 
-      - MINIO_ENDPOINT=minio-hot:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin123
-      - MINIO_SECURE=false
+  #     # MinIO 
+  #     - MINIO_ENDPOINT=minio-hot:9000
+  #     - MINIO_ACCESS_KEY=minioadmin
+  #     - MINIO_SECRET_KEY=minioadmin123
+  #     - MINIO_SECURE=false
 
-      # Request validation
-      - ALLOWED_BUCKETS=imagery
-      - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
-      - MAX_BYTES=104857600
+  #     # Request validation
+  #     - ALLOWED_BUCKETS=imagery
+  #     - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
+  #     - MAX_BYTES=104857600
 
-      # Tuning params 
-      - UNKNOWN_THRESHOLD=0.4
-      - WINDOW_SEC=2.0
-      - HOP_SEC=0.5
-      - PAD_LAST=true
-      - AGG=mean
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      mc-bootstrap:
-        condition: service_started
-    ports:
-      - "8088:8088"
-    networks:
-      - ag_cloud
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
-      interval: 45s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+  #     # Tuning params 
+  #     - UNKNOWN_THRESHOLD=0.4
+  #     - WINDOW_SEC=2.0
+  #     - HOP_SEC=0.5
+  #     - PAD_LAST=true
+  #     - AGG=mean
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     kafka:
+  #       condition: service_healthy
+  #     mc-bootstrap:
+  #       condition: service_started
+  #   ports:
+  #     - "8088:8088"
+  #   networks:
+  #     - ag_cloud
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
+  #     interval: 45s
+  #     timeout: 5s
+  #     retries: 10
+  #     start_period: 20s
 
 
   # --------------------------

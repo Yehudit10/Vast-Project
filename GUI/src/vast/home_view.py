@@ -13,9 +13,10 @@ from vast.orthophoto_canvas.ui.alert_layer import AlertLayer
 class HomeView(QWidget):
     openSensorsRequested = pyqtSignal()
 
-    def __init__(self, api, parent: QWidget | None = None):
+    def __init__(self, api,alert_service, parent: QWidget | None = None):
         super().__init__(parent)
-
+        self.api=api
+        self.alert_service=alert_service
         root = QVBoxLayout(self)
         header = QLabel("Sensors Dashboard (Grafana)")
         header.setStyleSheet("font-size: 20px; font-weight: 600;")
@@ -56,24 +57,67 @@ class HomeView(QWidget):
         )
 
         self.alert_layer = AlertLayer(self.viewer)
+        alerts = self.fetch_active_alerts()
+        for alert in alerts:
+            self.alert_layer.add_or_update_alert(alert)
 
-        gateway_ws = os.getenv("ALERTS_WS", "ws://alerts-gateway:8000/ws/alerts")
-        print("ALERTS_WS =", os.getenv("ALERTS_WS"))
-        self.alert_client = AlertClient(gateway_ws, self)
-        self.alert_client.snapshotReceived.connect(self._on_alert_snapshot)
-        self.alert_client.alertReceived.connect(self._on_alert_realtime)
+        # Subscribe to centralized AlertService updates
+        self.alert_service.alertsUpdated.connect(self._on_alerts_updated)
+        self.alert_service.alertAdded.connect(self._on_alert_added)
+        self.alert_service.alertRemoved.connect(self._on_alert_removed)
 
-        print(f"[HomeView] Connected to alerts gateway: {gateway_ws}")
+        # Load initial alerts
+        self.alert_service.load_initial()
+
+        # print(f"[HomeView] Connected to alerts gateway: {gateway_ws}")
 
         self.sensor_types_btn = QPushButton("Sensor Types")
         self.sensor_types_btn.clicked.connect(self.openSensorsRequested.emit)
         root.addWidget(self.sensor_types_btn)
 
-    def _on_alert_snapshot(self, items: list):
-        print(f"[HomeView] Received {len(items)} active alerts (snapshot).")
-        self.alert_layer.clear_alerts()
-        for alert in items:
+    def _on_alerts_updated(self, alerts: list):
+        """Called when AlertService emits a full update list."""
+        print(f"[HomeView] Full alert update: {len(alerts)} alerts")
+        self.alert_layer.clear_alerts()  # assuming you have clear() or reset() on AlertLayer
+        for alert in alerts:
             self.alert_layer.add_or_update_alert(alert)
+
+    def _on_alert_added(self, alert: dict):
+        """Called when a new alert arrives."""
+        print(f"[HomeView] New alert added: {alert.get('alert_id')}")
+        self.alert_layer.add_or_update_alert(alert)
+
+    def _on_alert_removed(self, alert_id: str):
+        """Called when an alert is resolved/removed."""
+        print(f"[HomeView] Removing alert: {alert_id}")
+        self.alert_layer.remove_alert(alert_id)
+
+    
+    def fetch_active_alerts(self):
+        try:
+            print("[HomeView] Fetching active alerts from dashboard API...")
+            url = f"{self.api.base}/api/tables/alerts"
+            r = self.api.http.get(url, timeout=10)
+            if r.status_code != 200:
+                print(f"[HomeView] Failed to fetch alerts: {r.status_code}")
+                return []
+
+            data = r.json()
+            # ✅ Unwrap 'rows' if present
+            if isinstance(data, dict) and "rows" in data:
+                alerts = data["rows"]
+            else:
+                alerts = data
+
+            print(f"[HomeView] Loaded {len(alerts)} active alerts from DB.")
+            return alerts
+
+        except Exception as e:
+            print(f"[HomeView] Failed to fetch alerts: {e}")
+            return []
+
+
+
 
     def _on_alert_realtime(self, alert: dict):
         print("[HomeView] Raw alert payload:", alert)
