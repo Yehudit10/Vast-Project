@@ -376,7 +376,7 @@ def run_classification_job(
                     meta = {
                         "bucket": s3_bucket,
                         "key": s3_key,
-                        "processing_ms": result.get("procssing_ms"),
+                        "processing_ms": result.get("processing_ms"),
                     }
                     if meta["processing_ms"] is None:
                         meta.pop("processing_ms")
