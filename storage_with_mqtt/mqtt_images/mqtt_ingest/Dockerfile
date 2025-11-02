@@ -10,9 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN if [ "$USE_NETFREE" = "true" ]; then \
         echo "Configuring NetFree certificates..."; \
         # Check if the certificate file exists
-        if [ -f ./*.crt ]; then \
+        if [ -n "$(ls ./*.crt 2>/dev/null)" ]; then \
             cp ./*.crt /usr/local/share/ca-certificates/; \
-            chmod 644 /usr/local/share/ca-certificates/; \
+            chmod 644 /usr/local/share/ca-certificates/*.crt; \
             update-ca-certificates; \
         else \
             echo "No NetFree certificate found, skipping"; \

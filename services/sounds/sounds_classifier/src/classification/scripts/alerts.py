@@ -52,7 +52,7 @@ def _delivery_report(err, msg):
         )
 
 def _iso_utc(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strtime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def send_alert(
     *,
