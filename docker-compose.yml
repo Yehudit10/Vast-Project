@@ -4,13 +4,13 @@
 # ==========================
 
 version: "3.9"
-  
 # --------------------------
 # Networks
 # --------------------------
 networks:
   ag_cloud:
     driver: bridge
+
 
 # --------------------------
 # Volumes
@@ -186,10 +186,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD-SHELL", "echo 'Checking Kafka...' && \
-        /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || \
-        /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9094 --list >/dev/null 2>&1 || \
-        exit 1"]
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -651,7 +648,155 @@ services:
       - "5000:5000"
     depends_on:
       - postgres
-    networks:
-      - ag_cloud
+
+  
+  # --------------------------
+  # Flink JobManager & TaskManager
+  # --------------------------
+  flink-jobmanager:
+    build:
+      context: ./streaming/flink
+      dockerfile: Dockerfile.flink-py
+    image: agcloud-flink-py:1.18    
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    networks: [ag_cloud]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        taskmanager.numberOfTaskSlots: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        s3.endpoint: http://minio-hot:9000
+        s3.path.style.access: true
+        s3.access.key: minioadmin
+        s3.secret.key: minioadmin123
+        fs.s3a.connection.ssl.enabled: false
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
     restart: unless-stopped
-    
+
+
+  flink-taskmanager:
+    image: agcloud-flink-py:1.18
+    container_name: flink-taskmanager
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+    networks: [ag_cloud]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        taskmanager.numberOfTaskSlots: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        s3.endpoint: http://minio-hot:9000
+        s3.path.style.access: true
+        s3.access.key: minioadmin
+        s3.secret.key: minioadmin123
+        fs.s3a.connection.ssl.enabled: false
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+    volumes:
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    restart: unless-stopped
+
+
+
+  # --------------------------
+  # Inference HTTP Service
+  # --------------------------
+  fruit-inference-http:
+    build:
+      context: ./services/inference_http   
+      dockerfile: Dockerfile
+    environment:
+    - TEAM=fruit
+    - WEIGHTS_PATH=/app/weights/fruit_cls_best.ts
+    - MINIO_ENDPOINT=minio-hot:9000
+    - MINIO_ACCESS_KEY=minioadmin
+    - MINIO_SECRET_KEY=minioadmin123
+    - MINIO_SECURE=0
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+    container_name: fruit-inference-http
+    networks: [ag_cloud]
+    ports:
+      - "8011:8000"
+    restart: unless-stopped
+
+  
+  # --------------------------
+  # Flink Jobs
+  # --------------------------
+  flink-dispatcher-fruit:
+    image: agcloud-flink-py:1.18
+    container_name: flink-dispatcher-fruit
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      fruit-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=imagery.new.fruit
+      - TEAM=fruit
+      - HTTP_URL=http://fruit-inference-http:8000/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-fruit
+      - PARALLELISM=2
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    command: [
+      "bash","-lc",
+      "set -e;
+      echo 'Waiting for JobManager to accept commands...';
+      until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do
+        echo 'still waiting...'; sleep 3;
+      done;
+      echo 'JobManager is ready!';
+      /opt/flink/bin/flink run \
+        -Dpython.client.executable=/usr/bin/python3 \
+        -Dpython.executable=/usr/bin/python3 \
+        -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar \
+        --jobmanager flink-jobmanager:8081 \
+        --detached \
+        --python /opt/flink/jobs/http_dispatcher.py \
+        -- \
+          --bootstrap kafka:9092 \
+          --input-topic imagery.new.fruit \
+          --team fruit \
+          --http-url http://fruit-inference-http:8000/infer_json \
+          --group-id http-dispatcher-fruit \
+          --dlq-topic dlq.inference.http;
+      tail -f /dev/null"
+    ]
