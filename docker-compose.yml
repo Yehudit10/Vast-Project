@@ -77,24 +77,24 @@ services:
     networks:
       - ag_cloud
 
-  plant_stress:
-    build: ./services/plant_stress
-    environment:
-      - INPUT_DIR=/data/inbox
-      - MODEL_DIR=/models
-      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
-      - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
-    volumes:
-      - "./services/plant_stress/models:/models:ro"
-      - "./services/plant_stress/samples:/data/inbox:ro"
+  # plant_stress:
+  #   build: ./services/plant_stress
+  #   environment:
+  #     - INPUT_DIR=/data/inbox
+  #     - MODEL_DIR=/models
+  #     - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+  #     - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
+  #     - CONFIDENCE_THRESHOLD=0.6
+  #     # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
+  #   volumes:
+  #     - "./services/plant_stress/models:/models:ro"
+  #     - "./services/plant_stress/samples:/data/inbox:ro"
 
-    depends_on:
-      - postgres
-    command: ["python", "-u", "/app/app.py"]
-    networks:
-      - ag_cloud
+  #   depends_on:
+  #     - postgres
+  #   command: ["python", "-u", "/app/app.py"]
+  #   networks:
+  #     - ag_cloud
 
 
  
@@ -584,7 +584,7 @@ services:
 
   notification_api:
     build:
-      context: ./services/sounds/API-development/src
+      context: ./services/API-notifications/src
       dockerfile: Dockerfile
     container_name: notification_api
     environment:
@@ -597,3 +597,25 @@ services:
       - ag_cloud
     restart: unless-stopped
     
+  audio_compression:
+      build:
+        context: ./services/compression
+        dockerfile: Dockerfile
+      container_name: audio_compression
+      environment:
+        - RAW_MAX_AGE_DAYS=30             
+        - COMPRESSION_CODEC=opus           
+        - COMPRESSED_MAX_AGE_DAYS=90       
+        - CHECK_INTERVAL_SECONDS=3600      
+        - MINIO_ENDPOINT=minio-hot:9000
+        - ACCESS_KEY=minioadmin
+        - SECRET_KEY=minioadmin123
+        - BUCKET_NAME=imagery
+      depends_on:
+        minio-hot:
+          condition: service_healthy
+        mc-bootstrap:
+          condition: service_started
+      networks:
+        - ag_cloud
+      restart: unless-stopped
