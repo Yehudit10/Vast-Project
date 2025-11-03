@@ -25,7 +25,7 @@ mic_uptime_seconds $uptime
 app_anomaly_total $anomalies
 "@
 
-    Invoke-RestMethod -Uri "http://localhost:9091/metrics/job/$job/instance/$instance" `
+    Invoke-RestMethod -Uri "http://pushgateway:9091/metrics/job/$job/instance/$instance" `
         -Method Put -Body ($body + "`n") -ContentType "text/plain"
 
     Write-Host "Pushed: V=$volume, R=$rate, U=$uptime, A=$anomalies"

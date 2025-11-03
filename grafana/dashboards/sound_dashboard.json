@@ -92,7 +92,7 @@
             "title": "⚠️ Anomaly Counters",
             "targets": [
                 {
-                    "expr": "app_anomaly_total",
+                    "expr": "anomaly_count",
                     "legendFormat": "Anomalies"
                 }
             ],
