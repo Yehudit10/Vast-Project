@@ -11,11 +11,6 @@ from app.tables.task_thresholds.router import router as task_thresholds_router
 
 
 
-
-# api.include_router(files_router)
-# api.include_router(device_router)
-# api.include_router(incidents_router)
-
 def build_router(contract_store) -> APIRouter:
     api = APIRouter(
         prefix="/api",
@@ -29,3 +24,4 @@ def build_router(contract_store) -> APIRouter:
     api.include_router(build_generic_router(contract_store))
 
     return api
+
