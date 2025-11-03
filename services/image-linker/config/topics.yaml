@@ -1,8 +1,8 @@
 teams:
   air:
     metadata_topic: dev-aerial-images-keys
-    minio_topic: image.new.aerial
-    output_topic: image.new.aerial.connections
+    minio_topic: image.new.aerial # imagery_image_camera-air
+    output_topic: image_new_aerial_connections # # imagery_image_camera-air_connections
 
 
   # fruits:
