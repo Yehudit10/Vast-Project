@@ -50,7 +50,7 @@ TOPICS=(
   summaries.5m
   dev-aerial-images-keys
   image.new.aerial
-  image.new.aerial.connections
+  image_new_aerial_connections
   alerts
 
 )
