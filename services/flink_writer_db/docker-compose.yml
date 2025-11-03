@@ -26,4 +26,3 @@ services:
 networks:
   ag_cloud:
     external: true
-
