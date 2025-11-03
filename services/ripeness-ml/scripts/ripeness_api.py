@@ -2,9 +2,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-import os
 import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), ""))  # מוסיף את התיקייה הראשית ל-PATH
+sys.path.append(os.path.join(os.path.dirname(__file__), "")) 
 
 from weekly_ripeness_job import (
     get_conn,
@@ -13,14 +12,10 @@ from weekly_ripeness_job import (
     predict_ripeness,
 )
 
-# <<< ייבוא כל הפונקציות שכבר כתבת ב-weekly_ripeness_job.py >>>
-# load_image_for_model, predict_ripeness, fetch_from_minio, get_conn, etc.
-# ואל תשכחי את model.eval() שכבר טעון פעם אחת בגלובל.
-
 app = FastAPI(title="Ripeness Service")
 
 class BatchRequest(BaseModel):
-    since_ts: datetime | None = None   # אם None => 7 ימים אחורה
+    since_ts: datetime | None = None   
     limit: int = 500
 
 def run_batch(since_ts: datetime | None, limit: int) -> int:
@@ -64,7 +59,6 @@ def predict_batch(req: BatchRequest):
     n = run_batch(req.since_ts, req.limit)
     return {"processed": n}
 
-# טריגר נוח לשבוע אחרון:
 @app.post("/predict-last-week")
 def predict_last_week():
     n = run_batch(None, int(os.getenv("BATCH_LIMIT","500")))
@@ -74,7 +68,7 @@ def insert_weekly_rollup():
     ddl = """
     CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (
       id BIGSERIAL PRIMARY KEY,
-      ts TIMESTAMPTZ NOT NULL DEFAULT now(),  -- רגע החישוב
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),  
       window_start TIMESTAMPTZ NOT NULL,
       window_end   TIMESTAMPTZ NOT NULL,
       fruit_type TEXT NOT NULL,

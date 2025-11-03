@@ -35,7 +35,6 @@ def list_minio_objects():
 
 def imread_from_any(url: str):
     u = urlparse(url)
-    # נזהה שזה MinIO: אותו host כמו MINIO_URL, או הידוע שלך (minio-hot-1:9000)
     minio_base = os.getenv("MINIO_URL", "http://minio-hot-1:9000")
     mu = urlparse(minio_base)
 
@@ -43,7 +42,6 @@ def imread_from_any(url: str):
                (u.hostname == "minio-hot-1" and (u.port or 80) == 9000)
 
     if is_minio:
-        # קריאה עם AK/SK
         cli = Minio(
             f"{mu.hostname}:{mu.port or (443 if mu.scheme=='https' else 80)}",
             access_key=os.getenv("MINIO_ACCESS_KEY"),
@@ -63,7 +61,6 @@ def imread_from_any(url: str):
         arr = np.frombuffer(data, dtype=np.uint8)
         return cv.imdecode(arr, cv.IMREAD_COLOR)
 
-    # אחרת — HTTP רגיל
     safe = quote(url, safe="/:?=&%()[]")
     r = requests.get(safe, timeout=30)
     r.raise_for_status()
@@ -74,8 +71,6 @@ def imread_from_any(url: str):
 def process_all():
 
     DSN = dsn(PG)
-    # apply_sql_autocommit(DSN, SCHEMA_SQL)
-    # apply_sql_autocommit(DSN, VIEW_SQL)
 
     lookback_days = int(os.getenv("LOOKBACK_DAYS", "7"))
     rows = fetch_inference_logs(PG, lookback_days=lookback_days,

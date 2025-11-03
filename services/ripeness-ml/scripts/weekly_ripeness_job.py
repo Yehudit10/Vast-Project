@@ -16,7 +16,7 @@ from tqdm.auto import tqdm
 from pathlib import Path
 try:
     from dotenv import load_dotenv
-    env_path = Path(__file__).resolve().parents[1] / ".env"  # קובץ .env בשורש הפרויקט
+    env_path = Path(__file__).resolve().parents[1] / ".env"  
     if env_path.exists():
         load_dotenv(env_path.as_posix())
 except Exception:
@@ -39,8 +39,8 @@ MODEL_NAME = os.getenv("MODEL_NAME", "best_conditional")
 BATCH_LIMIT = int(os.getenv("BATCH_LIMIT", "200"))
 
 # ----- labels & fruits mapping -----
-LABELS = ["ripe", "unripe", "rotten"]  # סדר המחלקות במודל
-FRUITS = ["Apple", "Orange", "Banana", "Strawberry"]   # לעדכן למה שאומנת עליו
+LABELS = ["unripe", "ripe", "overripe"]  
+FRUITS = ["Apple", "Banana", "Orange"]   
 FRUIT2IDX = {name.lower(): i for i, name in enumerate(FRUITS)}
 
 # ----- build model & load weights -----
@@ -61,13 +61,11 @@ model.eval()
 
 def load_image_for_model(img_bytes):
     im = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    # TODO: עדכני לפי ה־transforms של האימון
     from torchvision import transforms
     preprocess = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        # נירמול אם שימשת בו באימון:
-        # transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+        transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
     ])
     return preprocess(im).unsqueeze(0).to(device)
 
@@ -75,7 +73,6 @@ def load_image_for_model(img_bytes):
 def predict_ripeness(img_tensor, fruit_type: str):
     idx = FRUIT2IDX.get(fruit_type.lower())
     if idx is None:
-        # במקום להפיל – לדלג עם הודעה:
         raise KeyError(f"skip: fruit '{fruit_type}' not in trained set {FRUITS}")
     fruit_idx_tensor = torch.tensor([idx], dtype=torch.long, device=device)
     logits = model(img_tensor, fruit_idx_tensor)
@@ -87,12 +84,7 @@ def predict_ripeness(img_tensor, fruit_type: str):
 minio_client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=MINIO_SECURE)
 
 def fetch_from_minio(image_url: str) -> bytes:
-    """
-    image_url דמוי: http://127.0.0.1:9002/classification/samples/2025/10/28/apple1.png
-    נחלץ bucket=classification ו־object=samples/2025/10/28/apple1.png
-    """
     p = urlparse(image_url)
-    # הנתיב אחרי ה־host כולל את ה־bucket בתחילתו
     path = p.path.lstrip("/")
     bucket, *rest = path.split("/", 1)
     if not rest:
