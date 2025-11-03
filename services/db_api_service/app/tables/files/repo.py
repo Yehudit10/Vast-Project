@@ -1,4 +1,3 @@
-
 # app/tables/files/repo.py
 import os
 import json
@@ -23,12 +22,11 @@ def _spool(name: str, payload: Dict[str, Any]):
 
 
 def _ensure_json_text(obj: Any) -> Optional[str]:
-    
     if obj is None:
         return None
     if isinstance(obj, (dict, list)):
         return json.dumps(obj, ensure_ascii=False)
-    return obj  
+    return obj
 
 
 def upsert_file(payload: Dict[str, Any]) -> None:
@@ -36,11 +34,10 @@ def upsert_file(payload: Dict[str, Any]) -> None:
         _spool("files_upsert", payload)
         return
 
-   
     payload = dict(payload)
     payload["metadata"] = _ensure_json_text(payload.get("metadata"))
 
-   
+    # optional footprint (WKT) -> geometry
     fp = payload.get("footprint")
     payload["footprint"] = (None if not fp else fp)
 
@@ -106,7 +103,6 @@ def update_file(bucket: str, object_key: str, updates: Dict[str, Any]) -> bool:
         params["tile_id"] = updates["tile_id"]
 
     if "footprint" in updates:
-       
         fp = updates["footprint"]
         params["footprint"] = (None if not fp else fp)
         sets.append(
@@ -136,12 +132,13 @@ def update_file(bucket: str, object_key: str, updates: Dict[str, Any]) -> bool:
 
 def get_file(bucket: str, object_key: str) -> Optional[Dict[str, Any]]:
     if DRY_RUN:
-
         return None
 
     q = text("""
         SELECT
-            file_id, bucket, object_key, content_type, size_bytes, etag,
+            file_id, bucket, object_key,
+            object_key AS key,                       -- convenient alias
+            content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
             metadata, created_at
@@ -151,6 +148,28 @@ def get_file(bucket: str, object_key: str) -> Optional[Dict[str, Any]]:
     """)
     with session_scope() as s:
         row = s.execute(q, {"bucket": bucket, "object_key": object_key}).mappings().first()
+        return dict(row) if row else None
+
+
+def get_file_by_id(file_id: int) -> Optional[Dict[str, Any]]:
+    """New: fetch by numeric file_id."""
+    if DRY_RUN:
+        return None
+
+    q = text("""
+        SELECT
+            file_id, bucket, object_key,
+            object_key AS key,                       -- convenient alias
+            content_type, size_bytes, etag,
+            mission_id, device_id, tile_id,
+            ST_AsText(footprint) AS footprint_wkt,
+            metadata, created_at
+        FROM files
+        WHERE file_id = :file_id
+        LIMIT 1;
+    """)
+    with session_scope() as s:
+        row = s.execute(q, {"file_id": file_id}).mappings().first()
         return dict(row) if row else None
 
 
@@ -173,7 +192,9 @@ def list_files(bucket: Optional[str], device_id: Optional[str], limit: int) -> L
 
     q = text(f"""
         SELECT
-            file_id, bucket, object_key, content_type, size_bytes, etag,
+            file_id, bucket, object_key,
+            object_key AS key,                       -- convenient alias
+            content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
             metadata, created_at
@@ -200,4 +221,3 @@ def delete_file(bucket: str, object_key: str) -> bool:
     with session_scope() as s:
         row = s.execute(q, {"bucket": bucket, "object_key": object_key}).first()
         return bool(row)
-
