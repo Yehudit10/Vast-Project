@@ -344,6 +344,12 @@ CREATE TABLE IF NOT EXISTS task_thresholds (
     CONSTRAINT ux_task_thresholds_task_label UNIQUE (task, label)
 );
 
+CREATE TABLE public.image_new_aerial_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
 
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
