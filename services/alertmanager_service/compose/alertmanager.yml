@@ -15,11 +15,11 @@ route:
       matchers:
         - source="agcloud-alerts"
 
-    # 2️⃣ Slack route
-    - receiver: "slack"
-      continue: false
-      matchers:
-        - source="agcloud-alerts"
+    # # 2️⃣ Slack route
+    # - receiver: "slack"
+    #   continue: false
+    #   matchers:
+    #     - source="agcloud-alerts"
 
 receivers:
   - name: "null"
