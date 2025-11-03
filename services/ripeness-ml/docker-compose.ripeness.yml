@@ -6,14 +6,12 @@ services:
       dockerfile: Dockerfile
     container_name: ripeness-api
     environment:
-      # Postgres (שם השירות ברשת שלך הוא postgres)
       PGHOST: postgres
       PGPORT: "5432"
       PGDATABASE: missions_db
       PGUSER: missions_user
       PGPASSWORD: pg123
 
-      # MinIO (צריכה לדבר עם הקונטיינר minio-hot בפורט 9000, לא דרך 9001)
       MINIO_ENDPOINT: minio-hot:9000
       MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: minioadmin

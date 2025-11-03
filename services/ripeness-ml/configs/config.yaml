@@ -15,7 +15,7 @@ test_dir:  "data/test"
 checkpoint_dir: "checkpoints/mobilenet_v3_large"
 best_metric: "f1_macro"
 
-fruits: ["apple","banana","orange","pineapple"]
+fruits: ["apple","banana","orange"]
 ripeness: ["unripe","ripe","overripe"]
 
 csv:
