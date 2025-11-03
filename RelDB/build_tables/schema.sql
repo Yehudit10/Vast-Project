@@ -269,22 +269,6 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
---- Alerts table
-
--- CREATE TABLE IF NOT EXISTS public.alerts (
---   id bigserial PRIMARY KEY,
---   entity_id text NOT NULL,
---   rule text NOT NULL,
---   window_start timestamptz NOT NULL,
---   window_end   timestamptz NOT NULL,
---   score double precision NOT NULL,
---   first_seen timestamptz NOT NULL,
---   last_seen  timestamptz NOT NULL,
---   status text NOT NULL CHECK (status IN ('OPEN','ACK','RESOLVED')),
---   meta_json jsonb
--- );
-
-
 --- === Soil moisture irrigation tables ===
 
 CREATE TABLE IF NOT EXISTS soil_moisture_events (
