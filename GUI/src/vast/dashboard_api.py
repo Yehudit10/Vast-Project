@@ -117,7 +117,7 @@ class DashboardApi:
         else:
             items = mapping
 
-        url = f"{self.base}/api/thresholds/batch"
+        url = f"{self.base}/api/task_thresholds/batch"
         try:
             
             r = self.http.post(url, json=items, timeout=20)
