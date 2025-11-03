@@ -1,0 +1,11 @@
+# Core dependencies
+minio>=7.1.0
+
+# Testing dependencies
+pytest>=7.2.0
+pytest-mock>=3.8.0
+
+# Note: ffmpeg must be installed separately as a system dependency
+# Ubuntu/Debian: apt-get install ffmpeg
+# macOS: brew install ffmpeg
+# Windows: Download from https://ffmpeg.org/download.html
