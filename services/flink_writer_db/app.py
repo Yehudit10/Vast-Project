@@ -15,7 +15,7 @@ DB_API_SERVICE_NAME = os.getenv("DB_API_SERVICE_NAME", "flink-writer-db")
 DUMMY_DB = int(os.getenv("DUMMY_DB", "0")) == 1
 
 KAFKA_BROKERS = os.getenv("KAFKA_BROKERS", "kafka:9092")
-TOPICS = [t.strip() for t in os.getenv("TOPICS", "sensor_anomalies").split(",") if t.strip()]
+TOPICS = [t.strip() for t in os.getenv("TOPICS", "sensor_anomalies,alerts").split(",") if t.strip()]
 
 
 # ---------- Token Bootstrap ----------
