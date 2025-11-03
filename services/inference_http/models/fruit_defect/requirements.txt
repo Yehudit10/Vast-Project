@@ -1,0 +1,16 @@
+torchaudio
+pillow
+numpy
+pyyaml
+tqdm
+scikit-learn
+tensorboard
+minio
+fastapi
+uvicorn[standard]
+minio
+pydantic
+pillow
+numpy==1.26.4
+
+
