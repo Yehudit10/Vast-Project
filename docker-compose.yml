@@ -494,6 +494,43 @@ services:
       - ag_cloud
     restart: unless-stopped
 
+  mqtt_ingest_sound:
+    build:
+      context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+    container_name: mqtt_ingest_sound
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      S3_BUCKET: telemetry           
+      MQTT_BROKER: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/sound/#      
+      DEFAULT_PREFIX: MIC-01         
+      CAMERA_PREFIX: camera          
+      MICROPHONE_PREFIX: microphone
+      DUMMY_DB: 0
+      DB_API_BASE: http://db_api_service:8001
+      DB_API_TOKEN: auto
+      OUTBOX_DIR: /app/outbox
+      DB_API_AUTH_MODE: service
+      DB_API_SERVICE_NAME: mqtt_ingest_sound
+      INGEST_WORKERS: 8
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
   mqtt_publisher:
     build:
       context: ./storage_with_mqtt/mqtt_images/mqtt_publisher

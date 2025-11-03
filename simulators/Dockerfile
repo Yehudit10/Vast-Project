@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 
 # Copy the NetFree certificate into the container
-COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+COPY certs/*.crt /usr/local/share/ca-certificates/
 
 # Install system dependencies, add the certificate, and clean cache
 RUN apt-get update && \
