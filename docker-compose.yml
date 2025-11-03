@@ -4,13 +4,13 @@
 # ==========================
 
 version: "3.9"
-
 # --------------------------
 # Networks
 # --------------------------
 networks:
   ag_cloud:
     driver: bridge
+
 
 # --------------------------
 # Volumes
@@ -22,6 +22,7 @@ volumes:
   gui_data:
   minio-hot-data: {}
   minio-cold-data: {}
+  contracts: {}
 
 # ==========================
 # Services
@@ -38,7 +39,7 @@ services:
       POSTGRES_USER: missions_user
       POSTGRES_PASSWORD: pg123
       POSTGRES_DB: missions_db
-      PGHOST: 127.0.0.1
+      PGHOST: 0.0.0.0
       PGPORT: 5432
       PGDATA: /var/lib/postgresql/data
       WAL_DIR: /var/lib/postgresql/wal_archive
@@ -76,15 +77,50 @@ services:
     networks:
       - ag_cloud
 
+  # -------------------------
+  # Sound Metrics Service
+  # -------------------------
+
+  sound_metrics:
+    build:
+      context: ./services/sound_metrics
+      dockerfile: Dockerfile
+    environment:
+      - ADDR=0.0.0.0
+      - PORT=8005
+      - USE_UTC=false
+      - WINDOW_MIN=1
+      - STABLE_SEC=1
+      - PYTHONUNBUFFERED=1
+
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_BUCKET=telemetry         
+      - MINIO_PREFIX=sounds/           
+
+    command: ["python","-u","src/metrics.py"]  
+    ports:
+      - "8005:8005"
+    depends_on:
+      - minio-hot
+    networks:
+      - ag_cloud 
+    restart: unless-stopped
+
+  # -------------------------
+  # Plant Stress Detector
+  # -------------------------
+
   plant_stress:
     build: ./services/plant_stress
     environment:
       - INPUT_DIR=/data/inbox
       - MODEL_DIR=/models
       - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0            # אפשר לשנות ל-7 לעיבוד "שבוע אחרון" בלבד
+      - PERIOD_DAYS=0           
       - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0  # אופציונלי אם תרצי עקביות מספרית
+      # - TF_ENABLE_ONEDNN_OPTS=0   # Disable oneDNN optimizations (for CPU compatibility)
     volumes:
       - "./services/plant_stress/models:/models:ro"
       - "./services/plant_stress/samples:/data/inbox:ro"
@@ -94,6 +130,29 @@ services:
     command: ["python", "-u", "/app/app.py"]
     networks:
       - ag_cloud
+    
+
+  flink_writer_db:
+      build:
+        context: ./services/flink_writer_db
+        dockerfile: Dockerfile.flink
+      container_name: flink_writer_db
+      environment:
+        - KAFKA_BROKERS=kafka:9092
+        - TOPICS=sensor_zone_stats,sensor_anomalies
+        - DB_API_BASE=http://db_api_service:8001
+        - DB_API_AUTH_MODE=service
+        - DB_API_SERVICE_NAME=flink-writer-db
+        - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+        - FLINK_PARALLELISM=1
+      depends_on:
+        kafka:
+          condition: service_healthy
+        db_api_service:
+          condition: service_started
+      networks:
+        - ag_cloud
+      restart: unless-stopped
 
 
  
@@ -127,10 +186,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD-SHELL", "echo 'Checking Kafka...' && \
-        /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || \
-        /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9094 --list >/dev/null 2>&1 || \
-        exit 1"]
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -460,12 +516,105 @@ services:
     networks:
       - ag_cloud
 
+  # ------------------------
+  # Classifier - Sounds
+  # ------------------------
+  sounds_classifier:
+    build:
+      context: ./services/sounds/sounds_classifier
+      dockerfile: Dockerfile.classifier-svc
+      # args:
+        # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
+    container_name: sounds_classifier
+    restart: unless-stopped
+    # env_file:
+      # - ./services/sounds/sounds_classifier/src/classification/.env
+    environment:
+      # Runtime mode
+      - DEVICE=cpu
+      - BACKBONE=cnn14
+
+      # Model artifacts (must exist inside the image)
+      - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
+      - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
+      - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
+
+      # DB 
+      - WRITE_DB=false
+      - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - DB_SCHEMA=agcloud_audio
+      - DB_RUN_ID=api-default
+
+      # Kafka 
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTS_TOPIC=dev-robot-alerts
+
+      # MinIO 
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=false
+
+      # Request validation
+      - ALLOWED_BUCKETS=imagery
+      - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
+      - MAX_BYTES=104857600
+
+      # Tuning params 
+      - UNKNOWN_THRESHOLD=0.4
+      - WINDOW_SEC=2.0
+      - HOP_SEC=0.5
+      - PAD_LAST=true
+      - AGG=mean
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+    ports:
+      - "8088:8088"
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
+      interval: 45s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   # --------------------------
   # DB API Service
   # --------------------------
+
+
+  
+  contracts-gen:
+    build:
+      context: ./services/db_api_service
+      dockerfile: app/contracts/Dockerfile
+    env_file:
+      - ./services/db_api_service/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - contracts:/app/app/contracts
+    networks:
+      - ag_cloud
+    restart: "no"
+
+
   db_api_service:
-    build: ./services/db_api_service
+    build:
+      context: ./services/db_api_service
+      dockerfile: Dockerfile
     container_name: db_api_service
+    env_file:
+      - ./services/db_api_service/.env
     environment:
       DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
       ENV: dev
@@ -476,11 +625,17 @@ services:
       DEV_SA_NAME: my-ingest-service
     ports:
       - "8001:8001"
+    volumes:
+      - contracts:/app/app/contracts
+    depends_on:
+      contracts-gen:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     networks:
       - ag_cloud
     restart: unless-stopped
-    depends_on:
-      - postgres
+
 
   notification_api:
     build:
@@ -493,6 +648,155 @@ services:
       - "5000:5000"
     depends_on:
       - postgres
-    networks:
-      - ag_cloud
+
+  
+  # --------------------------
+  # Flink JobManager & TaskManager
+  # --------------------------
+  flink-jobmanager:
+    build:
+      context: ./streaming/flink
+      dockerfile: Dockerfile.flink-py
+    image: agcloud-flink-py:1.18    
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    networks: [ag_cloud]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        taskmanager.numberOfTaskSlots: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        s3.endpoint: http://minio-hot:9000
+        s3.path.style.access: true
+        s3.access.key: minioadmin
+        s3.secret.key: minioadmin123
+        fs.s3a.connection.ssl.enabled: false
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
     restart: unless-stopped
+
+
+  flink-taskmanager:
+    image: agcloud-flink-py:1.18
+    container_name: flink-taskmanager
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+    networks: [ag_cloud]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        taskmanager.numberOfTaskSlots: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        s3.endpoint: http://minio-hot:9000
+        s3.path.style.access: true
+        s3.access.key: minioadmin
+        s3.secret.key: minioadmin123
+        fs.s3a.connection.ssl.enabled: false
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+    volumes:
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    restart: unless-stopped
+
+
+
+  # --------------------------
+  # Inference HTTP Service
+  # --------------------------
+  fruit-inference-http:
+    build:
+      context: ./services/inference_http   
+      dockerfile: Dockerfile
+    environment:
+    - TEAM=fruit
+    - WEIGHTS_PATH=/app/weights/fruit_cls_best.ts
+    - MINIO_ENDPOINT=minio-hot:9000
+    - MINIO_ACCESS_KEY=minioadmin
+    - MINIO_SECRET_KEY=minioadmin123
+    - MINIO_SECURE=0
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+    container_name: fruit-inference-http
+    networks: [ag_cloud]
+    ports:
+      - "8011:8000"
+    restart: unless-stopped
+
+  
+  # --------------------------
+  # Flink Jobs
+  # --------------------------
+  flink-dispatcher-fruit:
+    image: agcloud-flink-py:1.18
+    container_name: flink-dispatcher-fruit
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      fruit-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=imagery.new.fruit
+      - TEAM=fruit
+      - HTTP_URL=http://fruit-inference-http:8000/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-fruit
+      - PARALLELISM=2
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    command: [
+      "bash","-lc",
+      "set -e;
+      echo 'Waiting for JobManager to accept commands...';
+      until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do
+        echo 'still waiting...'; sleep 3;
+      done;
+      echo 'JobManager is ready!';
+      /opt/flink/bin/flink run \
+        -Dpython.client.executable=/usr/bin/python3 \
+        -Dpython.executable=/usr/bin/python3 \
+        -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar \
+        --jobmanager flink-jobmanager:8081 \
+        --detached \
+        --python /opt/flink/jobs/http_dispatcher.py \
+        -- \
+          --bootstrap kafka:9092 \
+          --input-topic imagery.new.fruit \
+          --team fruit \
+          --http-url http://fruit-inference-http:8000/infer_json \
+          --group-id http-dispatcher-fruit \
+          --dlq-topic dlq.inference.http;
+      tail -f /dev/null"
+    ]
