@@ -1,0 +1,107 @@
+{
+    "id": null,
+    "uid": "sound-dashboard",
+    "title": "Sound 1 – Grafana Dashboards",
+    "tags": [
+        "sound",
+        "metrics",
+        "demo"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5s",
+    "panels": [
+        {
+            "type": "timeseries",
+            "title": "🎚 Volume Trends (dB)",
+            "targets": [
+                {
+                    "expr": "sound_volume_db",
+                    "legendFormat": "Mic Volume"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 12,
+                "h": 7
+            }
+        },
+        {
+            "type": "gauge",
+            "title": "🎯 Classifier Accuracy Rate",
+            "targets": [
+                {
+                    "expr": "classifier_rate"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "min": 0,
+                    "max": 1,
+                    "unit": "percentunit",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.7
+                            },
+                            {
+                                "color": "green",
+                                "value": 0.9
+                            }
+                        ]
+                    }
+                }
+            },
+            "gridPos": {
+                "x": 12,
+                "y": 0,
+                "w": 12,
+                "h": 7
+            }
+        },
+        {
+            "type": "stat",
+            "title": "⏱ Microphone Uptime (seconds)",
+            "targets": [
+                {
+                    "expr": "mic_uptime_seconds"
+                }
+            ],
+            "gridPos": {
+                "x": 0,
+                "y": 7,
+                "w": 12,
+                "h": 6
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                }
+            }
+        },
+        {
+            "type": "timeseries",
+            "title": "⚠️ Anomaly Counters",
+            "targets": [
+                {
+                    "expr": "anomaly_count",
+                    "legendFormat": "Anomalies"
+                }
+            ],
+            "gridPos": {
+                "x": 12,
+                "y": 7,
+                "w": 12,
+                "h": 6
+            }
+        }
+    ]
+}

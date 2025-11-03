@@ -139,7 +139,7 @@ services:
       container_name: flink_writer_db
       environment:
         - KAFKA_BROKERS=kafka:9092
-        - TOPICS=sensor_zone_stats,sensor_anomalies
+        - TOPICS=sensor_zone_stats,sensor_anomalies,alerts
         - DB_API_BASE=http://db_api_service:8001
         - DB_API_AUTH_MODE=service
         - DB_API_SERVICE_NAME=flink-writer-db
@@ -367,8 +367,10 @@ services:
     depends_on:
       - db_api_service
       - notification_api
+      - alerts-gateway
     volumes:
         - ./GUI/src/vast:/app/src/vast
+        - ./templates:/app/templates:ro 
     networks:
       - ag_cloud
     restart: unless-stopped
@@ -650,6 +652,7 @@ services:
       - postgres
 
   
+
   # --------------------------
   # Flink JobManager & TaskManager
   # --------------------------
@@ -800,3 +803,72 @@ services:
           --dlq-topic dlq.inference.http;
       tail -f /dev/null"
     ]
+
+
+  flink-alerts-job:
+    build:
+      context: ./services/alerts_forwarder
+      dockerfile: Dockerfile.flink
+    container_name: alerts-forwarder
+    depends_on:
+      kafka:
+          condition: service_healthy
+      alertmanager_service:
+          condition: service_started
+    environment:
+      - PYTHONPATH=/opt/app
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTMANAGER_SERVICE_URL=http://alertmanager_service:8090/alerts
+    command: ["python", "/opt/app/alerts_forwarder.py"]
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+  
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--log.level=debug"
+    volumes:
+      - ./services/alertmanager_service/compose/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    networks:
+      - ag_cloud
+    restart: always
+  
+  alertmanager_service:
+    build:
+      context: ./services/alertmanager_service/src
+      dockerfile: Dockerfile
+    container_name: alertmanager_service
+    ports:
+      - "8090:8090"
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8090"]
+    volumes:
+      - ./templates:/app/templates:ro
+    environment:
+      - CFG_PATH=/app/templates/templates.yml
+      - ALERTMANAGER_URL=http://alertmanager:9093
+      - GATEWAY_URL=http://alerts-gateway:8000/internal/alert
+    depends_on:
+      - alertmanager
+      - alerts-gateway
+    networks:
+      - ag_cloud
+
+  alerts-gateway:
+    build:
+      context: ./services/alertmanager_service/src
+      dockerfile: Dockerfile
+    container_name: alerts_gateway
+    command: ["uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8010:8000"      # host:container
+    networks:
+      - ag_cloud
+
+  

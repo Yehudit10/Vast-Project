@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--log.level=debug"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    restart: always
+  
+  alertmanager_service:
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+    container_name: alertmanager_service
+    ports:
+      - "8090:8090"
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8090"]
+    environment:
+      - CFG_PATH=/app/templates.yml
+      - ALERTMANAGER_URL=http://alertmanager:9093
+      - GATEWAY_URL=http://alerts-gateway:8000/internal/alert
+    depends_on:
+      - alertmanager
+      - alerts-gateway
+
+  alerts-gateway:
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+    container_name: alerts_gateway
+    command: ["uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8010:8000"      # host:container
+    
+networks:
+  default:
+    external: true
+    name: agcloud_ag_cloud
+

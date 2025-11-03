@@ -1,0 +1,30 @@
+
+global:
+  resolve_timeout: 24h
+
+route:
+  receiver: "null"
+  group_by: ["alertname", "device", "alert_id"]
+  group_wait: 0s
+  group_interval: 1s
+  repeat_interval: 2h
+  routes:
+    # 1️⃣ Gateway route
+    - receiver: "gateway"
+      continue: true
+      matchers:
+        - source="agcloud-alerts"
+
+    # # 2️⃣ Slack route
+    # - receiver: "slack"
+    #   continue: false
+    #   matchers:
+    #     - source="agcloud-alerts"
+
+receivers:
+  - name: "null"
+  - name: "gateway"
+    webhook_configs:
+      - url: "http://alerts-gateway:8000/internal/alert"
+        send_resolved: true
+  
