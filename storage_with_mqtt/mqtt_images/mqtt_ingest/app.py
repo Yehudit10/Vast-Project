@@ -119,92 +119,90 @@ def parse_topic(topic: str) -> dict:
     parts = [p for p in topic.split("/") if p]
     now = now_ms()
     result = {
-        "camera": DEFAULT_PREFIX,
+        "camera": DEFAULT_PREFIX,  
         "publish_ts_ms": now,
         "content_type": "application/octet-stream",
         "filename": f"{now}.bin",
         "media_type": "image",
     }
 
-    try:
-        i = parts.index("imagery")
-    except ValueError:
-        i = -1
+    # --- detect namespace and offsets ---
+    ns = None
+    idx = -1
+    for cand in ("imagery", "sound"):
+        if cand in parts:
+            ns, idx = cand, parts.index(cand)
+            break
 
-    if i != -1:
-        # camera
-        if len(parts) > i + 1 and parts[i + 1]:
-            result["camera"] = parts[i + 1]
-
-        # publish_ts_ms
-        if len(parts) > i + 2 and parts[i + 2]:
+    if ns == "imagery":
+        # format: MQTT/imagery/<device>/<ts>/<ctype>/<filename>
+        if len(parts) > idx + 1 and parts[idx + 1]:
+            result["camera"] = parts[idx + 1]
+        if len(parts) > idx + 2 and parts[idx + 2]:
             try:
-                ts = int(parts[i + 2])
+                ts = int(parts[idx + 2])
                 if ts > 0:
                     result["publish_ts_ms"] = ts
             except ValueError:
-                pass 
+                pass
+        if len(parts) > idx + 3 and parts[idx + 3]:
+            result["content_type"] = parts[idx + 3].replace("_", "/")
+        if len(parts) > idx + 4 and parts[idx + 4]:
+            result["filename"] = parts[idx + 4]
 
-        if len(parts) > i + 3 and parts[i + 3]:
-            result["content_type"] = parts[i + 3].replace("_", "/")
+    elif ns == "sound":
+        if len(parts) > idx + 1 and parts[idx + 1]:
+            try:
+                ts = int(parts[idx + 1])
+                if ts > 0:
+                    result["publish_ts_ms"] = ts
+            except ValueError:
+                pass
+        if len(parts) > idx + 2 and parts[idx + 2]:
+            result["content_type"] = parts[idx + 2].replace("_", "/")
+        if len(parts) > idx + 3 and parts[idx + 3]:
+            result["filename"] = parts[idx + 3]
 
-        if len(parts) > i + 4 and parts[i + 4]:
-            result["filename"] = parts[i + 4]
-
+    # normalize + media type detect
     result["content_type"] = normalize_content_type(result["content_type"], result["filename"])
-    
-    # Detect media_type from content_type
     ctype = result["content_type"].lower()
     if ctype.startswith("image/"):
         result["media_type"] = "image"
     elif ctype.startswith("video/"):
-        result["media_type"] = "image"  
+        result["media_type"] = "image"
     elif ctype.startswith("audio/") or "sound" in ctype or "wav" in ctype or "mp3" in ctype:
         result["media_type"] = "sound"
     else:
-        # Fallback: check filename extension
-        ext = result["filename"].lower().split(".")[-1]
-        if ext in ("jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp"):
+        ext = result["filename"].lower().rsplit(".", 1)[-1] if "." in result["filename"] else ""
+        if ext in ("jpg","jpeg","png","gif","bmp","tiff","webp"):
             result["media_type"] = "image"
-        elif ext in ("wav", "mp3", "ogg", "flac", "aac", "m4a"):
+        elif ext in ("wav","mp3","ogg","flac","aac","m4a"):
             result["media_type"] = "sound"
         else:
-            result["media_type"] = "image"  # default
-    
-    # Build key with media_type prefix and appropriate device naming
+            result["media_type"] = "image"
+
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
-    
-    # Extract device ID from camera field
     device_id = result["camera"]
-    
-    # Determine device prefix based on media type
+
     if result["media_type"] == "sound":
-        # For sound files, use microphone- prefix
         if device_id.startswith(f"{CAMERA_PREFIX}-"):
-            # Replace camera- with microphone-
             device_name = device_id.replace(f"{CAMERA_PREFIX}-", f"{MICROPHONE_PREFIX}-", 1)
         elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
-            # Already has microphone prefix
             device_name = device_id
         else:
-            # No recognized prefix, add microphone-
             device_name = f"{MICROPHONE_PREFIX}-{device_id}"
     else:
-        # For image/video files, ensure camera- prefix
         if device_id.startswith(f"{CAMERA_PREFIX}-"):
-            # Already has camera prefix
             device_name = device_id
         elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
-            # Replace microphone- with camera-
             device_name = device_id.replace(f"{MICROPHONE_PREFIX}-", f"{CAMERA_PREFIX}-", 1)
         else:
-            # No recognized prefix, add camera-
             device_name = f"{CAMERA_PREFIX}-{device_id}"
-    
+
     key = f"{result['media_type']}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
-    
+
     result["key"] = key
-    result["device_id"] = device_name  # Use the renamed device
+    result["device_id"] = device_name
     result["image_id"] = stem(result["filename"]) or uuid.uuid4().hex
     result["capture_ts_iso"] = iso_utc(result["publish_ts_ms"])
     return result
