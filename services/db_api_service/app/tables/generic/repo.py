@@ -3,6 +3,7 @@ from __future__ import annotations
 # Schema-first repository: load JSON contracts, build in-memory SQLAlchemy Table,
 # validate payloads, and perform read/insert operations (single + batch).
 from typing import Any, Dict, List, Optional
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from functools import lru_cache
 import json
 import os
@@ -269,7 +270,20 @@ def insert_row(resource: str, payload: Dict[str, Any], returning: str = "keys") 
     # build SQLAlchemy table afterwards for SQL generation
     table = _build_table_from_contract(resource)
 
-    stmt = insert(table).values(**valid).returning(*table.columns)
+    key_fields = contract.get("x-keyFields") or (["id"] if "id" in props else [])
+
+    if not key_fields:
+        raise ValidationFailed("no key fields", {"detail": "contract has no x-keyFields and no id"})
+
+    # Build UPSERT statement
+    stmt = pg_insert(table).values(**valid)
+    update_fields = {k: stmt.excluded[k] for k in valid.keys() if k not in key_fields}
+
+    stmt = stmt.on_conflict_do_update(
+        index_elements=key_fields,
+        set_=update_fields,
+    ).returning(*table.columns)
+    
     try:
         with session_scope() as s:
             res = s.execute(stmt)
