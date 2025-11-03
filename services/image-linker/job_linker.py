@@ -133,7 +133,7 @@ class Matcher(CoProcessFunction):
         self.minio_state.clear()
         self.cleanup_ts_state.clear()
         print("[CLEANUP] Cleared stale state after 5 minutes")
-        yield from []  # 🔧 fix: must return iterable (even empty)
+        yield from []  # fix: must return iterable (even empty)
 
 
 # ---------- Main Function ----------
