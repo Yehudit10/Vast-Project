@@ -94,7 +94,7 @@ services:
       - MINIO_ENDPOINT=minio-hot:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
-      - MINIO_BUCKET=telemetry
+      - MINIO_BUCKET=sound
       - MINIO_PREFIX=sounds/
 
     command: [ "python", "-u", "src/metrics.py" ]
@@ -136,7 +136,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,alerts
+      - TOPICS=sensor_zone_stats,sensor_anomalies
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
@@ -370,10 +370,8 @@ services:
     depends_on:
       - db_api_service
       - notification_api
-      - alerts-gateway
     volumes:
       - ./GUI/src/vast:/app/src/vast
-      - ./templates:/app/templates:ro
     networks:
       - ag_cloud
     restart: unless-stopped
@@ -403,6 +401,36 @@ services:
       MINIO_PROMETHEUS_AUTH_TYPE: public
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
+
+      # ===== IMAGE NOTIFIERS =====
+      MINIO_NOTIFY_KAFKA_ENABLE_aerial: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_aerial: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_aerial: "image.new.aerial"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_fruits: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_fruits: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_fruits: "image.new.fruits"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_leaves: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_leaves: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_leaves: "image.new.leaves"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_ground: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_ground: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_ground: "image.new.ground"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_field: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_field: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_field: "image.new.field"
+
+      # ===== SOUND NOTIFIERS =====
+      MINIO_NOTIFY_KAFKA_ENABLE_plants: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_plants: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_plants: "sound.new.plants"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_sounds: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_sounds: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_sounds: "sound.new.sounds"
     ports:
       - "9001:9000" # HOT S3
       - "9002:9001" # HOT Console
@@ -438,6 +466,7 @@ services:
   mc-bootstrap:
     build:
       context: ./storage_with_mqtt/storage/Lifecycle_rules/minio-bootstrap
+    container_name: mc-bootstrap
     volumes:
       - ./storage_with_mqtt/storage/combined_minio_setup/config:/config:ro
       - ./storage_with_mqtt/data/config:/config
@@ -446,7 +475,8 @@ services:
         condition: service_healthy
       minio-cold:
         condition: service_healthy
-    command: [ "/bin/bash", "-lc", "/entrypoint/init.sh; tail -f /dev/null" ]
+      kafka:
+        condition: service_healthy
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
@@ -455,7 +485,7 @@ services:
       MC_ALIAS_HOT: hot
       MC_ALIAS_COLD: cold
       BUCKET_IMAGERY: imagery
-      BUCKET_TELEMETRY: telemetry
+      BUCKET_SOUND: sound
     networks: [ ag_cloud ]
     restart: unless-stopped
 
@@ -471,7 +501,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
       BUCKET_IMAGERY: imagery
-      BUCKET_TELEMETRY: telemetry
+      BUCKET_SOUND: sound
       MQTT_BROKER: large-mosquitto
       MQTT_PORT: 1885
       MQTT_TOPIC: MQTT/imagery/#
@@ -774,68 +804,3 @@ services:
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
     command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8000/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
-
-  flink-alerts-job:
-    build:
-      context: ./services/alerts_forwarder
-      dockerfile: Dockerfile.flink
-    container_name: alerts-forwarder
-    depends_on:
-      kafka:
-        condition: service_healthy
-      alertmanager_service:
-        condition: service_started
-    environment:
-      - PYTHONPATH=/opt/app
-      - KAFKA_BROKERS=kafka:9092
-      - ALERTMANAGER_SERVICE_URL=http://alertmanager_service:8090/alerts
-    command: [ "python", "/opt/app/alerts_forwarder.py" ]
-    networks:
-      - ag_cloud
-    restart: unless-stopped
-
-  alertmanager:
-    image: prom/alertmanager:v0.27.0
-    container_name: alertmanager
-    command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
-      - "--storage.path=/alertmanager"
-      - "--log.level=debug"
-    volumes:
-      - ./services/alertmanager_service/compose/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-    ports:
-      - "9093:9093"
-    networks:
-      - ag_cloud
-    restart: always
-
-  alertmanager_service:
-    build:
-      context: ./services/alertmanager_service/src
-      dockerfile: Dockerfile
-    container_name: alertmanager_service
-    ports:
-      - "8090:8090"
-    command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8090" ]
-    volumes:
-      - ./templates:/app/templates:ro
-    environment:
-      - CFG_PATH=/app/templates/templates.yml
-      - ALERTMANAGER_URL=http://alertmanager:9093
-      - GATEWAY_URL=http://alerts-gateway:8000/internal/alert
-    depends_on:
-      - alertmanager
-      - alerts-gateway
-    networks:
-      - ag_cloud
-
-  alerts-gateway:
-    build:
-      context: ./services/alertmanager_service/src
-      dockerfile: Dockerfile
-    container_name: alerts_gateway
-    command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
-    ports:
-      - "8010:8000" # host:container
-    networks:
-      - ag_cloud

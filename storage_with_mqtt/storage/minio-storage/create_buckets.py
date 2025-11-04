@@ -29,7 +29,7 @@ else:
     raise Exception("MinIO not ready after waiting")
 
 # Creating the buckets
-for bucket in ["imagery", "telemetry"]:
+for bucket in ["imagery", "sound"]:
     if not client.bucket_exists(bucket):
         client.make_bucket(bucket)
         print(f"✅ Created bucket: {bucket}")
