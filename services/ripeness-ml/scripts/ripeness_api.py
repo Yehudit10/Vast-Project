@@ -58,7 +58,8 @@ def run_batch(since_ts: datetime | None, limit: int) -> int:
                             SELECT device_id FROM files 
                             WHERE bucket = %s AND object_key = %s
                         """, (bucket, object_key))
-                        device_id = cur.fetchone()[0] if cur.rowcount > 0 else None
+                        res = cur.fetchone()
+                        device_id = res[0] if res else None
 
             with get_conn() as conn, conn.cursor() as cur:
                 cur.execute("""
@@ -107,6 +108,8 @@ def insert_weekly_rollup():
       window_start TIMESTAMPTZ NOT NULL,
       window_end   TIMESTAMPTZ NOT NULL,
       fruit_type TEXT NOT NULL,
+      device_id TEXT,
+      run_id UUID,
       cnt_total  INTEGER NOT NULL,
       cnt_ripe   INTEGER NOT NULL,
       cnt_unripe INTEGER NOT NULL,
@@ -115,6 +118,8 @@ def insert_weekly_rollup():
     );
     CREATE INDEX IF NOT EXISTS ix_rwrt_ts ON ripeness_weekly_rollups_ts(ts);
     CREATE INDEX IF NOT EXISTS ix_rwrt_fruit_ts ON ripeness_weekly_rollups_ts(fruit_type, ts);
+    CREATE INDEX IF NOT EXISTS ix_rwrt_device ON ripeness_weekly_rollups_ts(device_id);
+    CREATE INDEX IF NOT EXISTS ix_rwrt_run ON ripeness_weekly_rollups_ts(run_id);
     """
 
     # optional filter by fruits from environment (comma-separated)
