@@ -515,7 +515,7 @@ services:
       MINIO_ENDPOINT: http://minio-hot:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin123
-      S3_BUCKET: telemetry
+      S3_BUCKET: sound
       MQTT_BROKER: large-mosquitto
       MQTT_PORT: 1885
       MQTT_TOPIC: MQTT/sound/#
