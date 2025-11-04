@@ -1,0 +1,10 @@
+templates:
+  smoke_detected:
+    category: environmental
+    summary: "🚨 Smoke detected by ${device_id} near ${area} (confidence ${confidence})"
+    recommendation: "Inspect the ${area} immediately. If fire is confirmed, contact emergency services."
+
+  masked_person:
+    category: security
+    summary: "Person wearing a mask detected by ${device_id} at ${timestamp}"
+    recommendation: "Verify the person’s authorization using the live feed."

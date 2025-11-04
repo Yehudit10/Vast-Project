@@ -30,6 +30,15 @@ TOPICS=(
   dev-robot-status
   dev-robot-sound-raw
   dev-robot-state
+
+  dev-camera-security
+  sensor-telemetry
+  sensor-anomalies
+  dev-robot-telemetry-anomalies
+  incidents.events
+  incidents.update
+  incidents.create
+
   sensor_anomalies
   sensor_zone_stats
   dev-robot-sound-anomalies
@@ -39,10 +48,11 @@ TOPICS=(
   sound.new
   image.new
   dev-aerial-images-keys
-  image.new.aerial.connections
-  
+  alerts
+
   # --- imagery (MinIO -> Kafka) ---
   image.new.aerial
+  image_new_aerial_connections
   image.new.fruits
   image.new.leaves
   image.new.ground

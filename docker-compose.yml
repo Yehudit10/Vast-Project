@@ -74,7 +74,6 @@ services:
       - "9187:9187"
     networks:
       - ag_cloud
-
   # -------------------------
   # Sound Metrics Service
   # -------------------------
@@ -118,7 +117,7 @@ services:
       - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
       - PERIOD_DAYS=0
       - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0   # Disable oneDNN optimizations (for CPU compatibility)
+      # - TF_ENABLE_ONEDNN_OPTS=0  # optional
     volumes:
       - "./services/plant_stress/models:/models:ro"
       - "./services/plant_stress/samples:/data/inbox:ro"
@@ -128,28 +127,6 @@ services:
     command: [ "python", "-u", "/app/app.py" ]
     networks:
       - ag_cloud
-
-  flink_writer_db:
-    build:
-      context: ./services/flink_writer_db
-      dockerfile: Dockerfile.flink
-    container_name: flink_writer_db
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies
-      - DB_API_BASE=http://db_api_service:8001
-      - DB_API_AUTH_MODE=service
-      - DB_API_SERVICE_NAME=flink-writer-db
-      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
-      - FLINK_PARALLELISM=1
-    depends_on:
-      kafka:
-        condition: service_healthy
-      db_api_service:
-        condition: service_started
-    networks:
-      - ag_cloud
-    restart: unless-stopped
 
   # -------------------------
   # MQTT + Kafka + Connect + Init
@@ -370,8 +347,10 @@ services:
     depends_on:
       - db_api_service
       - notification_api
+      - alerts-gateway
     volumes:
       - ./GUI/src/vast:/app/src/vast
+      - ./templates:/app/templates:ro
     networks:
       - ag_cloud
     restart: unless-stopped
@@ -528,6 +507,43 @@ services:
       - ag_cloud
     restart: unless-stopped
 
+  mqtt_ingest_sound:
+    build:
+      context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+    container_name: mqtt_ingest_sound
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      S3_BUCKET: telemetry
+      MQTT_BROKER: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/sound/#
+      DEFAULT_PREFIX: MIC-01
+      CAMERA_PREFIX: camera
+      MICROPHONE_PREFIX: microphone
+      DUMMY_DB: 0
+      DB_API_BASE: http://db_api_service:8001
+      DB_API_TOKEN: auto
+      OUTBOX_DIR: /app/outbox
+      DB_API_AUTH_MODE: service
+      DB_API_SERVICE_NAME: mqtt_ingest_sound
+      INGEST_WORKERS: 8
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
   mqtt_publisher:
     build:
       context: ./storage_with_mqtt/mqtt_images/mqtt_publisher
@@ -555,14 +571,10 @@ services:
   # ------------------------
   sounds_classifier:
     build:
-      context: ./services/sounds/sounds_classifier
+      context: ./services/sounds_classifier
       dockerfile: Dockerfile.classifier-svc
-      # args:
-      # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
     container_name: sounds_classifier
     restart: unless-stopped
-    # env_file:
-    # - ./services/sounds/sounds_classifier/src/classification/.env
     environment:
       # Runtime mode
       - DEVICE=cpu
@@ -581,7 +593,8 @@ services:
 
       # Kafka 
       - KAFKA_BROKERS=kafka:9092
-      - ALERTS_TOPIC=dev-robot-alerts
+      - ALERTS_TOPIC=alerts
+      - ENABLE_ALERTS=true
 
       # MinIO 
       - MINIO_ENDPOINT=minio-hot:9000
@@ -612,7 +625,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: [ "CMD", "curl", "-fsS", "http://localhost:8088/health" ]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health').read()" ]
       interval: 45s
       timeout: 5s
       retries: 10
@@ -671,7 +684,7 @@ services:
 
   notification_api:
     build:
-      context: ./services/sounds/API-development/src
+      context: ./services/API-notifications/src
       dockerfile: Dockerfile
     container_name: notification_api
     environment:
@@ -718,6 +731,51 @@ services:
       - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    restart: unless-stopped
+
+  audio_compression:
+    build:
+      context: ./services/compression
+      dockerfile: Dockerfile
+    container_name: audio_compression
+    environment:
+      - RAW_MAX_AGE_DAYS=30
+      - COMPRESSION_CODEC=opus
+      - COMPRESSED_MAX_AGE_DAYS=90
+      - CHECK_INTERVAL_SECONDS=3600
+      - MINIO_ENDPOINT=minio-hot:9000
+      - ACCESS_KEY=minioadmin
+      - SECRET_KEY=minioadmin123
+      - BUCKET_NAME=imagery
+    depends_on:
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  flink_writer_db:
+    build:
+      context: ./services/flink_writer_db
+      dockerfile: Dockerfile.flink
+    container_name: flink_writer_db
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections
+      - DB_API_BASE=http://db_api_service:8001
+      - DB_API_AUTH_MODE=service
+      - DB_API_SERVICE_NAME=flink-writer-db
+      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+      - FLINK_PARALLELISM=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
     restart: unless-stopped
 
   flink-taskmanager:
@@ -804,3 +862,68 @@ services:
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
     command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8000/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+
+  flink-alerts-job:
+    build:
+      context: ./services/alerts_forwarder
+      dockerfile: Dockerfile.flink
+    container_name: alerts-forwarder
+    depends_on:
+      kafka:
+        condition: service_healthy
+      alertmanager_service:
+        condition: service_started
+    environment:
+      - PYTHONPATH=/opt/app
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTMANAGER_SERVICE_URL=http://alertmanager_service:8090/alerts
+    command: [ "python", "/opt/app/alerts_forwarder.py" ]
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--log.level=debug"
+    volumes:
+      - ./services/alertmanager_service/compose/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    networks:
+      - ag_cloud
+    restart: always
+
+  alertmanager_service:
+    build:
+      context: ./services/alertmanager_service/src
+      dockerfile: Dockerfile
+    container_name: alertmanager_service
+    ports:
+      - "8090:8090"
+    command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8090" ]
+    volumes:
+      - ./templates:/app/templates:ro
+    environment:
+      - CFG_PATH=/app/templates/templates.yml
+      - ALERTMANAGER_URL=http://alertmanager:9093
+      - GATEWAY_URL=http://alerts-gateway:8000/internal/alert
+    depends_on:
+      - alertmanager
+      - alerts-gateway
+    networks:
+      - ag_cloud
+
+  alerts-gateway:
+    build:
+      context: ./services/alertmanager_service/src
+      dockerfile: Dockerfile
+    container_name: alerts_gateway
+    command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
+    ports:
+      - "8010:8000" # host:container
+    networks:
+      - ag_cloud
