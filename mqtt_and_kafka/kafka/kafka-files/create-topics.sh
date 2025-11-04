@@ -41,7 +41,7 @@ TOPICS=(
 
   sensor_anomalies
   sensor_zone_stats
-  dev-robot-sound-anomalies
+  dev-robot-telemetry-anomalies
   summaries.5m
   irrigation.control
   irrigation.control.dlq
