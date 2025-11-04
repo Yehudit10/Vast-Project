@@ -31,6 +31,8 @@ client_images.connect(MQTT_HOST_DATA, MQTT_PORT_DATA, keepalive=60)
 client_images.loop_start()
 
 client_meta = mqtt.Client(client_id=f"drone-simulator-meta-{uuid.uuid4().hex[:6]}")
+print(f"[MQTT] DATA -> {MQTT_HOST_DATA}:{MQTT_PORT_DATA}")
+print(f"[MQTT] META -> {MQTT_HOST_META}:{MQTT_PORT_META}")
 client_meta.connect(MQTT_HOST_META, MQTT_PORT_META, keepalive=60)
 client_meta.loop_start()
 
@@ -80,10 +82,11 @@ def publish_image(image_path):
     payload = json.dumps(meta_data, ensure_ascii=False)
     client_meta.publish(MQTT_TOPIC_META, payload, qos=QOS)
 
-    print(f"Published image: {new_file_name} | topic: {topic} | type: {guessed_type}")
+    print(f"Published file: {new_file_name} | topic: {topic} | type: {guessed_type}")
 
 def get_all_images():
-    exts = {".jpg", ".jpeg", ".png", ".tif"}
+    exts = {".jpg", ".jpeg", ".png", ".tif",
+            ".wav", ".mp3", ".flac", ".ogg", ".m4a"}
     return [os.path.join(IMAGES_DIR, f)
             for f in sorted(os.listdir(IMAGES_DIR))
             if os.path.splitext(f)[1].lower() in exts]

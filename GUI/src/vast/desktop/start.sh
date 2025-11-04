@@ -22,3 +22,10 @@ echo "[INFO] Starting noVNC..."
 
 echo "[INFO] Starting PyQt application..."
 exec python /app/src/vast/main.py
+
+
+
+# # ------------------------------
+# # 🚀  Launch the main PyQt application
+# # ------------------------------
+# exec /opt/venv/bin/python /app/src/vast/main.py
