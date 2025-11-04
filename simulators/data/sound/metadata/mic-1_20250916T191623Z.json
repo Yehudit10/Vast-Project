@@ -1,0 +1,11 @@
+{
+  "file_name": "mic-1_20250916T191623Z.wav",
+  "device_id": "mic-1",
+  "capture_time": "2025-09-16T19:16:23Z",
+  "duration_sec": 5.0,
+  "done": false,
+  "sample_rate_hz": 16000,
+  "channels": 1,
+  "content_type": "audio/wav",
+  "checksum_md5": "23cae107b283beda26873f55196c6b00"
+}
