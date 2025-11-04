@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fluxbox x11vnc xvfb wget net-tools python3-tk ca-certificates \
     procps iproute2 xauth git vlc libvlc5 libvlccore9 \
     fonts-dejavu-core fonts-noto-core fonts-noto-color-emoji\
-&& rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # (optional) minimal extra XCB deps for PyQt
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -24,9 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # # ───────── optional CA certs ─────────
 COPY certs /app/certs
 RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-        echo "Configuring NetFree certificates..."; \
-        cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-        update-ca-certificates; \
+    echo "Configuring NetFree certificates..."; \
+    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+    update-ca-certificates; \
     fi
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
@@ -68,7 +68,3 @@ ENV PORT=19100
 ENV MEDIA_BASE=http://media-proxy:8080
 
 CMD ["/app/start.sh"]
-
-
-
-
