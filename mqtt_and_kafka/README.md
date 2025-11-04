@@ -117,7 +117,7 @@ If the container is running and you want to reset it, use this command.
 
 ## AgCloud - Data Simulator
 
-This project provides a CLI tool that replays telemetry and sensor payloads from **CSV/Parquet** files at a fixed **QPS** to **MQTT** and/or **Kafka**.  
+This project provides a CLI tool that replays sound and sensor payloads from **CSV/Parquet** files at a fixed **QPS** to **MQTT** and/or **Kafka**.  
 It is used to validate throughput, stability, and reliability of the messaging stack.
 
 ### Features
@@ -141,25 +141,25 @@ pip install -r requirements.txt
 #### 1 Publish to both (MQTT + Kafka)
 
 ```bash
-python data_simulator.py --qps 100 --duration 30 --out both --file data/sample.csv --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
+python data_simulator.py --qps 100 --duration 30 --out both --file data/sample.csv --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic sound   --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-sound-raw
 ```
 
 #### 2 MQTT only
 
 ```bash
-python data_simulator.py --qps 5 --duration 10 --out mqtt --file data/sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry
+python data_simulator.py --qps 5 --duration 10 --out mqtt --file data/sample.csv   --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic sound
 ```
 
 #### 3 Kafka only
 
 ```bash
-python data_simulator.py --qps 5 --duration 10 --out kafka --file data/sample.csv --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
+python data_simulator.py --qps 5 --duration 10 --out kafka --file data/sample.csv --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-sound-raw
 ```
 
 #### 4 Stability profile (60s @ 1k msg/s)
 
 ```bash
-python data_simulator.py --stability --out kafka --file data/sample.csv --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
+python data_simulator.py --stability --out kafka --file data/sample.csv --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-sound-raw
 ```
 
 #### 5 Performance profile (15m @ 10k msg/s)
@@ -171,7 +171,7 @@ import pandas as pd; pd.read_csv("sample.csv").to_parquet("sample.parquet")
 ```
 
 ```bash
-python data_simulator.py --perf --out kafka --file data/sample.parquet --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
+python data_simulator.py --perf --out kafka --file data/sample.parquet --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-sound-raw
 ```
 
 ### Simulator CLI options
@@ -195,14 +195,14 @@ python data_simulator.py --perf --out kafka --file data/sample.parquet --kafka-b
   Optional. Kafka bootstrap servers. Default: `localhost:29092`.
 
 - `--topic <NAME>`  
-  Optional. Kafka topic name. Default: `dev-robot-telemetry-raw`.
+  Optional. Kafka topic name. Default: `dev-robot-sound-raw`.
 
 ### Example Output
 
 After running a short test:
 
 ```bash
-python data_simulator.py --qps 5 --duration 5 --out both --file data/sample.csv --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic telemetry --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-telemetry-raw
+python data_simulator.py --qps 5 --duration 5 --out both --file data/sample.csv --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-topic sound --kafka-bootstrap localhost:29092 --kafka-topic dev-robot-sound-raw
 ```
 
 You may see a summary like:
@@ -226,6 +226,6 @@ You may see a summary like:
 ## MQTT→Kafka Soak (Docker Compose)
 
 - Trigger: Actions → "Soak Test (MQTT to Kafka Bridge)" → Run workflow.
-- Load: 150s @ 1000 msg/s to MQTT topic `soak/test`, consumed from Kafka topic `dev-robot-telemetry-raw`.
+- Load: 150s @ 1000 msg/s to MQTT topic `soak/test`, consumed from Kafka topic `dev-robot-sound-raw`.
 - Results: Check "MQTT to Kafka Soak Test Results" and download artifacts (logs, junit.xml, bridge.json).
 - Pass/Fail: Job fails if loss_pct > 1.0%.

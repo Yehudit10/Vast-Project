@@ -14,21 +14,21 @@ def build_parser() -> argparse.ArgumentParser:
     """
     Build the CLI parser for the simulator.
     """
-    parser = argparse.ArgumentParser(description="Replay telemetry at a fixed QPS to MQTT/Kafka")
+    parser = argparse.ArgumentParser(description="Replay sound at a fixed QPS to MQTT/Kafka")
     parser.add_argument("--qps", type=positive_float, help="Messages per second to send (>0)")
     parser.add_argument("--duration", type=positive_float, help="Total run time in seconds (>0)")
     parser.add_argument("--out", choices=["mqtt", "kafka", "both"], default="both",
                    help="Publish target (default: both)")
-    parser.add_argument("--file", required=True, help="Path to .csv or .parquet file with telemetry data")
+    parser.add_argument("--file", required=True, help="Path to .csv or .parquet file with sound data")
 
     parser.add_argument("--mqtt-host", default="localhost", help="MQTT broker host (default: localhost)")
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)")
-    parser.add_argument("--mqtt-topic", default="telemetry", help="MQTT topic (default: telemetry)")
+    parser.add_argument("--mqtt-topic", default="sound", help="MQTT topic (default: sound)")
 
     parser.add_argument("--kafka-bootstrap", default="localhost:29092",
                    help="Kafka bootstrap servers (default: localhost:29092)")
-    parser.add_argument("--kafka-topic", default="dev-robot-telemetry-raw",
-                   help="Kafka topic (default: dev-robot-telemetry-raw)")
+    parser.add_argument("--kafka-topic", default="dev-robot-sound-raw",
+                   help="Kafka topic (default: dev-robot-sound-raw)")
 
     parser.add_argument("--window-sec", type=positive_float, default=5.0,
                    help="Rolling window (seconds) for instantaneous QPS (default: 5)")

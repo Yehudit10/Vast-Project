@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS mission_regions (
 );
 
 -- Telemetry points (raw stream)
-CREATE TABLE IF NOT EXISTS telemetry (
+CREATE TABLE IF NOT EXISTS sound (
   id          BIGSERIAL PRIMARY KEY,
   mission_id  BIGINT NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
   device_id   text   NOT NULL REFERENCES devices(device_id),
@@ -109,8 +109,8 @@ CREATE TABLE IF NOT EXISTS event_logs (
 ) PARTITION BY RANGE (ts);
 
 
--- === Partitioned parent for telemetry (daily range) ===
-CREATE TABLE IF NOT EXISTS telemetry_new (
+-- === Partitioned parent for sound (daily range) ===
+CREATE TABLE IF NOT EXISTS sound_new (
   mission_id  BIGINT NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
   ts          timestamptz NOT NULL,
   device_id   text NOT NULL REFERENCES devices(device_id),
@@ -373,16 +373,16 @@ CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (location_lat, locatio
 
 -- Spatial
 CREATE INDEX IF NOT EXISTS ix_missions_area_geom_gist  ON missions   USING GIST (area_geom);
-CREATE INDEX IF NOT EXISTS ix_telemetry_geom_gist      ON telemetry  USING GIST (geom);
+CREATE INDEX IF NOT EXISTS ix_sound_geom_gist      ON sound  USING GIST (geom);
 CREATE INDEX IF NOT EXISTS ix_tile_stats_geom_gist     ON tile_stats USING GIST (geom);
 CREATE INDEX IF NOT EXISTS ix_files_footprint_gist     ON files      USING GIST (footprint);
 
 -- Time-series
-CREATE INDEX IF NOT EXISTS ix_telemetry_ts_brin        ON telemetry  USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS ix_sound_ts_brin        ON sound  USING BRIN (ts);
 CREATE INDEX IF NOT EXISTS ix_anomalies_ts_brin        ON anomalies  USING BRIN (ts);
 
 -- Lookup / filtering
-CREATE INDEX IF NOT EXISTS ix_telemetry_mission_ts     ON telemetry (mission_id, ts);
+CREATE INDEX IF NOT EXISTS ix_sound_mission_ts     ON sound (mission_id, ts);
 CREATE INDEX IF NOT EXISTS ix_anomalies_mission_ts     ON anomalies (mission_id, ts);
 CREATE INDEX IF NOT EXISTS ix_files_mission_created    ON files (mission_id, created_at);
 
