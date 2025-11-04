@@ -16,7 +16,6 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# RUN python -m pip install --no-cache-dir --upgrade pip certifi
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir \
