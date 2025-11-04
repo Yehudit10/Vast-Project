@@ -77,50 +77,15 @@ services:
     networks:
       - ag_cloud
 
-  # -------------------------
-  # Sound Metrics Service
-  # -------------------------
-
-  sound_metrics:
-    build:
-      context: ./services/sound_metrics
-      dockerfile: Dockerfile
-    environment:
-      - ADDR=0.0.0.0
-      - PORT=8005
-      - USE_UTC=false
-      - WINDOW_MIN=1
-      - STABLE_SEC=1
-      - PYTHONUNBUFFERED=1
-
-      - MINIO_ENDPOINT=minio-hot:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin123
-      - MINIO_BUCKET=telemetry         
-      - MINIO_PREFIX=sounds/           
-
-    command: ["python","-u","src/metrics.py"]  
-    ports:
-      - "8005:8005"
-    depends_on:
-      - minio-hot
-    networks:
-      - ag_cloud 
-    restart: unless-stopped
-
-  # -------------------------
-  # Plant Stress Detector
-  # -------------------------
-
   plant_stress:
     build: ./services/plant_stress
     environment:
       - INPUT_DIR=/data/inbox
       - MODEL_DIR=/models
       - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0           
+      - PERIOD_DAYS=0            
       - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0   # Disable oneDNN optimizations (for CPU compatibility)
+      # - TF_ENABLE_ONEDNN_OPTS=0  # optional
     volumes:
       - "./services/plant_stress/models:/models:ro"
       - "./services/plant_stress/samples:/data/inbox:ro"
@@ -130,29 +95,6 @@ services:
     command: ["python", "-u", "/app/app.py"]
     networks:
       - ag_cloud
-    
-
-  flink_writer_db:
-      build:
-        context: ./services/flink_writer_db
-        dockerfile: Dockerfile.flink
-      container_name: flink_writer_db
-      environment:
-        - KAFKA_BROKERS=kafka:9092
-        - TOPICS=sensor_zone_stats,sensor_anomalies,alerts
-        - DB_API_BASE=http://db_api_service:8001
-        - DB_API_AUTH_MODE=service
-        - DB_API_SERVICE_NAME=flink-writer-db
-        - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
-        - FLINK_PARALLELISM=1
-      depends_on:
-        kafka:
-          condition: service_healthy
-        db_api_service:
-          condition: service_started
-      networks:
-        - ag_cloud
-      restart: unless-stopped
 
 
  
@@ -496,6 +438,43 @@ services:
       - ag_cloud
     restart: unless-stopped
 
+  mqtt_ingest_sound:
+    build:
+      context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+    container_name: mqtt_ingest_sound
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      S3_BUCKET: telemetry           
+      MQTT_BROKER: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/sound/#      
+      DEFAULT_PREFIX: MIC-01         
+      CAMERA_PREFIX: camera          
+      MICROPHONE_PREFIX: microphone
+      DUMMY_DB: 0
+      DB_API_BASE: http://db_api_service:8001
+      DB_API_TOKEN: auto
+      OUTBOX_DIR: /app/outbox
+      DB_API_AUTH_MODE: service
+      DB_API_SERVICE_NAME: mqtt_ingest_sound
+      INGEST_WORKERS: 8
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
   mqtt_publisher:
     build:
       context: ./storage_with_mqtt/mqtt_images/mqtt_publisher
@@ -641,7 +620,7 @@ services:
 
   notification_api:
     build:
-      context: ./services/sounds/API-development/src
+      context: ./services/API-notifications/src
       dockerfile: Dockerfile
     container_name: notification_api
     environment:
@@ -690,6 +669,51 @@ services:
       - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    restart: unless-stopped
+    
+  audio_compression:
+      build:
+        context: ./services/compression
+        dockerfile: Dockerfile
+      container_name: audio_compression
+      environment:
+        - RAW_MAX_AGE_DAYS=30             
+        - COMPRESSION_CODEC=opus           
+        - COMPRESSED_MAX_AGE_DAYS=90       
+        - CHECK_INTERVAL_SECONDS=3600      
+        - MINIO_ENDPOINT=minio-hot:9000
+        - ACCESS_KEY=minioadmin
+        - SECRET_KEY=minioadmin123
+        - BUCKET_NAME=imagery
+      depends_on:
+        minio-hot:
+          condition: service_healthy
+        mc-bootstrap:
+          condition: service_started
+      networks:
+        - ag_cloud
+      restart: unless-stopped
+
+  flink_writer_db:
+    build:
+      context: ./services/flink_writer_db
+      dockerfile: Dockerfile.flink
+    container_name: flink_writer_db
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections
+      - DB_API_BASE=http://db_api_service:8001
+      - DB_API_AUTH_MODE=service
+      - DB_API_SERVICE_NAME=flink-writer-db
+      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+      - FLINK_PARALLELISM=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
     restart: unless-stopped
 
 
