@@ -286,7 +286,15 @@ services:
       - prometheus
     networks:
       - ag_cloud
-
+  pushgateway:
+    image: prom/pushgateway:v1.8.0
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+    
   # --------------------------
   # Desktop App
   # --------------------------
