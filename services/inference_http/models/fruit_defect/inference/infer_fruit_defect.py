@@ -31,7 +31,7 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
 MINIO_SECURE     = os.getenv("MINIO_SECURE", "false").lower() == "true"
 
 BUCKET_INPUT     = os.getenv("MINIO_BUCKET_INPUT",  "imagery")
-BUCKET_OUTPUT    = os.getenv("MINIO_BUCKET_OUTPUT", "telemetry")
+BUCKET_OUTPUT    = os.getenv("MINIO_BUCKET_OUTPUT", "sound")
 INPUT_PREFIX     = os.getenv("MINIO_INPUT_PREFIX",  "inputs/batch1/")   # מאיפה לקרוא תמונות
 OUTPUT_PREFIX    = os.getenv("MINIO_OUTPUT_PREFIX", "results/batch1/")  # לאן להעלות תוצאות
 
@@ -336,7 +336,7 @@ def run_inference_from_minio() -> Dict:
 
     payload = {"summary": summary, "results": results}
 
-    # 4) Upload results.json back to MinIO (telemetry)
+    # 4) Upload results.json back to MinIO (sound)
     out_json = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
     obj_name = (OUTPUT_PREFIX.rstrip("/") + "/results.json")
     mc.put_object(BUCKET_OUTPUT, obj_name, io.BytesIO(out_json), length=len(out_json), content_type="application/json")
