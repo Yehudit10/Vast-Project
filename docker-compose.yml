@@ -385,6 +385,10 @@ services:
       MINIO_NOTIFY_KAFKA_ENABLE_aerial: "on"
       MINIO_NOTIFY_KAFKA_BROKERS_aerial: "kafka:9092"
       MINIO_NOTIFY_KAFKA_TOPIC_aerial: "image.new.aerial"
+      
+      MINIO_NOTIFY_KAFKA_ENABLE_air: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_air: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_air: "image.new.air"
 
       MINIO_NOTIFY_KAFKA_ENABLE_fruits: "on"
       MINIO_NOTIFY_KAFKA_BROKERS_fruits: "kafka:9092"
