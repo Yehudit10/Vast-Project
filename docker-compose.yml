@@ -96,9 +96,6 @@ services:
     networks:
       - ag_cloud
 
-
- 
-
   # -------------------------
   # MQTT + Kafka + Connect + Init
   # -------------------------
@@ -502,14 +499,10 @@ services:
   # ------------------------
   sounds_classifier:
     build:
-      context: ./services/sounds/sounds_classifier
+      context: ./services/sounds_classifier
       dockerfile: Dockerfile.classifier-svc
-      # args:
-        # CHECKPOINT_URL: "CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth"
     container_name: sounds_classifier
     restart: unless-stopped
-    # env_file:
-      # - ./services/sounds/sounds_classifier/src/classification/.env
     environment:
       # Runtime mode
       - DEVICE=cpu
@@ -528,7 +521,8 @@ services:
 
       # Kafka 
       - KAFKA_BROKERS=kafka:9092
-      - ALERTS_TOPIC=dev-robot-alerts
+      - ALERTS_TOPIC=alerts
+      - ENABLE_ALERTS=true
 
       # MinIO 
       - MINIO_ENDPOINT=minio-hot:9000
@@ -559,7 +553,7 @@ services:
     networks:
       - ag_cloud
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]      
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health').read()"]
       interval: 45s
       timeout: 5s
       retries: 10
