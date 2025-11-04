@@ -10,13 +10,13 @@ COPY certs/ /tmp/certs/
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/* && \
     if [ -d /tmp/certs ] && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
-      cp /tmp/certs/*.crt /usr/local/share/ca-certificates/ && \
-      chmod 644 /usr/local/share/ca-certificates/*.crt && \
-      update-ca-certificates; \
+    cp /tmp/certs/*.crt /usr/local/share/ca-certificates/ && \
+    chmod 644 /usr/local/share/ca-certificates/*.crt && \
+    update-ca-certificates; \
     else \
-      echo "No extra CA certs found. Skipping CA update."; \
+    echo "No extra CA certs found. Skipping CA update."; \
     fi
-    
+
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
