@@ -19,9 +19,9 @@ SELECT cron.schedule(
 
 -- 3) Every 10 minutes — re-homing from the default partition (DEFAULT) to the correct partitions
 SELECT cron.schedule(
-  'rehoming-sound-default',
+  'rehoming-telemetry-default',
   '*/10 * * * *',
-  $$SELECT admin.rehome_sound_default();$$
+  $$SELECT admin.rehome_telemetry_default();$$
 );
 
 SELECT cron.schedule(

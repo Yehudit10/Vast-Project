@@ -17,8 +17,8 @@ BEGIN
 END;
 $func$;
 
--- Per-partition indexes (sound_new)
-CREATE OR REPLACE FUNCTION admin.ensure_sound_partition_indexes(part_name text)
+-- Per-partition indexes (telemetry_new)
+CREATE OR REPLACE FUNCTION admin.ensure_telemetry_partition_indexes(part_name text)
 RETURNS void LANGUAGE plpgsql AS $func$
 BEGIN
   EXECUTE format('CREATE INDEX IF NOT EXISTS %I_ts_brin     ON %I USING BRIN (ts);',           part_name, part_name);
@@ -37,8 +37,8 @@ BEGIN
 END;
 $func$;
 
--- Daily partitions (sound_new)
-CREATE OR REPLACE FUNCTION admin.make_daily_partitions_sound(
+-- Daily partitions (telemetry_new)
+CREATE OR REPLACE FUNCTION admin.make_daily_partitions_telemetry(
   start_day date,
   num_days integer
 ) RETURNS void
@@ -49,9 +49,9 @@ BEGIN
   FOR i IN 0..num_days-1 LOOP
     d_from := (start_day + i)::timestamptz;
     d_to   := (start_day + i + 1)::timestamptz;
-    pname  := 'sound_new_p' || to_char(d_from,'YYYYMMDD');
-    PERFORM admin.create_range_partition('public.sound_new', pname, d_from, d_to);
-    PERFORM admin.ensure_sound_partition_indexes(pname);
+    pname  := 'telemetry_new_p' || to_char(d_from,'YYYYMMDD');
+    PERFORM admin.create_range_partition('public.telemetry_new', pname, d_from, d_to);
+    PERFORM admin.ensure_telemetry_partition_indexes(pname);
   END LOOP;
 END;
 $func$;
@@ -82,7 +82,7 @@ LANGUAGE plpgsql AS $func$
 DECLARE
   next_monday date := date_trunc('week', now())::date + 7;
 BEGIN
-  PERFORM admin.make_daily_partitions_sound(next_monday, 7);
+  PERFORM admin.make_daily_partitions_telemetry(next_monday, 7);
   PERFORM admin.make_weekly_partitions_event_logs(next_monday, 1);
 END;
 $func$;
@@ -131,7 +131,7 @@ $func$;
 CREATE OR REPLACE FUNCTION admin.apply_yearly_retention()
 RETURNS void LANGUAGE plpgsql AS $func$
 BEGIN
-  PERFORM admin.drop_old_partitions('public.sound_new', interval '1 year');
+  PERFORM admin.drop_old_partitions('public.telemetry_new', interval '1 year');
   PERFORM admin.drop_old_partitions('public.event_logs',   interval '1 year');
 END;
 $func$;

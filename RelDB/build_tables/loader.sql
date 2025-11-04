@@ -60,7 +60,7 @@ SELECT
              min_lon, max_lon, min_lat, max_lat), 4326))
 FROM params, generate_series(5,1,-1) AS s(i);
 
--- Insert sound (~60k rows for demo; adjust up for perf test)
+-- Insert telemetry (~60k rows for demo; adjust up for perf test)
 WITH params AS (
   SELECT 34.75::double precision AS min_lon, 35.05 AS max_lon,
          31.95::double precision AS min_lat, 32.20 AS max_lat
@@ -69,7 +69,7 @@ devices AS (
   SELECT device_id FROM devices
 ),
 ins AS (
-  INSERT INTO sound (mission_id, device_id, ts, geom, altitude)
+  INSERT INTO telemetry (mission_id, device_id, ts, geom, altitude)
   SELECT
     (SELECT mission_id FROM missions ORDER BY random() LIMIT 1),
     d.device_id,
