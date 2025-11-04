@@ -28,7 +28,7 @@ TOPICS=(
   dev-robot-alerts
   dev-robot-commands
   dev-robot-status
-  dev-robot-sound-raw
+  dev-robot-telemetry-raw
   dev-robot-state
 
   dev-camera-security
