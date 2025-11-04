@@ -9,9 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY certs /app/certs
 # System CA + add NetFree certs
 RUN if [ "$USE_NETFREE" = "true" ] && [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-        echo "Configuring NetFree certificates..."; \
-        cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-        update-ca-certificates; \
+    echo "Configuring NetFree certificates..."; \
+    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+    update-ca-certificates; \
     fi
 
 # SSL certs env   
