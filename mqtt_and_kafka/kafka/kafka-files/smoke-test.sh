@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Use the in-container bootstrap; from host use localhost:29092
 BOOTSTRAP="${BOOTSTRAP:-localhost:9092}"
-TOPIC="dev-robot-sound-raw"
+TOPIC="dev-robot-telemetry-raw"
 
 # Do NOT create the topic here. It must already exist (created by create-topics.sh)
 
