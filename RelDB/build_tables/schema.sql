@@ -212,6 +212,47 @@ CREATE TABLE IF NOT EXISTS inference_logs (
     image_url TEXT
 );
 
+-- Ripeness predictions table
+CREATE TABLE IF NOT EXISTS ripeness_predictions (
+    id BIGSERIAL PRIMARY KEY,
+    inference_log_id BIGINT NOT NULL REFERENCES inference_logs(id) ON DELETE CASCADE,
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ripeness_label TEXT NOT NULL CHECK (ripeness_label IN ('ripe', 'unripe', 'overripe')),
+    ripeness_score DOUBLE PRECISION NOT NULL,
+    model_name TEXT NOT NULL,
+    run_id UUID NOT NULL,
+    device_id TEXT REFERENCES devices(device_id),
+    UNIQUE (inference_log_id)
+);
+
+-- Create indexes for ripeness_predictions
+CREATE INDEX IF NOT EXISTS ix_ripeness_inflog ON ripeness_predictions(inference_log_id);
+CREATE INDEX IF NOT EXISTS ix_ripeness_ts ON ripeness_predictions(ts);
+CREATE INDEX IF NOT EXISTS ix_ripeness_device ON ripeness_predictions(device_id);
+CREATE INDEX IF NOT EXISTS ix_ripeness_run ON ripeness_predictions(run_id);
+
+-- Weekly ripeness rollups table
+CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (
+    id BIGSERIAL PRIMARY KEY,
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    window_start TIMESTAMPTZ NOT NULL,
+    window_end TIMESTAMPTZ NOT NULL,
+    fruit_type TEXT NOT NULL,
+    device_id TEXT REFERENCES devices(device_id),
+    run_id UUID NOT NULL,
+    cnt_total INTEGER NOT NULL,
+    cnt_ripe INTEGER NOT NULL,
+    cnt_unripe INTEGER NOT NULL,
+    cnt_overripe INTEGER NOT NULL,
+    pct_ripe DOUBLE PRECISION NOT NULL
+);
+
+-- Create indexes for ripeness_weekly_rollups_ts
+CREATE INDEX IF NOT EXISTS ix_rwrt_ts ON ripeness_weekly_rollups_ts(ts);
+CREATE INDEX IF NOT EXISTS ix_rwrt_fruit_ts ON ripeness_weekly_rollups_ts(fruit_type, ts);
+CREATE INDEX IF NOT EXISTS ix_rwrt_device ON ripeness_weekly_rollups_ts(device_id);
+CREATE INDEX IF NOT EXISTS ix_rwrt_run ON ripeness_weekly_rollups_ts(run_id);
+
 -- Sensor event logs table.
 CREATE TABLE IF NOT EXISTS event_logs_sensors(
     id         bigserial PRIMARY KEY,

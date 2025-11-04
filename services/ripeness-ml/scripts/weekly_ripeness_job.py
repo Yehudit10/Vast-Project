@@ -40,7 +40,7 @@ BATCH_LIMIT = int(os.getenv("BATCH_LIMIT", "200"))
 
 # ----- labels & fruits mapping -----
 LABELS = ["unripe", "ripe", "overripe"]  
-FRUITS = ["Apple", "Banana", "Orange"]   
+FRUITS = ["Apple", "Banana", "Orange", "."]   
 FRUIT2IDX = {name.lower(): i for i, name in enumerate(FRUITS)}
 
 # ----- build model & load weights -----
