@@ -7,7 +7,7 @@ with the original message body (JSON).
 
 ## Quick start
 
-1) Put your `netfree-ca.crt` next to `Dockerfile.flink` (required for HTTPS trust).
+1) Put your `*.crt` files next to `Dockerfile.flink` (required for HTTPS trust).
 2) Ensure you have an external Docker network named `ag_cloud` and that your Kafka (`kafka:9092`) and DB API service (`db_api_service:8001`) are reachable on it.
 3) Build & run:
    ```bash
