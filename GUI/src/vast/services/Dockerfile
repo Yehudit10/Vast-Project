@@ -20,4 +20,3 @@ ENV PYTHONPATH=/app/vast/proto/generated:/app
 EXPOSE 8001
 # Run the metrics app
 CMD ["python", "-m", "vast.services.sensors_metrics_app"]
-

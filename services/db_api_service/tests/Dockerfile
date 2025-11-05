@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates build-essential gcc curl && \
     rm -rf /var/lib/apt/lists/*
 
-COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+COPY *.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/ && update-ca-certificates
 
 RUN python -m pip install --no-cache-dir --upgrade pip certifi
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt

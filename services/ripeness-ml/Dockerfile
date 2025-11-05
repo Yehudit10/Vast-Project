@@ -29,7 +29,8 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+RUN pip install --no-cache-dir --timeout 120 --index-url https://download.pytorch.org/whl/cpu \
+    --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org \
       torch==2.3.1 torchvision==0.18.1 \
  && pip install --no-cache-dir -r /app/requirements.txt \
  && pip install --no-cache-dir fastapi "uvicorn[standard]"

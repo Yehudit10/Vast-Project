@@ -1,0 +1,4 @@
+minio==7.2.18
+# ffmpeg-python==4.4
+# argparse==1.4.0
+# statistics==1.0.3.5  # This module is built-in, but can be added for compatibility
