@@ -2,35 +2,35 @@ FROM python:3.12-slim
 
 # Install ffmpeg, cron, and ca-certificates
 RUN apt-get update && \
-    apt-get install -y ffmpeg cron ca-certificates && \
+    apt-get install -y ffmpeg cron ca-certificates dos2unix && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy certificates to container (make sure the 'certs' folder contains the necessary .crt files)
+# Copy certificates
 COPY certs /app/certs
 
-# Install necessary certificates and add custom ones
+# Install certificates
 RUN cp /app/certs/*.crt /usr/local/share/ca-certificates/ && \
-    update-ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    update-ca-certificates
 
-# Copy requirements and install dependencies
+# Copy requirements and install
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code to the container
+# Copy source code
 COPY src/ ./src/
 
 # Create logs directory
 RUN mkdir -p /app/src/logs
 
-# Copy cron setup script
+# Copy and fix both scripts
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN dos2unix /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh && \
+    dos2unix /app/src/run_tiering.sh && \
+    chmod +x /app/src/run_tiering.sh
 
 WORKDIR /app/src
 
-# Run cron in foreground
 ENTRYPOINT ["/docker-entrypoint.sh"]
