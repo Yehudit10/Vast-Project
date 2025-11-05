@@ -40,7 +40,7 @@ BATCH_LIMIT = int(os.getenv("BATCH_LIMIT", "200"))
 
 # ----- labels & fruits mapping -----
 LABELS = ["unripe", "ripe", "overripe"]  
-FRUITS = ["Apple", "Banana", "Orange"]   
+FRUITS = ["Apple", "Banana", "Orange", "."]   
 FRUIT2IDX = {name.lower(): i for i, name in enumerate(FRUITS)}
 
 # ----- build model & load weights -----
@@ -116,6 +116,12 @@ def main():
         rows = cur.fetchall()
 
     processed = 0
+
+    # generate a single run_id for this batch
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT gen_random_uuid()")
+        run_id = cur.fetchone()[0]
+
     for inflog_id, ts, fruit_type, image_url in tqdm(rows, desc="Predicting ripeness"):
         try:
             if processed % 20 == 0:
@@ -128,14 +134,28 @@ def main():
                 print(f"[SKIP] inflog_id={inflog_id} :: {skip}")
                 continue
 
+            # derive bucket/object_key and lookup device_id
+            device_id = None
+            try:
+                p = urlparse(image_url)
+                path = p.path.lstrip('/')
+                if '/' in path:
+                    bucket, object_key = path.split('/', 1)
+                    with get_conn() as conn, conn.cursor() as cur:
+                        cur.execute("SELECT device_id FROM files WHERE bucket = %s AND object_key = %s", (bucket, object_key))
+                        res = cur.fetchone()
+                        device_id = res[0] if res else None
+            except Exception:
+                # keep device_id as None if parsing/lookup fails
+                device_id = None
 
             with get_conn() as conn, conn.cursor() as cur:
                 cur.execute("""
                 INSERT INTO ripeness_predictions
-                    (inference_log_id, ts, ripeness_label, ripeness_score, model_name)
-                VALUES (%s, now(), %s, %s, %s)
+                    (inference_log_id, ts, ripeness_label, ripeness_score, model_name, run_id, device_id)
+                VALUES (%s, now(), %s, %s, %s, %s, %s)
                 ON CONFLICT (inference_log_id) DO NOTHING;
-                """, (inflog_id, label, score, MODEL_NAME))
+                """, (inflog_id, label, score, MODEL_NAME, run_id, device_id))
             processed += 1
             print(f"[OK] inflog_id={inflog_id} -> {label} ({score:.4f})")
         except Exception as e:
