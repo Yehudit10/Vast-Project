@@ -20,6 +20,7 @@ services:
       MODEL_PATH: /models/best_conditional.pt
       MODEL_NAME: best_conditional
       BATCH_LIMIT: "500"
+      FRUITS: "Apple,Banana,Orange"
     networks:
       - agcloud_net
     ports:

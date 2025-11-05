@@ -1,0 +1,15 @@
+{
+  "Rules": [
+    {
+      "ID": "seven-days-sound",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Transition": {
+        "Days": 7,
+        "StorageClass": "COLD_SOUND"
+      }
+    }
+  ]
+}

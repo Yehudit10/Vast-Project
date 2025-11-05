@@ -8,6 +8,16 @@ services:
       - ./data/air/metadata:/data/metadata:ro
     command: ["python", "-u", "/app/data_publisher.py"]
 
+  sound-publisher:
+    build: .
+    # image: data-publisher:latest  # or 'build: .' again if you prefer
+    container_name: sound-publisher
+    env_file: .env.sound           # separate env file for sound topics/ids
+    volumes:
+      - ./data/sound/sounds:/data/sound/sounds:ro    
+      - ./data/sound/metadata:/data/sound/metadata:ro     
+    command: ["python", "-u", "/app/data_publisher.py"]
+
 networks:
   default:
     external: true
