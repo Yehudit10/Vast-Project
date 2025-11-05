@@ -2,17 +2,16 @@
 from __future__ import annotations
 from typing import Optional, Tuple, Dict, List
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox,
     QTableWidget, QTableWidgetItem, QAbstractItemView, QDoubleSpinBox,
-    QMessageBox, QHeaderView, QDialog, QLineEdit, QToolButton, QFrame
+    QMessageBox, QHeaderView, QDialog, QLineEdit, QFrame
 )
 
 from dashboard_api import DashboardApi
 
 
-# ---------- דיאלוג מעוצב לעריכת thresholds ----------
+# ---------- thresholds ----------
 class ThresholdsEditorDialog(QDialog):
     thresholdsSaved = pyqtSignal(dict)  # {(task,label): threshold}
 
@@ -25,59 +24,21 @@ class ThresholdsEditorDialog(QDialog):
         self.setModal(True)
         self.resize(820, 560)
 
-        # --- Style (QSS) — פלטת “פירות” ---
+        
         self.setStyleSheet("""
-/* ====== בסיס ====== */
-QDialog { background: #fffdf8; }            /* שמנת־בהיר */
-QLabel#title {
-    font-size: 22px; font-weight: 800; color: #1f2937; letter-spacing: .2px;
-}
 
-/* ====== טולבר ====== */
-QFrame#toolbar {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #fff6e5, stop:1 #ffeef7);
-    border: 1px solid #f1e6d6;
-    border-radius: 14px;
-}
 QLineEdit#search {
     padding: 10px 12px; border: 1px solid #e8dccc; border-radius: 10px; background: #ffffff;
 }
 
-/* ====== טבלה ====== */
-QTableWidget {
-    background: #ffffff;
-    border: 1px solid #f1e6d6;
-    border-radius: 14px;
-    gridline-color: #f1e6d6;
-    selection-background-color: #ffe2b8;   /* תפוז רך */
-    selection-color: #2c2c2c;
-    alternate-background-color: #fff9f0;   /* פסי רקע */
-}
-QTableWidget::item:hover { background: #fff1dc; } /* הובר עדין */
 
-QHeaderView::section {
-    background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ffefd7, stop:1 #ffe0b3);
-    color: #2b2b2b; padding: 10px 12px; border: none; border-right: 1px solid #f1e6d6;
-    font-weight: 700;
-}
-
-/* תאים ניתנים לעריכה */
-QDoubleSpinBox, QComboBox, QTableWidget QLineEdit {
-    border: 1px solid #e8dccc; border-radius: 8px; padding: 6px 8px; background: #ffffff;
-}
-
-/* ====== סטטוס ====== */
+/* ====== status====== */
 QLabel#status { color: #6b7280; }
-QLabel.status-ok   { color: #17803a; }  /* ליים */
-QLabel.status-warn { color: #b25a00; }  /* מנגו */
-QLabel.status-err  { color: #cc0022; }  /* דובדבן */
+QLabel.status-ok   { color: #17803a; }  
+QLabel.status-warn { color: #b25a00; } 
+QLabel.status-err  { color: #cc0022; }  
 
-/* ====== כפתורים בטעם פירות ======
-   add   = בננה/ליים
-   delete= דובדבן
-   save  = קיווי
-   close = אוכמניות
-*/
+
 QPushButton, QToolButton {
     padding: 10px 16px; border-radius: 12px; color: white; border: none; font-weight: 700;
 }
@@ -131,7 +92,6 @@ QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, s
         self.btn_delete = QPushButton("🍒 Delete selected")
         self.btn_save = QPushButton("🥝 Save all")
 
-        # מזהי כפתורים עבור ה־QSS
         self.btn_add.setObjectName("btn_add")
         self.btn_delete.setObjectName("btn_delete")
         self.btn_save.setObjectName("btn_save")
@@ -160,8 +120,8 @@ QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, s
             | QAbstractItemView.EditTrigger.SelectedClicked
             | QAbstractItemView.EditTrigger.EditKeyPressed
         )
-        # פינישים:
-        self.tbl.verticalHeader().setDefaultSectionSize(36)   # גובה שורות נעים
+     
+        self.tbl.verticalHeader().setDefaultSectionSize(36)   
 
         root.addWidget(self.tbl, 1)
 
@@ -186,9 +146,8 @@ QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, s
         # Start with one empty row
         self.add_row()
 
-    # ---- Public API (טעינה מבחוץ, אם רוצים) ----
     def load_rows(self, rows: List[Tuple[str, str, float, str]]):
-        """Optional: אפשר לטעון נתונים קיימים מבחוץ."""
+        
         self.tbl.setRowCount(0)
         for t, l, thr, upd in rows:
             self.add_row(t, l, thr, upd)
@@ -221,7 +180,7 @@ QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, s
         spn.setSingleStep(0.01)
         spn.setDecimals(2)
         spn.setValue(float(threshold))
-        spn.setAlignment(Qt.AlignmentFlag.AlignRight)  # יישור לימין
+        spn.setAlignment(Qt.AlignmentFlag.AlignRight)  
         self.tbl.setCellWidget(r, 2, spn)
 
         # Updated By
@@ -320,7 +279,7 @@ QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, s
     # -------- Save --------
     def save_all(self):
         ok, msg, bad_rows = self._validate()
-        # לנראות: אם יש שגיאה—נבחר את השורה הבעייתית
+       
         if not ok:
             if bad_rows:
                 self.tbl.selectRow(bad_rows[0])
@@ -392,7 +351,7 @@ QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, s
             self.btn_delete.setEnabled(True)
 
 
-# ---------- ה־View הראשי: כפתור שפותח את הדיאלוג ----------
+
 class FruitsView(QWidget):
     thresholdsSaved = pyqtSignal(dict)  # {(task,label): threshold}
 
@@ -407,7 +366,7 @@ class FruitsView(QWidget):
         title.setStyleSheet("font-size: 22px; font-weight: 700;")
         root.addWidget(title)
 
-        # שורת הסבר + כפתור פתיחת הדיאלוג
+        
         row = QHBoxLayout()
         lbl = QLabel("Manage task thresholds per task/label.")
         self.btn_open_editor = QPushButton("Change thresholds…")
@@ -416,23 +375,22 @@ class FruitsView(QWidget):
         row.addWidget(self.btn_open_editor)
         root.addLayout(row)
 
-        # קו דקורטיבי
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setStyleSheet("color:#e5e7eb;")
         root.addWidget(line)
 
-        # סטטוס כללי
+        
         self.lbl_status = QLabel("Click “Change thresholds…” to edit.")
         self.lbl_status.setStyleSheet("color:#555;")
         root.addWidget(self.lbl_status)
 
-        # אותות
+     
         self.btn_open_editor.clicked.connect(self.open_thresholds_dialog)
 
     def open_thresholds_dialog(self):
         dlg = ThresholdsEditorDialog(self.api, self)
-        # דוגמה: אם יש נתונים קיימים:
+       
         # rows = self.api.get_current_thresholds() -> List[Tuple[str,str,float,str]]
         # dlg.load_rows(rows)
 
