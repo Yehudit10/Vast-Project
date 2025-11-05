@@ -32,4 +32,3 @@ def build_router(contract_store) -> APIRouter:
     api.include_router(build_generic_router(contract_store))
 
     return api
-ם
