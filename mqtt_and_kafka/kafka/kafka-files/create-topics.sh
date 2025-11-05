@@ -24,24 +24,43 @@ for i in {1..60}; do
   fi
 done
 
-# Required topics with 7-day retention
 TOPICS=(
   dev-robot-alerts
   dev-robot-commands
   dev-robot-status
   dev-robot-telemetry-raw
   dev-robot-state
+
+  dev-camera-security
+  sensor-telemetry
+  sensor-anomalies
+  dev-robot-telemetry-anomalies
+  incidents.events
+  incidents.update
+  incidents.create
+
   sensor_anomalies
   sensor_zone_stats
   dev-robot-telemetry-anomalies
+  summaries.5m
   irrigation.control
   irrigation.control.dlq
   sound.new
   image.new
-  summaries.5m
   dev-aerial-images-keys
+  alerts
+
+  # --- imagery (MinIO -> Kafka) ---
   image.new.aerial
-  image.new.aerial.connections
+  image_new_aerial_connections
+  image.new.fruits
+  image.new.leaves
+  image.new.ground
+  image.new.field
+  
+  # --- sound(sound) (MinIO -> Kafka) ---
+  sound.new.plants
+  sound.new.sounds
 )
 
 # Idempotent creation with retention.ms

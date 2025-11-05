@@ -23,7 +23,7 @@ USE_UTC        = os.getenv("USE_UTC", "false").lower() == "true"
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET   = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
-MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "telemetry")
+MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "sound")
 MINIO_PREFIX   = os.getenv("MINIO_PREFIX", "sounds/")
 
 ALLOWED_EXTS = {".wav", ".flac", ".ogg", ".aiff", ".aif", ".au", ".mp3", ".m4a", ".aac", ".opus"}
