@@ -2,8 +2,9 @@ import json
 import time
 import logging
 from typing import Optional, Dict, Any
-
 from confluent_kafka import Producer, KafkaException
+import uuid
+from datetime import datetime, timezone
 
 LOGGER = logging.getLogger("audio_cls.alerts")
 if not LOGGER.handlers:
@@ -49,6 +50,9 @@ def _delivery_report(err, msg):
             "Kafka delivered: topic=%s partition=%s offset=%s",
             msg.topic(), msg.partition(), msg.offset()
         )
+
+def _iso_utc(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def send_alert(
     *,
@@ -108,3 +112,72 @@ def send_kafka_alert(file_path: str, label: str, prob: float) -> bool:
         probs=payload_probs,
         meta=meta,
     )
+
+# ---- Structured alert with strict required fields ----
+REQUIRED_FIELDS = ("alert_id", "alert_type", "device_id", "started_at")
+
+def send_structured_alert(
+    *,
+    brokers: str,
+    topic: str = "alerts",
+    alert_type: str,
+    device_id: str,
+    started_at: str,
+    ended_at: Optional[str] = None,
+    confidence: Optional[float] = None,
+    severity: Optional[int] = None,
+    area: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    image_url: Optional[str] = None,
+    vod: Optional[str] = None,
+    hls: Optional[str] = None,
+    meta: Optional[Dict[str, Any]] = None,
+    alert_id: Optional[str] = None,
+    message_key: Optional[str] = None,
+) -> bool:
+    """
+    Send alert JSON to Kafka in the required schema.
+    Required: alert_id, alert_type, device_id, started_at (ISO-8601 Z).
+    Optional fields are included ONLY if explicitly provided (no defaults/guesses).
+    """
+    payload: Dict[str, Any] = {
+        "alert_id": alert_id or str(uuid.uuid4()),
+        "alert_type": alert_type,
+        "device_id": device_id,
+        "started_at": started_at,
+    }
+
+    # Append optional fields IFF provided (no guessing)
+    if ended_at: payload["ended_at"] = ended_at
+    if confidence is not None: payload["confidence"] = float(confidence)
+    if severity is not None: payload["severity"] = int(severity)
+    if area: payload["area"] = area
+    if lat is not None: payload["lat"] = float(lat)
+    if lon is not None: payload["lon"] = float(lon)
+    if image_url: payload["image_url"] = image_url
+    if vod: payload["vod"] = vod
+    if hls: payload["hls"] = hls
+    if meta is not None: payload["meta"] = meta
+
+    missing = [f for f in REQUIRED_FIELDS if f not in payload or payload[f] in (None, "")]
+    if missing:
+        LOGGER.error("Structured alert missing required fields: %s", missing)
+        return False
+
+    try:
+        p = _get_producer(brokers)
+        p.produce(
+            topic=topic,
+            value=json.dumps(payload).encode("utf-8"),
+            key=(message_key.encode("utf-8") if isinstance(message_key, str) else None),
+            callback=_delivery_report
+        )
+        p.poll(0)
+        return True
+    except KafkaException as e:
+        LOGGER.error("Kafka exception while producing structured alert: %s", e)
+        return False
+    except Exception as e:
+        LOGGER.error("Kafka produce error (structured alert): %s", e)
+        return False

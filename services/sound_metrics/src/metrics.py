@@ -15,7 +15,7 @@ except Exception:
 
 # === Environment ===
 ADDR           = os.getenv("ADDR", "0.0.0.0")
-PORT           = int(os.getenv("PORT", "8001"))
+PORT           = int(os.getenv("PORT", "8005"))
 WINDOW_MIN     = int(os.getenv("WINDOW_MIN", 5))
 FRAME_SEC      = float(os.getenv("FRAME_SEC", 0.1))
 THRESHOLD      = float(os.getenv("THRESHOLD", 0.01))
@@ -23,7 +23,7 @@ USE_UTC        = os.getenv("USE_UTC", "false").lower() == "true"
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET   = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
-MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "telemetry")
+MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "sound")
 MINIO_PREFIX   = os.getenv("MINIO_PREFIX", "sounds/")
 
 ALLOWED_EXTS = {".wav", ".flac", ".ogg", ".aiff", ".aif", ".au", ".mp3", ".m4a", ".aac", ".opus"}

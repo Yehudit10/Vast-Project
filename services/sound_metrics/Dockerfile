@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY certs/ /app/certs/
+# COPY certs/ /app/certs/
 RUN if [ -d /app/certs ] && ls /app/certs/*.crt >/dev/null 2>&1; then \
       cp /app/certs/*.crt /usr/local/share/ca-certificates/ && update-ca-certificates; \
     else \
@@ -23,7 +23,7 @@ COPY src/ ./src/
 
 ENV PYTHONUNBUFFERED=1 \
     ADDR=0.0.0.0 \
-    PORT=8001 \
+    PORT=8005 \
     WINDOW_MIN=5 \
     FRAME_SEC=0.1 \
     THRESHOLD=0.01 \
@@ -31,8 +31,8 @@ ENV PYTHONUNBUFFERED=1 \
     MINIO_ENDPOINT=minio:9000 \
     MINIO_ACCESS_KEY=minioadmin \
     MINIO_SECRET_KEY=minioadmin123 \
-    MINIO_BUCKET=audio \
-    MINIO_PREFIX=samples/
+    MINIO_BUCKET=sound \
+    MINIO_PREFIX=sounds/
 
 EXPOSE 8001
 
