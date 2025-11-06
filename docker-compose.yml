@@ -708,6 +708,37 @@ services:
     depends_on:
       - postgres
 
+  ripeness-api:
+    build:
+      context: ./services/ripeness-ml
+      dockerfile: deploy/Dockerfile
+    image: ripeness-api:latest
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=missions_db
+      - PGUSER=missions_user
+      - PGPASSWORD=pg123
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_SECURE=false
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MODEL_NAME=best_conditional
+      - BATCH_LIMIT=500
+      - FRUITS=Apple,Banana,Orange
+    depends_on:
+      - postgres
+      - minio-hot
+    volumes:
+      - ./services/ripeness-ml/checkpoints:/app/checkpoints
+      - ./services/ripeness-ml/configs:/app/configs
+      - ./services/ripeness-ml/model:/app/model
+    container_name: ripeness-api
+    networks: [ ag_cloud ]
+    ports:
+      - "8091:8088"
+    restart: unless-stopped
+ 
   # --------------------------
   # Flink JobManager & TaskManager
   # --------------------------
