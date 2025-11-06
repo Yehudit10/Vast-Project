@@ -5,3 +5,6 @@ tensorflow
 psycopg2-binary
 requests
 urllib3
+pytz
+minio
+keras
