@@ -48,9 +48,19 @@ jobs:
           'REFRESH_TTL_DAYS=14' \
           'DEV_SA_NAME=ci-service' \
               > services/db_api_service/.env
-
-
-
+      - name: Prepare env for plant_stress
+        run: |
+          mkdir -p services/plant_stress
+          cat > services/plant_stress/.env <<'EOF'
+          ADDR=0.0.0.0
+          PORT=8001
+          MINIO_ENDPOINT=minio:9000
+          MINIO_ACCESS_KEY=minioadmin
+          MINIO_SECRET_KEY=minioadmin123
+          MINIO_BUCKET=audio
+          MINIO_PREFIX=samples/
+          WINDOW_MIN=5
+          EOF
 
       - name: Start core stack
         run: docker compose up -d kafka mosquitto connect
