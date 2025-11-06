@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR="/mnt/c/Users/This User/Desktop/New folder/AgCloud"
+PROJECT_DIR="/mnt/c/Users/This User/Desktop/project_05112025/AgCloud"
 LOG_DIR="$PROJECT_DIR/services/plant_stress/logs"
 STAMP="$(date +%F)"
 LOG_FILE="$LOG_DIR/cron_${STAMP}.log"
