@@ -18,7 +18,7 @@ POSTGRES_DSN  = os.getenv("POSTGRES_DSN", "postgresql://postgres:postgres@localh
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET   = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
-MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "telemetry")
+MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "sound")
 MINIO_PREFIX   = os.getenv("MINIO_PREFIX", "plants/")
 MINIO_SECURE   = os.getenv("MINIO_SECURE", "false").lower() == "true"
 

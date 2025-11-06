@@ -15,7 +15,7 @@ except Exception:
 
 # === Environment ===
 ADDR           = os.getenv("ADDR", "0.0.0.0")
-PORT           = int(os.getenv("PORT", "8001"))
+PORT           = int(os.getenv("PORT", "8005"))
 WINDOW_MIN     = int(os.getenv("WINDOW_MIN", 5))
 FRAME_SEC      = float(os.getenv("FRAME_SEC", 0.1))
 THRESHOLD      = float(os.getenv("THRESHOLD", 0.01))
