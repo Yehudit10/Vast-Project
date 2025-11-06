@@ -100,14 +100,14 @@ def main() -> int:
     print("[main] starting QApplication")
     app = QApplication(sys.argv)
 
-    # 1) show auth shell first
+    # 1) create the auth shell but do NOT show it
     shell = AuthShell()
     shell.setWindowTitle("Sign in")
-    shell.show()
+    # shell.show()   # disabled to skip the login window
 
     # 2) when login succeeds -> open MainWindow
     def open_main(user):
-        api = DashboardApi()  # pass user if needed
+        api = DashboardApi()  # create API instance (user not required)
         win = MainWindow(api)
 
         # connect logout back to login
@@ -116,7 +116,6 @@ def main() -> int:
         win.show()
         shell.hide()
 
-  
     def on_logout(win):
         win.close()
         shell.reset()
@@ -124,6 +123,9 @@ def main() -> int:
 
     # wire callback
     shell.on_login_success = open_main
+
+    # open the main window directly (skip login)
+    open_main(None)
 
     print("[main] window shown, entering event loop")
     rc = app.exec()
