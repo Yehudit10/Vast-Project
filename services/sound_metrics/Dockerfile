@@ -1,31 +1,24 @@
 FROM python:3.11-slim
 
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg ca-certificates curl && \
-    rm -rf /var/lib/apt/lists/*
+    ffmpeg ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# --- Copy and trust all *.crt files (if any) ---
-COPY certs/ /tmp/certs/
-RUN if [ -d /tmp/certs ] && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
-      cp /tmp/certs/*.crt /usr/local/share/ca-certificates/ && \
-      chmod 644 /usr/local/share/ca-certificates/*.crt && \
-      update-ca-certificates; \
+# COPY certs/ /app/certs/
+RUN if [ -d /app/certs ] && ls /app/certs/*.crt >/dev/null 2>&1; then \
+      cp /app/certs/*.crt /usr/local/share/ca-certificates/ && update-ca-certificates; \
     else \
       echo "No extra CA certs found. Skipping CA update."; \
     fi
 
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
-RUN printf "[global]\ncert = /etc/ssl/certs/ca-certificates.crt\n" > /etc/pip.conf
-
+# Python deps
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip setuptools wheel certifi && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
+# App code
 COPY src/ ./src/
 
 ENV PYTHONUNBUFFERED=1 \
