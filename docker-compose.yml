@@ -106,27 +106,37 @@ services:
     restart: unless-stopped
 
   # -------------------------
-  # Plant Stress Detector
+  # Plant Stress Daily Batch
   # -------------------------
 
-  plant_stress:
-    build: ./services/plant_stress
-    environment:
-      - INPUT_DIR=/data/inbox
-      - MODEL_DIR=/models
-      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0
-      - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0  # optional
-    volumes:
-      - "./services/plant_stress/models:/models:ro"
-      - "./services/plant_stress/samples:/data/inbox:ro"
-
-    depends_on:
-      - postgres
-    command: [ "python", "-u", "/app/app.py" ]
-    networks:
-      - ag_cloud
+  plant_stress_daily:
+      build: ./services/plant_stress
+      env_file:
+        - ./services/plant_stress/.env
+      restart: "no"
+      environment:
+        MODEL_DIR: /models
+        CONFIDENCE_THRESHOLD: "0.60"
+        TF_CPP_MIN_LOG_LEVEL: "2"
+        TIMEZONE: Asia/Jerusalem
+        POSTGRES_DSN: postgresql://missions_user:pg123@postgres:5432/missions_db
+        MINIO_ENDPOINT: minio-hot:9000
+        MINIO_ACCESS_KEY: minioadmin
+        MINIO_SECRET_KEY: minioadmin123
+        MINIO_BUCKET: sound
+        MINIO_PREFIX: plants/
+        MINIO_SECURE: "false"
+      command: ["python","-u","/app/predict_minio_daily.py"]
+      volumes:
+        - "./services/plant_stress/models:/models:ro"
+      depends_on:
+        postgres:
+          condition: service_healthy
+        minio-hot:
+          condition: service_healthy
+        mc-bootstrap:
+          condition: service_started
+      networks: [ag_cloud]
 
   # -------------------------
   # MQTT + Kafka + Connect + Init
