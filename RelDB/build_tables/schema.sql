@@ -30,13 +30,22 @@ CREATE TABLE IF NOT EXISTS anomaly_types (
   description text NOT NULL
 );
 
--- === Core entities ===
-
--- Leaf disease catalog (simple id+name)
+--Types of leaf diseases
 CREATE TABLE IF NOT EXISTS leaf_disease_types (
     id   SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
 );
+-- === Core entities ===
+
+CREATE TABLE IF NOT EXISTS leaf_reports (
+    id                     BIGSERIAL PRIMARY KEY,
+    device_id              TEXT NOT NULL REFERENCES devices(device_id),
+    leaf_disease_type_id   INT  NOT NULL REFERENCES leaf_disease_types(id),
+    ts                     TIMESTAMPTZ NOT NULL,
+    confidence             DOUBLE PRECISION CHECK (confidence >= 0 AND confidence <= 1),
+    sick                   BOOLEAN NOT NULL
+);
+
 
 -- Missions table
 CREATE TABLE IF NOT EXISTS missions (
@@ -86,16 +95,6 @@ CREATE TABLE IF NOT EXISTS anomalies (
   geom             geometry(Point,4326)
 );
 
--- Per-leaf disease report events
-CREATE TABLE IF NOT EXISTS leaf_reports (
-    id                     BIGSERIAL PRIMARY KEY,
-    device_id              TEXT NOT NULL REFERENCES devices(device_id),
-    leaf_disease_type_id   INT  NOT NULL REFERENCES leaf_disease_types(id),
-    ts                     TIMESTAMPTZ NOT NULL,
-    confidence             DOUBLE PRECISION CHECK (confidence >= 0 AND confidence <= 1),
-    sick                   BOOLEAN NOT NULL
-);
-
 -- Files stored in MinIO (S3-compatible) and referenced here
 CREATE TABLE IF NOT EXISTS files (
   file_id      bigserial PRIMARY KEY,
@@ -125,6 +124,7 @@ CREATE TABLE IF NOT EXISTS event_logs (
   user_id  bigint NOT NULL DEFAULT -1,          -- -1 = not triggered by a user
   PRIMARY KEY (log_id, ts)
 ) PARTITION BY RANGE (ts);
+
 
 -- === Partitioned parent for telemetry (daily range) ===
 CREATE TABLE IF NOT EXISTS telemetry_new (
@@ -179,6 +179,7 @@ CREATE TABLE IF NOT EXISTS public.service_accounts (
     token_hash  text NOT NULL
 );
 
+
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id         SERIAL PRIMARY KEY,
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -186,6 +187,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 
 
 --- === Embeddings table for vector data (e.g. image embeddings) ===
@@ -225,6 +227,50 @@ CREATE TABLE IF NOT EXISTS inference_logs (
     image_url TEXT
 );
 
+-- Ripeness predictions table
+CREATE TABLE IF NOT EXISTS ripeness_predictions (
+    id BIGSERIAL PRIMARY KEY,
+    inference_log_id BIGINT NOT NULL REFERENCES inference_logs(id) ON DELETE CASCADE,
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ripeness_label TEXT NOT NULL CHECK (ripeness_label IN ('ripe', 'unripe', 'overripe')),
+    ripeness_score DOUBLE PRECISION NOT NULL,
+    model_name TEXT NOT NULL,
+    run_id UUID NOT NULL,
+    device_id TEXT REFERENCES devices(device_id),
+    UNIQUE (inference_log_id)
+);
+
+-- Create indexes for ripeness_predictions
+CREATE INDEX IF NOT EXISTS ix_ripeness_inflog ON ripeness_predictions(inference_log_id);
+CREATE INDEX IF NOT EXISTS ix_ripeness_ts ON ripeness_predictions(ts);
+CREATE INDEX IF NOT EXISTS ix_ripeness_device ON ripeness_predictions(device_id);
+CREATE INDEX IF NOT EXISTS ix_ripeness_run ON ripeness_predictions(run_id);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts_brin ON leaf_reports USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts ON leaf_reports (device_id, ts);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_type_ts ON leaf_reports (leaf_disease_type_id, ts);
+
+-- Weekly ripeness rollups table
+CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (
+    id BIGSERIAL PRIMARY KEY,
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    window_start TIMESTAMPTZ NOT NULL,
+    window_end TIMESTAMPTZ NOT NULL,
+    fruit_type TEXT NOT NULL,
+    device_id TEXT REFERENCES devices(device_id),
+    run_id UUID NOT NULL,
+    cnt_total INTEGER NOT NULL,
+    cnt_ripe INTEGER NOT NULL,
+    cnt_unripe INTEGER NOT NULL,
+    cnt_overripe INTEGER NOT NULL,
+    pct_ripe DOUBLE PRECISION NOT NULL
+);
+
+-- Create indexes for ripeness_weekly_rollups_ts
+CREATE INDEX IF NOT EXISTS ix_rwrt_ts ON ripeness_weekly_rollups_ts(ts);
+CREATE INDEX IF NOT EXISTS ix_rwrt_fruit_ts ON ripeness_weekly_rollups_ts(fruit_type, ts);
+CREATE INDEX IF NOT EXISTS ix_rwrt_device ON ripeness_weekly_rollups_ts(device_id);
+CREATE INDEX IF NOT EXISTS ix_rwrt_run ON ripeness_weekly_rollups_ts(run_id);
+
 -- Sensor event logs table.
 CREATE TABLE IF NOT EXISTS event_logs_sensors(
     id         bigserial PRIMARY KEY,
@@ -237,6 +283,7 @@ CREATE TABLE IF NOT EXISTS event_logs_sensors(
     CONSTRAINT event_logs_sensors_end_after_start
         CHECK (end_ts IS NULL OR end_ts >= start_ts)
 );
+
 
 
 CREATE TABLE IF NOT EXISTS sensors (
@@ -263,6 +310,7 @@ CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     result JSONB NOT NULL,           
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 
 
 CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
@@ -383,6 +431,7 @@ CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (upd
 
 -- === Indexes for performance optimization ===
 
+
 CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
     ON public.sensor_anomalies USING BRIN (ts);
 
@@ -391,6 +440,7 @@ CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
 
 CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
     ON public.sensor_anomalies (sensor);
+
 
 CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
     ON public.sensor_zone_stats (zone, window_start, window_end);
@@ -417,22 +467,13 @@ CREATE INDEX IF NOT EXISTS ix_telemetry_mission_ts     ON telemetry (mission_id,
 CREATE INDEX IF NOT EXISTS ix_anomalies_mission_ts     ON anomalies (mission_id, ts);
 CREATE INDEX IF NOT EXISTS ix_files_mission_created    ON files (mission_id, created_at);
 
--- Leaf reports indexes
-CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts_brin
-    ON leaf_reports USING BRIN (ts);
-
-CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts
-    ON leaf_reports (device_id, ts);
-
-CREATE INDEX IF NOT EXISTS ix_leaf_reports_type_ts
-    ON leaf_reports (leaf_disease_type_id, ts);
-
 -- JSONB for flexible search
 CREATE INDEX IF NOT EXISTS ix_anomalies_details_gin    ON anomalies USING GIN (details);
 CREATE INDEX IF NOT EXISTS ix_files_metadata_gin       ON files     USING GIN (metadata);
 
 -- Regions spatial index
 CREATE INDEX IF NOT EXISTS ix_regions_geom_gist        ON regions USING GIST (geom);
+
 
 -- Vector index for embeddings (using HNSW)
 CREATE INDEX IF NOT EXISTS idx_embeddings_vec_hnsw    ON embeddings USING hnsw (vec vector_l2_ops)  WITH (m=4, ef_construction=10);
@@ -450,6 +491,7 @@ CREATE INDEX IF NOT EXISTS idx_infer_fruit ON inference_logs (fruit_type);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sensors (device_id, start_ts);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
 CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
+
 
 
 
@@ -535,5 +577,4 @@ ALTER TABLE incident_frames                                                     
 
 -- CREATE INDEX IF NOT EXISTS ix_alerts_entity_rule ON public.alerts(entity_id, rule);
 -- CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
-
 
