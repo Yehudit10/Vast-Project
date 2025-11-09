@@ -42,9 +42,9 @@ Default credentials:
 ## What the bootstrap (`init.sh`) does
 
 - Configures `mc` aliases for Hot/Cold
-- Ensures buckets `imagery` and `telemetry` exist
+- Ensures buckets `imagery` and `sound` exist
 - Enables Versioning on those buckets
-- Creates remote tiers: `COLD_IMAGERY`, `COLD_TELEMETRY`
+- Creates remote tiers: `COLD_IMAGERY`, `COLD_SOUND`
 - Applies default ILM (7 days → Cold)
 
 ---
@@ -58,7 +58,7 @@ docker compose exec mc-bootstrap sh -lc 'mc ls hot && mc admin tier ls hot'
 
 Check ILM:
 ```bash
-docker compose exec mc-bootstrap sh -lc 'mc ilm ls hot/imagery && mc ilm ls hot/telemetry'
+docker compose exec mc-bootstrap sh -lc 'mc ilm ls hot/imagery && mc ilm ls hot/sound'
 ```
 
 Upload a test file:
@@ -78,7 +78,7 @@ docker compose exec mc-bootstrap sh -lc 'mc stat hot/imagery/test.txt'
 
 ```bash
 docker compose exec mc-bootstrap sh -lc '
-for b in imagery telemetry; do
+for b in imagery sound; do
   ids=$(mc ilm export hot/$b 2>/dev/null | sed -n "s/.*\"ID\" *: *\"\([^\"]\+\)\".*/\1/p" || true)
   for id in $ids; do mc ilm rule rm hot/$b --id "$id" || true; done
 done

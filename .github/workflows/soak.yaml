@@ -1,422 +1,226 @@
-name: Soak Test (MQTT to Kafka Bridge)
+name: Soak Test (Real MQTT→Kafka via Compose)
+
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "sounds-ruth" ]
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
-concurrency:
-  group: soak-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ "main", "sounds-ruth", "ruthhermelin/soak" ]
+
 jobs:
   soak:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    defaults:
-      run:
-        shell: bash
     env:
-      SOAK_DURATION_SEC: "150"
+      ARTIFACT_DIR: artifacts
+      SOAK_DURATION_SEC: "120"
       SOAK_RATE_PER_SEC: "1000"
-      LOSS_THRESHOLD_PCT: "1.0"
-      MQTT_TOPIC: "soak/test"
-      KAFKA_TOPIC: "dev-robot-telemetry-raw" 
-      ARTIFACT_DIR: "artifacts"
+      MQTT_TOPIC: "mqtt/soak"
+      KAFKA_TOPIC: "dev-robot-alerts"
+      LOSS_THRESHOLD_PCT: "1.0"   # סף כשל: % אובדן מותר (שני לפי הצורך)
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Prepare artifacts dir
         run: mkdir -p "$ARTIFACT_DIR"
 
-      - name: Build Kafka image
-        run: |
-          cd kafka
-          docker build -t kafka-single:local .
-
-      - name: Copy kafka env file
-        run: |
-          cp kafka/kafka.env.example ./kafka.env.example
-
-      - name: Create docker-compose.yml & configs
-        run: |
-          cat > docker-compose.yml <<'YAML'
-          services:
-            kafka:
-              image: kafka-single:local
-              env_file:
-                - ./kafka/kafka.env.example
-              ports:
-                - "9092:9092"
-                - "29092:9094"
-              healthcheck:
-                test: ["CMD", "/opt/bitnami/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
-                interval: 10s
-                timeout: 5s
-                retries: 40
-            mosquitto:
-              image: eclipse-mosquitto:2.0
-              volumes:
-                - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-              healthcheck:
-                test: ["CMD", "mosquitto_pub", "-h", "localhost", "-t", "health", "-m", "test", "-q", "0"]
-                interval: 5s
-                timeout: 3s
-                retries: 20
-            mqtt-kafka-bridge:
-              image: alpine:3.20
-              depends_on:
-                kafka:
-                  condition: service_healthy
-                mosquitto:
-                  condition: service_healthy
-              volumes:
-                - ./bridge.py:/app/bridge.py:ro
-              working_dir: /app
-              environment:
-                - MQTT_HOST=mosquitto
-                - MQTT_PORT=1883
-                - MQTT_TOPIC=soak/test
-                - KAFKA_HOST=kafka
-                - KAFKA_PORT=9092
-                - KAFKA_TOPIC=${KAFKA_TOPIC}
-              command: sh -c "apk add --no-cache python3 py3-pip py3-paho-mqtt py3-kafka || (apk add --no-cache python3 py3-pip && pip install --break-system-packages paho-mqtt kafka-python) && python bridge.py"
-            mqtt-tools:
-              image: alpine:3.20
-              entrypoint: ["sh","-lc","sleep infinity"]
-              depends_on:
-                mosquitto:
-                  condition: service_healthy
-          YAML
-          cat > mosquitto.conf <<'CONF'
-          listener 1883 0.0.0.0
-          allow_anonymous true
-          persistence false
-          CONF
-          cat > bridge.py <<'PYTHON'
-          import paho.mqtt.client as mqtt
-          import time
-          import os
-          import json
-          import threading
-          import logging
-          from kafka import KafkaProducer
-          from kafka.errors import KafkaError
-          logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-          logger = logging.getLogger(__name__)
-          MQTT_HOST = os.getenv('MQTT_HOST', 'mosquitto')
-          MQTT_PORT = int(os.getenv('MQTT_PORT', '1883'))
-          MQTT_TOPIC = os.getenv('MQTT_TOPIC', 'soak/test')
-          KAFKA_HOST = os.getenv('KAFKA_HOST', 'kafka')
-          KAFKA_PORT = int(os.getenv('KAFKA_PORT', '9092'))
-          KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'dev-robot-telemetry-raw')
-          messages_received = 0
-          messages_sent = 0
-          messages_failed = 0
-          lock = threading.Lock()
-          def create_kafka_producer():
-              max_retries = 60
-              for i in range(max_retries):
-                  try:
-                      producer = KafkaProducer(
-                          bootstrap_servers=f'{KAFKA_HOST}:{KAFKA_PORT}',
-                          value_serializer=lambda x: x.encode('utf-8') if isinstance(x, str) else x,
-                          retries=3,
-                          batch_size=16384,
-                          linger_ms=10,
-                          buffer_memory=33554432,
-                          acks=1,
-                          request_timeout_ms=30000,
-                          api_version=(0, 10, 1)
-                      )
-                      logger.info("Kafka producer connected successfully")
-                      producer.send(KAFKA_TOPIC, value="bridge_started").get(timeout=10)
-                      return producer
-                  except Exception as e:
-                      logger.error(f"Failed to connect to Kafka (attempt {i+1}/{max_retries}): {e}")
-                      time.sleep(2)
-              raise Exception("Failed to connect to Kafka after max retries")
-          kafka_producer = None
-          running = True
-          def on_connect(client, userdata, flags, rc):
-              if rc == 0:
-                  logger.info(f"MQTT connected successfully")
-                  client.subscribe(MQTT_TOPIC, qos=0)
-                  logger.info(f"Subscribed to MQTT topic: {MQTT_TOPIC}")
-              else:
-                  logger.error(f"MQTT connection failed with code {rc}")
-          def on_message(client, userdata, msg):
-              global messages_received, messages_sent, messages_failed, kafka_producer
-              with lock:
-                  messages_received += 1
-              try:
-                  if kafka_producer and running:
-                      future = kafka_producer.send(KAFKA_TOPIC, value=msg.payload)
-                      with lock:
-                          messages_sent += 1
-                      if messages_received % 5000 == 0:
-                          logger.info(f"Bridge stats: MQTT received={messages_received}, Kafka sent={messages_sent}, failed={messages_failed}")
-              except Exception as e:
-                  with lock:
-                      messages_failed += 1
-                  logger.error(f"Error forwarding message to Kafka: {e}")
-          def on_disconnect(client, userdata, rc):
-              logger.warning(f"MQTT disconnected with code {rc}")
-          def stats_reporter():
-              while running:
-                  time.sleep(15)
-                  with lock:
-                      logger.info(f"Bridge status - MQTT received: {messages_received}, Kafka sent: {messages_sent}, failed: {messages_failed}")
-          def main():
-              global kafka_producer, running
-              logger.info("Starting MQTT to Kafka bridge...")
-              logger.info(f"Config: MQTT={MQTT_HOST}:{MQTT_PORT}, topic={MQTT_TOPIC}")
-              logger.info(f"Config: Kafka={KAFKA_HOST}:{KAFKA_PORT}, topic={KAFKA_TOPIC}")
-              try:
-                  logger.info("Creating Kafka producer...")
-                  kafka_producer = create_kafka_producer()
-                  logger.info("Setting up MQTT client...")
-                  client = mqtt.Client(client_id="mqtt_kafka_bridge")
-                  client.on_connect = on_connect
-                  client.on_message = on_message
-                  client.on_disconnect = on_disconnect
-                  max_retries = 30
-                  for i in range(max_retries):
-                      try:
-                          logger.info(f"Connecting to MQTT broker (attempt {i+1}/{max_retries})...")
-                          client.connect(MQTT_HOST, MQTT_PORT, 60)
-                          break
-                      except Exception as e:
-                          logger.error(f"Failed to connect to MQTT: {e}")
-                          time.sleep(2)
-                  else:
-                      raise Exception("Failed to connect to MQTT after max retries")
-                  stats_thread = threading.Thread(target=stats_reporter, daemon=True)
-                  stats_thread.start()
-                  logger.info("Bridge is ready and running...")
-                  client.loop_forever()
-              except KeyboardInterrupt:
-                  logger.info("Bridge shutdown requested...")
-              except Exception as e:
-                  logger.error(f"Bridge error: {e}")
-              finally:
-                  running = False
-                  if kafka_producer:
-                      logger.info("Flushing Kafka producer...")
-                      kafka_producer.flush(timeout=30)
-                      kafka_producer.close()
-                  logger.info(f"Bridge stopped. Final stats: MQTT received={messages_received}, Kafka sent={messages_sent}, failed={messages_failed}")
-          if __name__ == "__main__":
-              main()
-          PYTHON
-
-      - name: Show Docker/Compose versions
+      - name: Show Docker versions
         run: |
           docker --version || true
-          docker compose version || docker-compose --version || true
+          docker compose version || true
 
-      - name: Start stack
-        run: docker compose up -d --wait || docker compose up -d
-
-      - name: Wait for services to be ready
+      - name: Create dummy MinIO env file (for CI)
         run: |
-          echo "Waiting for Kafka to complete initialization..."
-          # Wait for your app-start.sh to finish topics creation and smoke test
-          for i in $(seq 1 120); do
-            if docker compose logs kafka 2>/dev/null | grep -q "Bridge is ready and running\|✅ PASS\|Kafka starting"; then
-              echo "Kafka initialization completed!"
-              break
-            fi
-            echo "Waiting for Kafka initialization... ($i/120)"
-            docker compose ps kafka
-            docker compose logs kafka --tail=5
-            sleep 2
-          done
-          
-          echo "Waiting for bridge to be ready..."
-          for i in $(seq 1 60); do
-            if docker compose logs mqtt-kafka-bridge 2>/dev/null | grep -q "Bridge is ready and running"; then
-              echo "Bridge is ready!"
-              break
-            fi
-            echo "Waiting for bridge... ($i/60)"
-            docker compose ps mqtt-kafka-bridge
-            docker compose logs mqtt-kafka-bridge --tail=5
-            sleep 2
-          done
-          
-          echo "=== All Services Status ==="
-          docker compose ps
-
-      - name: Debug services connectivity
+          mkdir -p storage_with_mqtt/storage/combined_minio_setup
+          cat > storage_with_mqtt/storage/combined_minio_setup/.env <<'EOF'
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=minioadmin123
+          EOF
+      - name: Prepare env for db_api_service
         run: |
-          echo "=== Debugging services connectivity ==="
-          echo "1. Container status:"
-          docker compose ps
-          
-          echo "2. Testing MQTT connectivity:"
-          docker compose exec -T mqtt-tools sh -c "
-            apk add --no-cache mosquitto-clients netcat-openbsd
-            echo 'Testing MQTT connection...'
-            timeout 5 nc -zv mosquitto 1883 || echo 'MQTT port not reachable'
-            echo 'Publishing test message to MQTT...'
-            mosquitto_pub -h mosquitto -t test/debug -m 'test message' -q 0
-            echo 'Subscribing to MQTT for 3 seconds...'
-            timeout 3 mosquitto_sub -h mosquitto -t test/debug -q 0 || echo 'No messages received'
-          "
-          
-          echo "3. Testing Kafka connectivity (using your custom image):"
-          docker compose exec -T kafka bash -c "
-            echo 'Testing Kafka connection...'
-            /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
-            echo 'Testing Kafka producer...'
-            echo 'test message' | /opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic ${KAFKA_TOPIC}
-            echo 'Testing Kafka consumer (5 seconds)...'
-            timeout 5 /opt/bitnami/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic ${KAFKA_TOPIC} --from-beginning || echo 'Done'
-          "
-          
-          echo "4. Bridge detailed logs:"
-          docker compose logs mqtt-kafka-bridge
-          
-          echo "5. Network connectivity from bridge:"
-          docker compose exec -T mqtt-kafka-bridge sh -c "
-            echo 'Testing from bridge container:'
-            nc -zv mosquitto 1883 2>&1 || echo 'Cannot reach MQTT'
-            nc -zv kafka 9092 2>&1 || echo 'Cannot reach Kafka'
-            ps aux | grep python || echo 'No python process found'
-          " || echo "Bridge container not accessible"
+          mkdir -p services/db_api_service
+          printf '%s\n' \
+          'DB_DSN=postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db' \
+          'ENV=ci' \
+          'JWT_SECRET=change-me-in-ci' \
+          'JWT_ALGO=HS256' \
+          'ACCESS_TTL_MIN=15' \
+          'REFRESH_TTL_DAYS=14' \
+          'DEV_SA_NAME=ci-service' \
+              > services/db_api_service/.env
+      - name: Prepare env for plant_stress
+        run: |
+          mkdir -p services/plant_stress
+          cat > services/plant_stress/.env <<'EOF'
+          ADDR=0.0.0.0
+          PORT=8001
+          MINIO_ENDPOINT=minio:9000
+          MINIO_ACCESS_KEY=minioadmin
+          MINIO_SECRET_KEY=minioadmin123
+          MINIO_BUCKET=audio
+          MINIO_PREFIX=samples/
+          WINDOW_MIN=5
+          EOF
 
-      - name: Install MQTT clients in tools container
-        run: docker compose exec -T mqtt-tools sh -lc "apk add --no-cache mosquitto-clients jq busybox-extras"
+      - name: Start core stack
+        run: docker compose up -d kafka mosquitto connect
 
-      - name: Run MQTT to Kafka soak test
+      - name: Wait for Kafka & Mosquitto & Connect
         run: |
           set -euo pipefail
+
+          echo "== Wait Kafka =="
+          for i in $(seq 1 60); do
+            s=$(docker inspect -f '{{.State.Health.Status}}' kafka || echo unknown)
+            [ "$s" = "healthy" ] && break
+            echo "Kafka: $s ($i/60)"; sleep 3
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' kafka)" = "healthy" ] || { echo "Kafka not healthy"; exit 1; }
+
+          echo "== Wait Mosquitto =="
+          for i in $(seq 1 40); do
+            s=$(docker inspect -f '{{.State.Health.Status}}' mosquitto || echo unknown)
+            [ "$s" = "healthy" ] && break
+            echo "Mosquitto: $s ($i/40)"; sleep 3
+          done
+          [ "$(docker inspect -f '{{.State.Health.Status}}' mosquitto)" = "healthy" ] || { echo "Mosquitto not healthy"; exit 1; }
+
+          echo "== Wait Connect REST =="
+          READY=0
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8083/connectors >/dev/null; then
+              echo "Connect REST is ready!"
+              READY=1
+              break
+            fi
+            echo "Connect REST not ready ($i/60)"; sleep 3
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "ERROR: Connect REST not ready after timeout"
+            docker compose logs connect --tail=200 || true
+            exit 1
+          fi
+
+      - name: Create Kafka topic if missing
+        run: |
+          set -euo pipefail
+          docker compose exec -T kafka bash -lc "\
+            /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list | grep -qx '${KAFKA_TOPIC}' \
+            || /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic '${KAFKA_TOPIC}' --partitions 1 --replication-factor 1"
+
+      - name: Ensure MQTT source connector exists (mosquitto -> ${KAFKA_TOPIC})
+        run: |
+          set -euo pipefail
+          cat > mqtt-source.json <<JSON
+          {
+            "name": "mqtt-source",
+            "config": {
+              "connector.class": "io.confluent.connect.mqtt.MqttSourceConnector",
+              "tasks.max": "1",
+              "mqtt.server.uri": "tcp://mosquitto:1883",
+              "mqtt.topics": "mqtt/#",
+              "mqtt.qos": "0",
+              "clean.session": "true",
+              "kafka.topic": "${KAFKA_TOPIC}",
+              "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+              "key.converter.schemas.enable": "false",
+              "value.converter": "org.apache.kafka.connect.converters.ByteArrayConverter",
+              "value.converter.schemas.enable": "false",
+              "errors.tolerance": "all",
+              "errors.log.enable": "true",
+              "topic.creation.enable": "false",
+              "topic.creation.default.replication.factor": "1",
+              "topic.creation.default.partitions": "1",
+              "confluent.topic.bootstrap.servers": "kafka:9092",
+              "confluent.topic.replication.factor": "1",
+              "producer.override.bootstrap.servers": "kafka:9092"
+            }
+          }
+          JSON
+
+          if ! curl -sf http://localhost:8083/connectors/mqtt-source >/dev/null; then
+            curl -sS -X POST -H 'Content-Type: application/json' --data @mqtt-source.json http://localhost:8083/connectors \
+              || { echo "Connector create failed"; curl -s http://localhost:8083/connectors; exit 1; }
+          fi
+          echo "MQTT connector status:"
+          curl -sSf http://localhost:8083/connectors/mqtt-source/status || true
+
+      - name: Determine compose network name
+        id: net
+        run: |
+          set -euo pipefail
+          NET=$(docker network ls --format '{{.Name}}' | grep '_ag_cloud$' | head -1)
+          echo "net=$NET" >> $GITHUB_OUTPUT
+          echo "Using network: $NET"
+
+      - name: Start Kafka consumer (kcat) on compose network
+        run: |
+          set -euo pipefail
+          NET="${{ steps.net.outputs.net }}"
+          docker run --rm --name soak-kcat -i --network "$NET" edenhill/kcat:1.7.1 \
+            -b kafka:9092 -t "${KAFKA_TOPIC}" -C -o end -q \
+            > "${ARTIFACT_DIR}/kafka-received.log" 2> "${ARTIFACT_DIR}/kafka-consumer.err" &
+          echo $! > kcat.pid
+          sleep 3
+
+      - name: Publish load to MQTT on compose network
+        run: |
+          set -euo pipefail
+          NET="${{ steps.net.outputs.net }}"
           D=${SOAK_DURATION_SEC}
           RATE=${SOAK_RATE_PER_SEC}
-          MQTT_TOPIC_VAR=${MQTT_TOPIC}
-          KAFKA_TOPIC_VAR=${KAFKA_TOPIC}
-          HOST=mosquitto
-          PORT=1883
-          SENT=$((D*RATE))
-          
-          echo "=== Starting MQTT to Kafka soak test ==="
-          echo "Duration: $D seconds"
-          echo "Rate: $RATE messages/second"
-          echo "Total messages to send: $SENT"
-          echo "MQTT Topic: $MQTT_TOPIC_VAR"
-          echo "Kafka Topic: $KAFKA_TOPIC_VAR"
-          
-          echo "Starting Kafka consumer..."
-          timeout $((D+120)) docker compose exec -T kafka bash -lc \
-            "/opt/bitnami/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic ${KAFKA_TOPIC_VAR} --from-beginning" \
-            > "${ARTIFACT_DIR}/kafka-received.log" 2> "${ARTIFACT_DIR}/kafka-consumer.err" &
-          CONS_PID=$!
-          
-          sleep 5
-          echo "=== Bridge status before test ==="
-          docker compose logs mqtt-kafka-bridge --tail=5
-          
-          echo "=== Starting message sending ==="
-          START_TIME=$(date +%s)
-          for i in $(seq 1 "$D"); do
-            CURRENT_TIME=$(date +%s)
-            ELAPSED=$((CURRENT_TIME - START_TIME))
-            echo "[$ELAPSED/${D}s] Sending batch $i/$D - $(date '+%H:%M:%S')"
-            docker compose exec -T mqtt-tools timeout 10 sh -lc \
-              "awk -v n=${RATE} -v batch=$i 'BEGIN{for(i=0;i<n;i++)printf \"msg_%d_%d_%d\n\", batch, i, systime()}' | mosquitto_pub -h ${HOST} -p ${PORT} -t ${MQTT_TOPIC_VAR} -l -q 0" || {
-                echo "Warning: batch $i may have failed"
-              }
-            if [ $((i % 30)) -eq 0 ]; then
-              echo "=== Bridge stats at ${i}s ==="
-              docker compose logs mqtt-kafka-bridge --tail=3 | grep "Bridge stats" || echo "No stats yet"
-            fi
+          TOPIC=${MQTT_TOPIC}
+
+          echo "Publishing D=$D sec, RATE=$RATE msg/s to $TOPIC"
+          for sec in $(seq 1 "$D"); do
+            echo "[$sec/$D] batch $sec"
+            docker run --rm --network "$NET" alpine:3.20 \
+              sh -lc "apk add --no-cache mosquitto-clients >/dev/null \
+                && awk -v n=$RATE -v b=$sec 'BEGIN{for(i=0;i<n;i++)printf \"msg_%d_%d_%d\\n\", b, i, systime()}' \
+                | mosquitto_pub -h mosquitto -p 1883 -t '$TOPIC' -l -q 0" \
+              || echo "WARN: batch $sec failed"
             sleep 1
           done
-          
-          echo "=== Finished sending messages ==="
-          END_TIME=$(date +%s)
-          TOTAL_TIME=$((END_TIME - START_TIME))
-          echo "Total sending time: ${TOTAL_TIME} seconds"
-          
-          echo "=== Final bridge status ==="
-          docker compose logs mqtt-kafka-bridge --tail=10
-          
-          echo "Waiting for message processing to complete..."
-          sleep 60
-          
-          echo "Stopping Kafka consumer..."
-          kill $CONS_PID 2>/dev/null || true
-          wait $CONS_PID 2>/dev/null || true
-          
-          echo "=== Calculating results ==="
+
+      - name: Stop consumer and compute results
+        run: |
+          set -euo pipefail
+          sleep 20
+          if [ -f kcat.pid ]; then kill -9 "$(cat kcat.pid)" 2>/dev/null || true; fi
+
+          D=${SOAK_DURATION_SEC}
+          RATE=${SOAK_RATE_PER_SEC}
+          SENT=$((D*RATE))
           RECEIVED=$(wc -l < "${ARTIFACT_DIR}/kafka-received.log" 2>/dev/null || echo 0)
           LOSS=$((SENT-RECEIVED))
           LOSS_PCT=$(awk -v s="$SENT" -v r="$RECEIVED" 'BEGIN{ if(s>0){printf "%.2f", (s-r)*100.0/s}else{printf "0.0"} }')
-          
-          echo "=== SOAK TEST RESULTS ==="
-          echo "Messages sent via MQTT: $SENT"
-          echo "Messages received in Kafka: $RECEIVED"
-          echo "Messages lost: $LOSS ($LOSS_PCT%)"
-          echo "Test duration: ${TOTAL_TIME} seconds"
-          
-          echo "=== Sample of received messages ==="
-          head -5 "${ARTIFACT_DIR}/kafka-received.log" 2>/dev/null || echo "No messages received"
-          
-          if [ -s "${ARTIFACT_DIR}/kafka-consumer.err" ]; then
-            echo "=== Consumer errors ==="
-            cat "${ARTIFACT_DIR}/kafka-consumer.err"
-          fi
-          
-          echo "{\"component\":\"mqtt-to-kafka\",\"sent\":$SENT,\"received\":$RECEIVED,\"loss\":$LOSS,\"loss_pct\":$LOSS_PCT,\"duration\":$TOTAL_TIME}" \
+          echo "Sent: $SENT"
+          echo "Received: $RECEIVED"
+          echo "Lost: $LOSS ($LOSS_PCT%)"
+          echo "{\"component\":\"mqtt-to-kafka\",\"sent\":$SENT,\"received\":$RECEIVED,\"loss\":$LOSS,\"loss_pct\":$LOSS_PCT}" \
             | tee "${ARTIFACT_DIR}/bridge.json"
 
-      - name: Collect bridge logs
-        if: always()
-        run: |
-          echo "=== Bridge Logs ===" > "${ARTIFACT_DIR}/bridge-logs.txt"
-          docker compose logs mqtt-kafka-bridge >> "${ARTIFACT_DIR}/bridge-logs.txt" 2>&1 || true
-          echo "=== All Container Logs ===" > "${ARTIFACT_DIR}/all-logs.txt"
-          docker compose logs --no-color >> "${ARTIFACT_DIR}/all-logs.txt" 2>&1 || true
-
-      - name: Generate JUnit report
-        continue-on-error: true
+      - name: Generate JUnit
         run: |
           python - <<'PY'
-          import json, os, sys, xml.etree.ElementTree as ET
-          loss_threshold = float(os.getenv("LOSS_THRESHOLD_PCT","1.0"))
+          import json, os, xml.etree.ElementTree as ET
           art = os.getenv("ARTIFACT_DIR","artifacts")
-          os.makedirs(art, exist_ok=True)
-          results = []
+          thr = float(os.getenv("LOSS_THRESHOLD_PCT","1.0"))
+          r = {"loss_pct":100.0}
           p = os.path.join(art, "bridge.json")
           if os.path.exists(p):
-            with open(p) as f:
-              results.append(json.load(f))
+            with open(p) as f: r = json.load(f)
+          ts = ET.Element("testsuite", name="mqtt-kafka-soak", tests="1")
+          tc = ET.SubElement(ts, "testcase", classname="soak", name="mqtt->kafka")
+          if float(r.get("loss_pct",100.0)) > thr:
+            ET.SubElement(tc, "failure", message=str(r)).text = json.dumps(r)
+            failures = 1
           else:
-            results.append({"component":"mqtt-to-kafka","sent":0,"received":0,"loss":0,"loss_pct":100.0,"error":"missing_result"})
-          ts = ET.Element("testsuite", name="mqtt-kafka-soak", tests=str(len(results)))
-          failures = 0
-          for r in results:
-            cname = r.get("component")
-            loss_pct = float(r.get("loss_pct", 100.0))
-            msg = f"{cname}: sent={r.get('sent')} received={r.get('received')} loss={r.get('loss')} ({loss_pct}%)"
-            tc = ET.SubElement(ts, "testcase", classname="soak", name=cname)
-            if loss_pct > loss_threshold or r.get("error"):
-              ET.SubElement(tc, "failure", message=msg).text = json.dumps(r)
-              failures += 1
-            else:
-              print(f":white_check_mark: {msg}")
+            failures = 0
           ts.set("failures", str(failures))
+          os.makedirs(art, exist_ok=True)
           ET.ElementTree(ts).write(os.path.join(art, "junit.xml"), encoding="utf-8", xml_declaration=True)
-          with open(os.path.join(art, "failures.txt"), "w") as f:
-            f.write(str(failures))
-          if failures > 0:
-            print(f":x: Test failed with {failures} failures")
-            sys.exit(1)
-          else:
-            print(":white_check_mark: All tests passed!")
-            sys.exit(0)
+          with open(os.path.join(art, "failures.txt"), "w") as f: f.write(str(failures))
           PY
 
       - name: Upload artifacts
@@ -427,16 +231,10 @@ jobs:
           path: ${{ env.ARTIFACT_DIR }}
           retention-days: 7
 
-      - name: Publish JUnit results
-        if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: ${{ env.ARTIFACT_DIR }}/junit.xml
-          check_name: "MQTT to Kafka Soak Test Results"
-
-      - name: Fail job if tests failed
+      - name: Fail if tests failed
         if: always()
         run: |
+          set -euo pipefail
           F=$(cat "$ARTIFACT_DIR/failures.txt" 2>/dev/null || echo 0)
           echo "Failures reported: $F"
           if [ "$F" -gt 0 ]; then
@@ -446,6 +244,14 @@ jobs:
             echo ":white_check_mark: All tests passed!"
           fi
 
-      - name: Cleanup
+      - name: Cleanup (containers & volumes)
         if: always()
-        run: docker compose down -v || true
+        run: |
+          set -euo pipefail
+          # ודא שהצרכן נעצר
+          if [ -f kcat.pid ]; then kill -9 "$(cat kcat.pid)" 2>/dev/null || true; fi
+          # נקה את סביבת ה-compose
+          docker compose down -v || true
+          # ניקוי נוסף למקרה של שאריות
+          docker ps -aq | xargs -r docker rm -f || true
+          docker network prune -f || true

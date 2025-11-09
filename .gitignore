@@ -1,0 +1,40 @@
+# --- Secrets and Certificates ---
+*.env
+*.crt
+*/certs/
+**/certs/
+**/secrets/
+storage_with_mqtt/secrets/
+storage_with_mqtt/mqtt_images/secrets/
+MQTT_IMAGES/secrets/
+services/sounds/sounds_classifier/src/classification/data/
+services/sounds/sounds_classifier/src/classification/models/panns_data/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.venv/
+venv/
+.coverage
+
+# --- VSCode / Editor ---
+.vscode/
+.idea/
+
+# --- Docker / Build ---
+*.log
+*.pid
+*.bak
+*.tmp
+*.swp
+.env.local
+.env.*
+!.env.example
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+

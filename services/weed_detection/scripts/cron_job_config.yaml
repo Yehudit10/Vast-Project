@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: weed-detection-job
+spec:
+  schedule: "0 0 * * 0"  # every Sunday night
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: weed-detection
+            image: weed-detection-image
+            command: ["/bin/bash", "-c", "python /scripts/run_detection.py"]
+          restartPolicy: OnFailure

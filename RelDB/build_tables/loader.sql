@@ -9,6 +9,26 @@ INSERT INTO devices (device_id, model, owner, active) VALUES
   ('dev-e','sensor-z','TeamC',true),
   ('dev-f','sensor-z','TeamC',true)
 ON CONFLICT DO NOTHING;
+-- Insert synthetic sensors
+INSERT INTO sensors (
+  sensor_name,
+  sensor_type,
+  owner_name,
+  location_lat,
+  location_lon,
+  install_date,
+  status,
+  description,
+  last_maintenance
+)
+VALUES
+  ('SoilMoistureSensor_A1', 'moisture', 'TeamA', 32.051, 34.871, NOW() - INTERVAL '120 days', 'active', 'Soil probe at north field section A1', NOW() - INTERVAL '20 days'),
+  ('TempSensor_B2', 'temperature', 'TeamA', 32.057, 34.885, NOW() - INTERVAL '95 days', 'active', 'Temperature monitor - greenhouse B2', NOW() - INTERVAL '15 days'),
+  ('HumiditySensor_C1', 'humidity', 'TeamB', 31.982, 34.945, NOW() - INTERVAL '200 days', 'maintenance', 'Humidity node C1 (low battery)', NOW() - INTERVAL '3 days'),
+  ('NDVI_Camera_01', 'NDVI', 'TeamB', 32.015, 34.980, NOW() - INTERVAL '60 days', 'active', 'Multispectral NDVI drone-mounted camera', NOW() - INTERVAL '10 days'),
+  ('WeatherStation_Main', 'weather', 'TeamC', 32.000, 34.760, NOW() - INTERVAL '365 days', 'active', 'Main weather station at south field', NOW() - INTERVAL '30 days'),
+  ('SoilProbe_Edge', 'moisture', 'TeamC', 32.010, 34.910, NOW() - INTERVAL '40 days', 'inactive', 'Edge field soil probe - disconnected', NOW() - INTERVAL '60 days')
+ON CONFLICT (sensor_name) DO NOTHING;
 
 -- Insert some regions
 INSERT INTO regions (name, geom)
@@ -24,6 +44,11 @@ VALUES
   ('ALT_HIGH','Altitude too high'),
   ('SENSOR_FAIL','Sensor failure'),
   ('COMM_LOSS','Communication lost')
+ON CONFLICT DO NOTHING;
+
+-- Seed leaf disease types
+INSERT INTO leaf_disease_types (name)
+VALUES ('Blight'), ('Mildew'), ('Rust')
 ON CONFLICT DO NOTHING;
 
 -- Insert 5 missions
@@ -121,3 +146,36 @@ SELECT
   md5(g::text),
   CASE WHEN random()<0.3 THEN (100+g) ELSE -1 END
 FROM generate_series(1,100) g;
+
+-- Insert 1000 random embeddings
+INSERT INTO embeddings (vec)
+SELECT ARRAY(
+    SELECT random()
+    FROM generate_series(1, 784)
+)
+FROM generate_series(1, 1000)
+ON CONFLICT DO NOTHING;
+
+-- === Seed בסיסי לטבלת task_thresholds ===
+INSERT INTO task_thresholds (task, label, threshold, updated_by)
+VALUES
+    (CAST('ripeness' AS task_type_enum), '', 0.75, 'seed'),
+    (CAST('disease'  AS task_type_enum), '', 0.60, 'seed'),
+    (CAST('size'     AS task_type_enum), '', 0.55, 'seed'),
+    (CAST('color'    AS task_type_enum), '', 0.65, 'seed'),
+    (CAST('quality'  AS task_type_enum), '', 0.80, 'seed')
+ON CONFLICT (task, label)
+DO UPDATE SET
+    threshold  = EXCLUDED.threshold,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = NOW();
+
+-- Seed sample leaf reports
+INSERT INTO leaf_reports (device_id, leaf_disease_type_id, ts, confidence, sick)
+SELECT d.device_id, t.id, now() - ((g % 2000) || ' seconds')::interval,
+       (random()*0.5 + 0.5)::double precision,         -- 0.5..1.0
+       (random() < 0.5)
+FROM devices d, leaf_disease_types t, generate_series(1,20) g
+LIMIT 30;
+
+
