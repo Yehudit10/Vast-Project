@@ -46,6 +46,11 @@ VALUES
   ('COMM_LOSS','Communication lost')
 ON CONFLICT DO NOTHING;
 
+-- Seed leaf disease types
+INSERT INTO leaf_disease_types (name)
+VALUES ('Blight'), ('Mildew'), ('Rust')
+ON CONFLICT DO NOTHING;
+
 -- Insert 5 missions
 WITH params AS (
   SELECT 34.75::double precision AS min_lon, 35.05 AS max_lon,
@@ -142,7 +147,6 @@ SELECT
   CASE WHEN random()<0.3 THEN (100+g) ELSE -1 END
 FROM generate_series(1,100) g;
 
-
 -- Insert 1000 random embeddings
 INSERT INTO embeddings (vec)
 SELECT ARRAY(
@@ -165,3 +169,13 @@ DO UPDATE SET
     threshold  = EXCLUDED.threshold,
     updated_by = EXCLUDED.updated_by,
     updated_at = NOW();
+
+-- Seed sample leaf reports
+INSERT INTO leaf_reports (device_id, leaf_disease_type_id, ts, confidence, sick)
+SELECT d.device_id, t.id, now() - ((g % 2000) || ' seconds')::interval,
+       (random()*0.5 + 0.5)::double precision,         -- 0.5..1.0
+       (random() < 0.5)
+FROM devices d, leaf_disease_types t, generate_series(1,20) g
+LIMIT 30;
+
+
