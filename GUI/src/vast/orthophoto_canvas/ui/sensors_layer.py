@@ -311,6 +311,43 @@ def _latlon_to_base_xy_if_inside(viewer, lat: float, lon: float, z: int = None) 
        y_min_base <= yb < y_min_base + y_max_base + 1:
         return xb, yb
     return None
+import math
+MERCATOR_MAX_LAT = 85.05112878
+
+def _latlon_to_xy_at_max_zoom(viewer, lat: float, lon: float) -> Optional[tuple[float, float]]:
+    """
+    Convert WGS84 (lat, lon) → fractional tile coordinates (x, y)
+    aligned with viewer.max_zoom_fs scene orientation.
+    """
+    z = viewer.max_zoom_fs
+    if z not in viewer.z_ranges:
+        return None
+
+    try:
+        lat = float(lat)
+        lon = float(lon)
+    except Exception:
+        return None
+
+    lat = max(min(lat, MERCATOR_MAX_LAT), -MERCATOR_MAX_LAT)
+    n = 1 << z
+    lat_rad = math.radians(lat)
+    xtile = (lon + 180.0) / 360.0 * n
+    ytile = (1.0 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2.0 * n
+
+    # 🔁 Flip if your tile store is TMS (bottom origin)
+    if getattr(viewer, "is_tms", False):
+        ytile = n - ytile - 1
+
+    # 🧭 XYZ tiles: (0,0) top-left, y increases downward
+    # But our scene uses top-left origin (same), so no additional flip!
+
+    x_min, x_max, y_min, y_max = viewer.ts.z_ranges[z]
+    if not (x_min <= xtile <= x_max and y_min <= ytile <= y_max):
+        return None
+
+    return xtile, ytile
+
 
 def add_sensor_by_gps_strict(layer: SensorLayer, sensor_id: str, lat: float, lon: float,
                              z: int = None, center: bool = False, **kwargs) -> Optional[SensorSpec]:
