@@ -1,0 +1,56 @@
+{
+  "accuracy": 0.4467483506126296,
+  "report": {
+    "unripe": {
+      "precision": 0.9479166666666666,
+      "recall": 0.337037037037037,
+      "f1-score": 0.4972677595628415,
+      "support": 270.0
+    },
+    "ripe": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 388.0
+    },
+    "overripe": {
+      "precision": 0.42745535714285715,
+      "recall": 0.9503722084367245,
+      "f1-score": 0.5896843725943033,
+      "support": 403.0
+    },
+    "accuracy": 0.4467483506126296,
+    "macro avg": {
+      "precision": 0.4584573412698412,
+      "recall": 0.4291364151579205,
+      "f1-score": 0.36231737738571496,
+      "support": 1061.0
+    },
+    "weighted avg": {
+      "precision": 0.4035834202908308,
+      "recall": 0.4467483506126296,
+      "f1-score": 0.3505231830701898,
+      "support": 1061.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      91,
+      54,
+      125
+    ],
+    [
+      0,
+      0,
+      388
+    ],
+    [
+      5,
+      15,
+      383
+    ]
+  ],
+  "samples": 1061,
+  "prefix": "orange/test",
+  "bucket": "imagery"
+}

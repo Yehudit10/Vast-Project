@@ -1,176 +1,199 @@
+# Storage DB API
 
-# DB API Service
+A FastAPI microservice for managing image/file metadata in the **AgCloud** platform.
 
-This project provides a lightweight **FastAPI** service that exposes REST endpoints
-for interacting with a PostgreSQL database table `files` (with PostGIS geometry and JSONB support).
+## Quickstart (Docker Compose)
 
-## Features
-- **Authentication**: Bearer token required (`API_TOKEN`).
-- **CRUD** operations on `files` table:
-  - `POST /api/files` → Insert or UPSERT a file record.
-  - `PUT /api/files/{bucket}/{object_key}` → Update existing record fields.
-  - `GET /api/files/{bucket}/{object_key}` → Retrieve single record.
-  - `GET /api/files` → List recent records (with optional filters).
-- **PostGIS**: `footprint` stored as geometry (SRID 4326).
-- **JSONB**: `metadata` stored as JSONB.
-- **Dry-run mode**: `DB_DRY_RUN=1` spools payloads to JSON files without touching the DB.
-
-## Requirements
-- Docker
-- PostgreSQL with:
-  ```sql
-  CREATE EXTENSION IF NOT EXISTS postgis;
-
-
-Environment Variables
-API_TOKEN – Bearer token required in requests.
-
-DB_DSN – SQLAlchemy DSN for PostgreSQL, e.g. postgresql+psycopg://user:pass@host:5432/db.
-
-DB_DRY_RUN – if set to 1, all requests are spooled locally instead of writing to DB.
-
-DRY_RUN_SPOOL – directory for spooled JSON (default: /tmp/api_spool).
-
-## Build and Run
-# Build Docker image:
-
-bash
-Copy code
-docker build -t db-api:latest ./services/db_api_service
-
-
-
-# Run container with PostgreSQL connection:
-
-bash# DB API Service
-
-This project provides a lightweight **FastAPI** service that exposes REST endpoints  
-for interacting with a PostgreSQL `files` table (with PostGIS geometry and JSONB support).
-
----
-
-## ✨ Features
-- **Authentication**: All requests require a Bearer token (`API_TOKEN`).
-- **CRUD operations** on the `files` table:
-  - `POST /api/files` → Insert or **upsert** a file record.
-  - `PUT /api/files/{bucket}/{object_key}` → Update fields of an existing record.
-  - `GET /api/files/{bucket}/{object_key}` → Retrieve a single record.
-  - `GET /api/files` → List recent records (with optional filters).
-  - `DELETE /api/files/{bucket}/{object_key}` → Delete a record.
-- **PostGIS**: `footprint` stored as geometry (SRID 4326).
-- **JSONB**: `metadata` stored as JSONB.
-- **Dry-run mode**: `DB_DRY_RUN=1` → spool payloads to JSON files without touching the DB.
-
----
-
-## 📦 Requirements
-- Docker
-- PostgreSQL with PostGIS:
-  ```sql
-  CREATE EXTENSION IF NOT EXISTS postgis;
-  ```
-
----
-
-## ⚙️ Environment Variables
-| Name           | Description                                                        | Default              |
-|----------------|--------------------------------------------------------------------|----------------------|
-| `API_TOKEN`    | Bearer token required in requests                                  | –                    |
-| `DB_DSN`       | SQLAlchemy DSN, e.g. `postgresql+psycopg://user:pass@host:5432/db` | –                    |
-| `DB_DRY_RUN`   | If set to `1`, requests are spooled locally (no DB writes)         | `0`                  |
-| `DRY_RUN_SPOOL`| Directory for spooled JSON files                                   | `/tmp/api_spool`     |
-
----
-
-## 🚀 Build & Run
-
-### Build Docker image
+Build:
 ```bash
-docker build -t db-api:latest ./services/db_api_service
+docker compose up -d --build
 ```
 
-### Run container with PostgreSQL connection
-
-#### WSL / Linux
+Check health:
 ```bash
-docker run -d --name db-api   -p 8080:8080   -e API_TOKEN=dev-token   -e DB_DSN="postgresql+psycopg://missions_user:pg123@localhost:5432/missions_db"   db-api:latest
+curl http://localhost:8001/healthz
+curl http://localhost:8001/ready
 ```
 
-#### Windows (Docker Desktop)
+Stop and clean up:
 ```bash
-docker run -d --name db-api   -p 8080:8080   --add-host=host.docker.internal:host-gateway   -e API_TOKEN=dev-token   -e DB_DSN="postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db"   db-api:latest
+docker compose down
+```
+
+## Generic API Support
+The service now includes a Generic API layer that automatically exposes CRUD endpoints for allowed database tables.
+
+To enable a table:
+
+Add the table name under the ALLOWED_TABLES list in the ENV file
+
+## Authentication
+
+### Dev bootstrap
+For local development only – creates default user (`admin`) and service account (`db-api`):
+
+```bash
+curl -X POST http://localhost:8001/auth/_dev_bootstrap
+```
+
+Response includes:
+- User and Service Account (created if missing).
+- JWT access & refresh tokens.
+- Raw service token (only shown once if newly created).
+
+---
+
+### Human users (username/password)
+
+Login:
+```bash
+curl -s -X POST http://localhost:8001/auth/login   -H "Content-Type: application/x-www-form-urlencoded"   -d "username=admin&password=admin123"
+```
+
+Use the returned `access_token` in the `Authorization` header:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Refresh:
+```bash
+curl -s -X POST http://localhost:8001/auth/refresh   -H "Content-Type: application/json"   -d '{"refresh_token":"<refresh_token>"}'
 ```
 
 ---
 
-## ✅ Quick Tests
+### Service-to-service
 
-### Health checks
-```bash
-curl -fsS http://localhost:8080/healthz
-# {"status":"ok"}
+Use the `X-Service-Token` header with the raw token received during bootstrap (or after manual rotation):
 
-curl -fsS http://localhost:8080/ready
-# {"ready":true}
+```http
+X-Service-Token: <raw-service-token>
 ```
 
-### List files
-```bash
-curl -s -H "Authorization: Bearer dev-token"   "http://localhost:8080/api/files?bucket=hot&limit=10"
+---
+
+## Example API call
+
+With JWT (user):
+```powershell
+$boot = Invoke-WebRequest -Method POST "http://localhost:8001/auth/_dev_bootstrap"
+$j = $boot.Content | ConvertFrom-Json
+$access = $j.tokens.access_token
+
+Invoke-WebRequest "http://localhost:8001/api/files?limit=2" `
+  -Headers @{ Authorization = ("Bearer {0}" -f $access) }
 ```
 
-### Insert / Upsert a file
-```bash
-ts=$(date +%s)
-
-curl -s -X POST -H "Authorization: Bearer dev-token" -H "Content-Type: application/json"   --data-binary '{
-    "bucket":"hot",
-    "object_key":"imagery/new-file-'"$ts"'.jpg",
-    "content_type":"image/jpeg",
-    "size_bytes":1234,
-    "etag":"etag-new-file-'"$ts"'",
-    "mission_id":1,
-    "device_id":"dev-a",
-    "metadata":{"source":"via-api","note":"insert test"}
-  }'   http://localhost:8080/api/files
+With Service Token (service account):
+```powershell
+Invoke-WebRequest "http://localhost:8001/api/files?limit=2" `
+  -Headers @{ "X-Service-Token" = "<raw-service-token>" }
 ```
 
-### Update fields
+---
+
+## Testing readme in /test
+
+
+---
+
+## Notes
+- Changing `JWT_SECRET` invalidates all existing JWTs.
+- Service tokens are **write-once**: only the raw token (from bootstrap or rotation) can be used; the DB only stores its SHA-256 hash.
+- `/auth/_dev_bootstrap` is intended for development only – do not enable in production.
+
+## API Examples (CRUD)
+
+### Available endpoints
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| GET | `/api/tables/{resource}/schema` | Get table schema |
+| GET | `/api/tables/{resource}` | List rows |
+| POST | `/api/tables/{resource}` | Create a single row |
+| POST | `/api/tables/{resource}/rows:batch` | Create multiple rows in one request |
+
+Base URL: http://localhost:8001 (adjust if different)
+Prefix used below: /api/tables/{resource}
+
+Replace `{resource}` with the table name (e.g. `event_logs_sensors`). Ensure `Content-Type: application/json` header.
+
+Create — single row (POST /api/tables/{resource})
 ```bash
-curl -s -X PUT -H "Authorization: Bearer dev-token" -H "Content-Type: application/json"   --data-binary '{
-    "size_bytes": 9999,
-    "metadata": {"source":"via-api","note":"updated via PUT"}
-  }'   http://localhost:8080/api/files/hot/imagery/new-file-$ts.jpg
+curl -X POST "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "log_id": 4,
+    "device_id": "dev-c",
+    "status": "ok",
+    "value": 12.3
+  }'
+# Response: {"affected_rows":1,"returning":{...}}
 ```
 
-### Get single file
+Create — batch (POST /api/tables/{resource}/rows:batch)
 ```bash
-curl -s -H "Authorization: Bearer dev-token"   http://localhost:8080/api/files/hot/imagery/new-file-$ts.jpg
+curl -X POST "http://localhost:8001/api/tables/event_logs_sensors/rows:batch" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"log_id": 5, "device_id":"dev-a", "status":"ok"},
+    {"log_id": 6, "device_id":"dev-b", "status":"error"}
+  ]'
+# Response: {"affected_rows":2}
 ```
 
-### Delete file
+Read — list rows (GET /api/tables/{resource})
 ```bash
-curl -s -X DELETE -H "Authorization: Bearer dev-token"   http://localhost:8080/api/files/hot/imagery/new-file-$ts.jpg
+curl "http://localhost:8001/api/tables/event_logs_sensors?limit=20&offset=0&order_by=log_id&order_dir=asc"
+# Response: {"rows":[...],"count":N}
+```
 
+Read — describe table / schema (GET /api/tables/{resource}/schema)
+```bash
+curl "http://localhost:8001/api/tables/event_logs_sensors/schema"
+# Response: {"table":"event_logs_sensors","contract":{...},"columns":[...]}
+```
 
-## 🛠️ Troubleshooting
-- **Not Found on PUT/DELETE/GET** → make sure `router.py` uses:
-  ```python
-  @router.put("/{bucket}/{object_key:path}")
-  @router.get("/{bucket}/{object_key:path}")
-  @router.delete("/{bucket}/{object_key:path}")
-  ```
-- **Connection refused** → check PostgreSQL is running and accessible from the container.
-- **Check row count**:
-  ```bash
-  docker exec -it postgres psql -U missions_user -d missions_db -c "SELECT COUNT(*) FROM files;"
-  ```
+Update — partial (PATCH /api/tables/{resource})
+- body must include `keys` (identifying fields) and `data` (fields to update)
+```bash
+curl -X PATCH "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "keys": {"log_id": 4, "device_id": "dev-c"},
+    "data": {"status": "resolved", "value": 15.0}
+  }'
+# Response: {"affected_rows":1,"returning":{...}}
+```
 
-Copy code
-# WSL
-docker run -d --name db-api \
-  -p 8080:8080 \
-  -e API_TOKEN=dev-token \
-  -e DB_DSN="postgresql+psycopg://missions_user:pg123@localhost:5432/missions_db" \
-  db-api:latest
+Replace / full update (PUT /api/tables/{resource})
+- body includes `keys` and a full `data` payload validated against the contract
+```bash
+curl -X PUT "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "keys": {"log_id": 4, "device_id": "dev-c"},
+    "data": {
+      "log_id": 4,
+      "device_id": "dev-c",
+      "status": "resolved",
+      "value": 15.0,
+      "ts": "2025-10-22T10:00:00Z"
+    }
+  }'
+# Response: {"affected_rows":1,"returning":{...}}
+```
 
+Delete (DELETE /api/tables/{resource})
+- body must include `keys` object
+```bash
+curl -X DELETE "http://localhost:8001/api/tables/event_logs_sensors" \
+  -H "Content-Type: application/json" \
+  -d '{"keys": {"log_id": 4, "device_id": "dev-c"}}'
+# Response: {"affected_rows":1}
+```
+
+Notes
+- `keys` fields are determined by the contract's `x-keyFields` (fallback to `id` if not present). Use the schema endpoint to confirm.
+- All validation is performed against the JSON contract; unknown fields are rejected.
+- Adjust base URL, auth headers and query params as needed for your deployment.

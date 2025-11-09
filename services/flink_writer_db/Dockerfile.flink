@@ -1,0 +1,46 @@
+FROM flink:1.20.0-scala_2.12-java11
+USER root
+
+# Copy certs dir (may be empty) and trust *.crt if present
+COPY certs/ /tmp/certs/
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    if [ -d /tmp/certs ] && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
+      cp /tmp/certs/*.crt /usr/local/share/ca-certificates/ && \
+      chmod 644 /usr/local/share/ca-certificates/*.crt && \
+      update-ca-certificates; \
+    else \
+      echo "No extra CA certs found. Skipping CA update."; \
+    fi
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Python & tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-venv python3-pip curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --upgrade pip certifi && \
+    pip install --no-cache-dir --prefer-binary apache-flink==2.1.0 requests urllib3
+
+RUN curl -fSL https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.2.0-1.19/flink-connector-kafka-3.2.0-1.19.jar \
+    -o /opt/flink/lib/flink-connector-kafka-3.2.0-1.19.jar && \
+    curl -fSL https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.7.0/kafka-clients-3.7.0.jar \
+    -o /opt/flink/lib/kafka-clients-3.7.0.jar
+
+RUN mkdir -p /opt/app/secrets && chmod -R 777 /opt/app
+WORKDIR /opt/app
+COPY app.py /opt/app/app.py
+
+ENV PYFLINK_CLIENT_EXECUTABLE=/opt/venv/bin/python \
+    PYFLINK_PYTHON=/opt/venv/bin/python \
+    PYTHONPATH=/opt/app
+
+CMD ["bash", "-lc", "python app.py"]

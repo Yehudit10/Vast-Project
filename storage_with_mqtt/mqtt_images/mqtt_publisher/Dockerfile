@@ -1,10 +1,24 @@
 # syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
+# Build argument
+ARG USE_NETFREE=true
+
+# Install basic packages
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-# RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+# Install NetFree certificates only if USE_NETFREE=true
+RUN if [ "$USE_NETFREE" = "true" ]; then \
+        echo "Configuring NetFree certificates..."; \
+        # Check if the certificate file exists
+        if [ -f ./*.crt ]; then \
+            cp ./*.crt /usr/local/share/ca-certificates/; \
+            chmod 644 /usr/local/share/ca-certificates/; \
+            update-ca-certificates; \
+        else \
+            echo "No NetFree certificate found, skipping"; \
+        fi; \
+    fi
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
@@ -18,4 +32,5 @@ WORKDIR /app
 COPY app.py .
 
 ENV IMAGES_DIR=/images
-CMD ["python","-u","/app/app.py"]
+
+CMD ["bash", "-c", "sleep 5 && python -u /app/app.py"]

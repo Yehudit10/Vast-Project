@@ -9,7 +9,6 @@ templates:
     summary: "Person wearing a mask detected by ${device_id} at ${timestamp}"
     recommendation: "Verify the person’s authorization using the live feed."
 
- 
   fruit_ripeness_high:
     category: agriculture
     summary: "🍓 High fruit ripeness detected by ${device_id} (${confidence} ≥ ${threshold})"
