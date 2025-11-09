@@ -191,55 +191,32 @@ services:
       timeout: 5s
       retries: 12
 
-  connect:
-    build:
-      context: ./mqtt_and_kafka
-      dockerfile: connect.Dockerfile
-    image: local/connect-with-mqtt:1.0.0
-    container_name: connect
-    depends_on:
-      kafka:
-        condition: service_healthy
-      mosquitto:
-        condition: service_healthy
-    ports:
-      - "8083:8083"
-    environment:
-      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
-      - CONNECT_GROUP_ID=agcloud-connect
-      - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
-      - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offsets
-      - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
-      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
-      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
-      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
-      - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
-    networks:
-      - ag_cloud
-    healthcheck:
-      test: [ "CMD", "curl", "-sf", "http://localhost:8083/connectors" ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+  mqtt-router:
+      build:
+        context: ./mqtt_and_kafka/mqtt-router
+      image: local/mqtt-router:1.0.0
+      depends_on:
+        kafka:
+          condition: service_healthy
+        mosquitto:
+          condition: service_healthy
+      environment:
+        - MQTT_HOST=mosquitto
+        - MQTT_PORT=1883
+        - MQTT_TOPIC_FILTER=mqtt/#
 
-  init-connector:
-    image: curlimages/curl:8.7.1
-    depends_on:
-      connect:
-        condition: service_healthy
-    volumes:
-      - ./mqtt_and_kafka/connectors:/connectors
-    networks:
-      - ag_cloud
-    entrypoint: >
-      sh -c "
-        echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
-        echo '==> Done.';
-      "
+        - KAFKA_BOOTSTRAP=kafka:9092
+        - CREATE_TOPICS=false
+        - DEFAULT_PARTITIONS=1
+        - DEFAULT_REPLICATION=1
+      networks:
+        - ag_cloud
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "python", "-c", "import socket; socket.create_connection(('mosquitto',1883),3); socket.create_connection(('kafka',9092),3)"]
+        interval: 15s
+        timeout: 5s
+        retries: 5
 
   # --------------------------
   # GUI / Runner / Gateway
@@ -969,7 +946,7 @@ services:
     container_name: alerts_gateway
     command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
     ports:
-      - "8010:8000" # host:container
+      - "8010:8000" 
     networks:
       - ag_cloud
       
@@ -980,7 +957,7 @@ services:
     container_name: image-linker-jobmanager
     command: jobmanager
     ports:
-      - "8084:8081"   # ✅ unique external port (no overlap)
+      - "8084:8081"   
     environment:
       - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
       - KAFKA_BROKERS=kafka:9092
