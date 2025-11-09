@@ -13,8 +13,12 @@ RUN apk add --no-cache bash curl ca-certificates netcat-openbsd && \
   update-ca-certificates
 
 # ===== Add NetFree CA =====
-COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
-RUN update-ca-certificates
+# COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+# RUN update-ca-certificates
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/*.crt \
+ && update-ca-certificates
+
 
 # ===== Copy mc from the official image =====
 COPY --from=mc-source /usr/bin/mc /usr/local/bin/mc

@@ -74,7 +74,14 @@ class IngestService:
     def process_image(self, info: ImageInfo, payload: bytes, telemetry: Optional[dict] = None) -> Tuple[MinioObject, KafkaEvent]:
 
         # 1) Compute MinIO object key (stable contract)
-        key = build_minio_key(info.sensor_id, info.captured_ts, info.filename)
+        # key = build_minio_key(info.sensor_id, info.captured_ts, info.filename)
+        event_id    = self.deps.ids.new_event_id()   # single source for both event & incident
+        incident_id = event_id                       # reuse; replace if you have a real incident id
+        key = build_minio_key(
+            info.sensor_id, info.captured_ts, info.filename,
+            incident_id=incident_id,
+            rover_type="rover-car"  # adjust if needed
+        )
 
         # 2) Upload to object storage
         sha, size = self._retry(lambda: self.deps.image_store.put_object(
@@ -87,7 +94,7 @@ class IngestService:
             info=info,
             sha256=sha,
             size_bytes=size,
-            event_id=self.deps.ids.new_event_id(),
+            event_id=event_id,
             telemetry=telemetry,
         )
 

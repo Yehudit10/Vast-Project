@@ -117,9 +117,18 @@ def main() -> None:
             print(f"[mqtt] connect failed rc={rc}")
 
     def on_message(c, u, msg):
+        # if "/telemetry/" in msg.topic:
+        #     try:
+        #         sensor, ts_ms, ctype, fname = parse_topic(msg.topic)
+        #         tel = json.loads(msg.payload.decode("utf-8"))
+        #         put_telemetry(sensor, ts_ms, tel)
+        #         log.debug("telemetry cached sensor=%s ts=%d", sensor, ts_ms)
+        #     except Exception as e:
+        #         log.warning("bad telemetry message: %s", e, exc_info=False)
+        #     return
         if "/telemetry/" in msg.topic:
             try:
-                sensor, ts_ms, ctype, fname = parse_topic(msg.topic)
+                sensor, ts_ms = parse_tel_topic(msg.topic)
                 tel = json.loads(msg.payload.decode("utf-8"))
                 put_telemetry(sensor, ts_ms, tel)
                 log.debug("telemetry cached sensor=%s ts=%d", sensor, ts_ms)
