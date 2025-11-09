@@ -268,7 +268,8 @@ class MainWindow(QMainWindow):
             "Home": self.home,
             "Sensors": self.sensors_view,
             "Notifications": self.notification_view,
-            "Fruits": self.fruits_view
+            "Fruits": self.fruits_view,
+            "Ground" : self.ground_view
         }
         for view in self.views.values():
             self.stack.addWidget(view)
