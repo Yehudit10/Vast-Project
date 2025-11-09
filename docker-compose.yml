@@ -8,6 +8,7 @@ version: "3.9"
 # --------------------------
 networks:
   ag_cloud:
+    name: ag_cloud
     driver: bridge
 
 # --------------------------
@@ -676,7 +677,7 @@ services:
     env_file:
       - ./services/db_api_service/.env
     environment:
-      DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+      DB_DSN: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
       ENV: dev
       JWT_SECRET: change-me-please-very-secret
       JWT_ALGO: HS256
@@ -686,6 +687,7 @@ services:
     ports:
       - "8001:8001"
     volumes:
+      - ./services/db_api_service/app:/app/app
       - contracts:/app/app/contracts
     depends_on:
       contracts-gen:
