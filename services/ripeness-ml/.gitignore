@@ -1,6 +1,5 @@
 __pycache__/
 *.onnx
-data/
 datasets/
 *.png
 .venv/

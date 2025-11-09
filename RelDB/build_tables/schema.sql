@@ -30,7 +30,22 @@ CREATE TABLE IF NOT EXISTS anomaly_types (
   description text NOT NULL
 );
 
+--Types of leaf diseases
+CREATE TABLE IF NOT EXISTS leaf_disease_types (
+    id   SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
 -- === Core entities ===
+
+CREATE TABLE IF NOT EXISTS leaf_reports (
+    id                     BIGSERIAL PRIMARY KEY,
+    device_id              TEXT NOT NULL REFERENCES devices(device_id),
+    leaf_disease_type_id   INT  NOT NULL REFERENCES leaf_disease_types(id),
+    ts                     TIMESTAMPTZ NOT NULL,
+    confidence             DOUBLE PRECISION CHECK (confidence >= 0 AND confidence <= 1),
+    sick                   BOOLEAN NOT NULL
+);
+
 
 -- Missions table
 CREATE TABLE IF NOT EXISTS missions (
@@ -230,6 +245,9 @@ CREATE INDEX IF NOT EXISTS ix_ripeness_inflog ON ripeness_predictions(inference_
 CREATE INDEX IF NOT EXISTS ix_ripeness_ts ON ripeness_predictions(ts);
 CREATE INDEX IF NOT EXISTS ix_ripeness_device ON ripeness_predictions(device_id);
 CREATE INDEX IF NOT EXISTS ix_ripeness_run ON ripeness_predictions(run_id);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts_brin ON leaf_reports USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts ON leaf_reports (device_id, ts);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_type_ts ON leaf_reports (leaf_disease_type_id, ts);
 
 -- Weekly ripeness rollups table
 CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (

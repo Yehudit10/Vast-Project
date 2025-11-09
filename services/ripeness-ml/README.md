@@ -10,14 +10,23 @@ A small **FastAPI** service that:
 
 ```
 services/ripeness-ml/
-├─ scripts/
-│  ├─ ripeness_api.py           # FastAPI endpoints (predict + rollup)
-│  └─ weekly_ripeness_job.py    # model/minio/db helpers reused by the API
+├─ api/
+│  └─ ripeness_api.py          # FastAPI endpoints (predict + rollup)
+├─ jobs/
+│  └─ weekly_ripeness_job.py   # model/minio/db helpers reused by the API
+├─ model/
+│  ├─ architecture/
+│  │  └─ mobilenet_v3_large_head.py  # Model architecture definition
+│  └─ data/
+│     └─ data_multitask.py     # Data loading and preprocessing
 ├─ checkpoints/
 │  └─ mobilenet_v3_large/
-│     └─ best_conditional.pt    # your trained model weights (mounted into /models)
-├─ Dockerfile
-├─ docker-compose.ripeness.yml
+│     └─ best_conditional.pt    # trained model weights
+├─ deploy/
+│  ├─ Dockerfile
+│  └─ docker-compose.ripeness.yml
+├─ configs/
+│  └─ config.yaml              # Model and training configuration
 ├─ requirements.txt
 └─ .env (optional)
 ```
