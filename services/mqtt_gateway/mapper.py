@@ -25,12 +25,33 @@ def date_parts_from_epoch_ms(ts_ms: int) -> Tuple[str, str, str]:
     return f"{dt.year:04d}", f"{dt.month:02d}", f"{dt.day:02d}"
 
 
-def build_minio_key(sensor_id: str, ts_ms: int, filename: str) -> str:
-    """images/{sensor}/{YYYY}/{MM}/{DD}/{sensor}_{ts}{ext}"""
-    y, m, d = date_parts_from_epoch_ms(ts_ms)
-    ext = safe_ext(filename)
+# def build_minio_key(sensor_id: str, ts_ms: int, filename: str) -> str:
+#     """images/{sensor}/{YYYY}/{MM}/{DD}/{sensor}_{ts}{ext}"""
+#     y, m, d = date_parts_from_epoch_ms(ts_ms)
+#     ext = safe_ext(filename)
+#     base = f"{sensor_id}_{ts_ms}{ext}"
+#     return f"images/{sensor_id}/{y}/{m}/{d}/{base}"
+
+def build_minio_key(
+    sensor_id: str,
+    ts_ms: int,
+    filename: str,
+    *,
+    incident_id: str,
+    rover_type: str = "rover-car",
+    prefix: str = "security/incidents",
+) -> str:
+    """
+    Build canonical S3 key:
+      imagery/security/incidents/<rover_type>/<incident_id>/<sensor_id>_<ts_ms><ext>
+
+    Notes:
+    - `incident_id` must be provided by the caller (stable folder per incident).
+    - `rover_type` has a sensible default ("rover-car") but can be overridden.
+    """
+    ext = safe_ext(filename, default=".jpg")
     base = f"{sensor_id}_{ts_ms}{ext}"
-    return f"images/{sensor_id}/{y}/{m}/{d}/{base}"
+    return f"{prefix}/{rover_type}/{incident_id}/{base}"
 
 
 def map_to_objects(
@@ -46,7 +67,7 @@ def map_to_objects(
     Given input image info → compute MinIO object + Kafka event.
     Pure function: no IO. Easy to unit test.
     """
-    key = build_minio_key(info.sensor_id, info.captured_ts, info.filename)
+    key = build_minio_key(info.sensor_id, info.captured_ts, info.filename, incident_id=event_id or str(uuid4()))
     mobj = MinioObject(
         bucket=bucket,
         key=key,

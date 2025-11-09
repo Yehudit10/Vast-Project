@@ -1,8 +1,9 @@
-fastapi
-uvicorn[standard]
-onnxruntime
-numpy
-opencv-python
-minio
-python-dotenv
-pydantic>=2
+fastapi>=0.110,<0.116
+uvicorn[standard]>=0.23,<0.32
+kafka-python>=2.0.2,<3
+minio>=7.1.17,<8
+python-dotenv>=1.0.1,<2
+pydantic>=2.6,<3
+numpy>=1.26,<2
+opencv-python-headless>=4.8.0.76,<4.10
+onnxruntime>=1.17,<1.20

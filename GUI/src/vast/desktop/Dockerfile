@@ -16,6 +16,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core fonts-noto-core fonts-noto-color-emoji\
     && rm -rf /var/lib/apt/lists/*
 
+COPY certs/ /usr/local/share/ca-certificates/
+RUN find /usr/local/share/ca-certificates -type f ! -name '*.crt' -delete && \
+    update-ca-certificates
+
+# Make Python/pip/requests use the system trust store explicitly
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    PIP_DEFAULT_TIMEOUT=120
+
 # COPY certs/*.crt /usr/local/share/ca-certificates/
 # RUN update-ca-certificates || true
 # ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
@@ -28,12 +38,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-randr0 && rm -rf /var/lib/apt/lists/*
 
 # # ───────── optional CA certs ─────────
-COPY certs /app/certs
-RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-    echo "Configuring NetFree certificates..."; \
-    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-    update-ca-certificates; \
-    fi
+# COPY certs /app/certs
+# RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+#     echo "Configuring NetFree certificates..."; \
+#     cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+#     update-ca-certificates; \
+#     fi
 
 
 
@@ -58,7 +68,18 @@ RUN mkdir -p /opt && \
 
 # ───────── Python deps ─────────
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# Add a small retry loop to handle flaky networks (especially large wheels like PyQt6)
+RUN set -eux; \
+    for i in 1 2 3 4 5; do \
+        if pip install --no-cache-dir -r requirements.txt; then \
+            echo "pip install succeeded on attempt $i"; \
+            break; \
+        fi; \
+        echo "pip install failed on attempt $i; sleeping before retry..."; \
+        sleep $((i*5)); \
+    done
 
 
 # ───────── app setup ─────────

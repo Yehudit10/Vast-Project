@@ -7,19 +7,42 @@ USER root
 # COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
 # RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-venv python3-pip curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/*.crt \
+ && update-ca-certificates
+
+
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Python & tools
-RUN apt-get update && apt-get install -y --no-install-recommends     python3 python3-venv python3-pip curl ca-certificates     && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y --no-install-recommends     python3 python3-venv python3-pip curl ca-certificates     && rm -rf /var/lib/apt/lists/*
 
 # Create venv and install pyflink
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install PyFlink (DataStream API) and requests
-RUN pip install --upgrade pip certifi &&     pip install --prefer-binary apache-flink==2.1.0 requests urllib3
+# RUN pip install --upgrade pip certifi &&     pip install --prefer-binary apache-flink==2.1.0 requests urllib3
+
+# Install PyFlink (DataStream API) and requests with retries
+# Reason: large wheels over flaky network may fail with IncompleteRead.
+RUN set -eux; \
+    export PIP_DEFAULT_TIMEOUT=120; \
+    pkgs="apache-flink==2.1.0 requests urllib3"; \
+    for i in 1 2 3 4 5; do \
+        if pip install --no-cache-dir --prefer-binary $pkgs; then \
+            echo "pip install succeeded on attempt $i"; \
+            break; \
+        fi; \
+        echo "pip install failed on attempt $i; sleeping before retry..."; \
+        sleep $((i*5)); \
+    done
 
 # Kafka connector jar matching Flink 1.20 (connector v3 series)
 # Reference: flink-connector-kafka-3.x for Flink 1.20

@@ -6,8 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-<<<<<<< HEAD
-
 COPY certs/*.crt /usr/local/share/ca-certificates/
 RUN chmod 644 /usr/local/share/ca-certificates/*.crt \
  && update-ca-certificates
