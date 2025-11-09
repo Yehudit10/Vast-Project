@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates openssl libpq-dev build-essential gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY certs/ /usr/local/share/ca-certificates/
+# COPY certs/ /usr/local/share/ca-certificates/
 RUN set -eux; \
     for f in /usr/local/share/ca-certificates/*.cer; do \
       [ -f "$f" ] && openssl x509 -inform der -in "$f" -out "${f%.cer}.crt" && rm -f "$f" || true; \
