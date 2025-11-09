@@ -35,9 +35,6 @@ TOPICS=(
   sensor-telemetry
   sensor-anomalies
   dev-robot-telemetry-anomalies
-  incidents.events
-  incidents.update
-  incidents.create
 
   sensor_anomalies
   sensor_zone_stats
@@ -48,6 +45,7 @@ TOPICS=(
   sound.new
   image.new
   dev-aerial-images-keys
+  dev-security-images-keys
   alerts
 
   # --- imagery (MinIO -> Kafka) ---
@@ -57,6 +55,8 @@ TOPICS=(
   image.new.leaves
   image.new.ground
   image.new.field
+  image.new.security
+  image_new_security_connections
   
   # --- sound(sound) (MinIO -> Kafka) ---
   sound.new.plants
