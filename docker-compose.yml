@@ -1,0 +1,976 @@
+# ==========================
+# Docker Compose - AG Cloud
+# ==========================
+
+version: "3.9"
+# --------------------------
+# Networks
+# --------------------------
+networks:
+  ag_cloud:
+    name: ag_cloud
+    driver: bridge
+
+# --------------------------
+# Volumes
+# --------------------------
+volumes:
+  postgres_data:
+  wal_archive:
+  backups:
+  gui_data:
+  minio-hot-data: {}
+  minio-cold-data: {}
+  contracts: {}
+
+# ==========================
+# Services
+# ==========================
+services:
+
+  # --------------------------
+  # RelDB / Postgres
+  # --------------------------
+  postgres:
+    build: ./RelDB
+    container_name: postgres
+    environment:
+      POSTGRES_USER: missions_user
+      POSTGRES_PASSWORD: pg123
+      POSTGRES_DB: missions_db
+      PGHOST: 0.0.0.0
+      PGPORT: 5432
+      PGDATA: /var/lib/postgresql/data
+      WAL_DIR: /var/lib/postgresql/wal_archive
+      BACKUP_DIR: /var/lib/postgresql/backups
+      RETENTION: 7
+      TZ: Asia/Jerusalem
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - wal_archive:/var/lib/postgresql/wal_archive
+      - backups:/var/lib/postgresql/backups
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "missions_user", "-d", "missions_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  postgres_exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: "postgresql://missions_user:pg123@postgres:5432/missions_db?sslmode=disable"
+    command:
+      - "--extend.query-path=/etc/postgres-queries.yml"
+    volumes:
+      - ./RelDB/graphs/postgres-queries.yml:/etc/postgres-queries.yml
+    depends_on:
+      - postgres
+    ports:
+      - "9187:9187"
+    networks:
+      - ag_cloud
+  # -------------------------
+  # Sound Metrics Service
+  # -------------------------
+
+  sound_metrics:
+    build:
+      context: ./services/sound_metrics
+      dockerfile: Dockerfile
+    environment:
+      - ADDR=0.0.0.0
+      - PORT=8005
+      - USE_UTC=false
+      - WINDOW_MIN=1
+      - STABLE_SEC=1
+      - PYTHONUNBUFFERED=1
+
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_BUCKET=sound
+      - MINIO_PREFIX=sounds/
+
+    command: [ "python", "-u", "src/metrics.py" ]
+    ports:
+      - "8005:8005"
+    depends_on:
+      - minio-hot
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  # -------------------------
+  # Plant Stress Daily Batch
+  # -------------------------
+
+  plant_stress_daily:
+      build: ./services/plant_stress
+      env_file:
+        - ./services/plant_stress/.env
+      restart: "no"
+      environment:
+        MODEL_DIR: /models
+        CONFIDENCE_THRESHOLD: "0.60"
+        TF_CPP_MIN_LOG_LEVEL: "2"
+        TIMEZONE: Asia/Jerusalem
+        POSTGRES_DSN: postgresql://missions_user:pg123@postgres:5432/missions_db
+        MINIO_ENDPOINT: minio-hot:9000
+        MINIO_ACCESS_KEY: minioadmin
+        MINIO_SECRET_KEY: minioadmin123
+        MINIO_BUCKET: sound
+        MINIO_PREFIX: plants/
+        MINIO_SECURE: "false"
+      command: ["python","-u","/app/predict_minio_daily.py"]
+      volumes:
+        - "./services/plant_stress/models:/models:ro"
+      depends_on:
+        postgres:
+          condition: service_healthy
+        minio-hot:
+          condition: service_healthy
+        mc-bootstrap:
+          condition: service_started
+      networks: [ag_cloud]
+
+  # -------------------------
+  # MQTT + Kafka + Connect + Init
+  # -------------------------
+  kafka:
+    build:
+      context: ./mqtt_and_kafka/kafka
+      dockerfile: dockerfile
+    container_name: kafka
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: mosquitto
+    command: [ "mosquitto", "-c", "/mqtt_and_kafka/mosquitto/config/mosquitto.conf" ]
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mqtt_and_kafka/mosquitto/config:/mqtt_and_kafka/mosquitto/config:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: [ "CMD", "mosquitto_sub", "-h", "localhost", "-p", "1883", "-t", "$$SYS/#", "-C", "1", "-W", "15" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  connect:
+    build:
+      context: ./mqtt_and_kafka
+      dockerfile: connect.Dockerfile
+    image: local/connect-with-mqtt:1.0.0
+    container_name: connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+      - CONNECT_GROUP_ID=agcloud-connect
+      - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
+      - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
+      - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: [ "CMD", "curl", "-sf", "http://localhost:8083/connectors" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  init-connector:
+    image: curlimages/curl:8.7.1
+    depends_on:
+      connect:
+        condition: service_healthy
+    volumes:
+      - ./mqtt_and_kafka/connectors:/connectors
+    networks:
+      - ag_cloud
+    entrypoint: >
+      sh -c "
+        echo '==> Creating MQTT connector...';
+        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
+        echo '==> Done.';
+      "
+
+  # --------------------------
+  # GUI / Runner / Gateway
+  # --------------------------
+  runner:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/runner/Dockerfile
+      args:
+        USE_NETFREE: ${USE_NETFREE:-true}
+    container_name: runner
+    environment:
+      - RUNNER_MODE=real
+      - SQLITE_DB=/data/app.db
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./GUI/data:/data:ro
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+
+  gateway:
+    container_name: gateway
+    build:
+      context: ./GUI
+      dockerfile: src/vast/gateway/Dockerfile
+      args:
+        USE_NETFREE: ${USE_NETFREE:-true}
+    environment:
+      - RUNNER_ADDR=runner:50051
+    ports:
+      - "8000:8000"
+    depends_on:
+      - runner
+    restart: unless-stopped
+
+  sensors_metrics:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/services/Dockerfile
+    container_name: sensors_metrics
+    environment:
+      - SQLITE_DB=/data/app.db
+      - GATEWAY_URL=http://gateway:8000
+    volumes:
+      - ./GUI/data:/data:ro
+    depends_on:
+      - gateway
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  # --------------------------
+  # Prometheus / Grafana
+  # --------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/prometheus-recording.rules.yml:/etc/prometheus/prometheus-recording.rules.yml:ro
+      - ./prometheus/postgres-alerts.yml:/etc/prometheus/postgres-alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - postgres_exporter
+      - minio-hot
+      - minio-cold
+    networks:
+      - ag_cloud
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: light
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - ag_cloud
+
+  pushgateway:
+    image: prom/pushgateway:v1.8.0
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  # --------------------------
+  # Desktop App
+  # --------------------------
+  desktop_app:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/desktop/Dockerfile
+    container_name: desktop_app
+    environment:
+      - NO_VNC_PORT=8080
+      - DISPLAY=host.docker.internal:0.0
+      - GATEWAY_URL=http://sensors_metrics:8000
+      - NOTIFICATION_API_URL=http://notification_api:5000
+    ports:
+      - "5900:5900"
+      - "8080:8080"
+    depends_on:
+      - db_api_service
+      - notification_api
+      - alerts-gateway
+    volumes:
+      - ./GUI/src/vast:/app/src/vast
+      - ./templates:/app/templates:ro
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  # --------------------------
+  # Large Mosquitto
+  # --------------------------
+  large-mosquitto:
+    container_name: large-mosquitto
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - "1885:1885"
+    networks:
+      - ag_cloud
+
+  # --------------------------
+  # MinIO: hot + cold + bootstrap
+  # --------------------------
+  minio-hot:
+    build:
+      context: ./storage_with_mqtt/storage/minio-storage
+    container_name: minio-hot
+    environment:
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+
+      # ===== IMAGE NOTIFIERS =====
+      MINIO_NOTIFY_KAFKA_ENABLE_aerial: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_aerial: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_aerial: "image.new.aerial"
+      
+      MINIO_NOTIFY_KAFKA_ENABLE_air: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_air: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_air: "image.new.air"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_fruits: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_fruits: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_fruits: "image.new.fruits"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_leaves: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_leaves: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_leaves: "image.new.leaves"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_ground: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_ground: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_ground: "image.new.ground"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_field: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_field: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_field: "image.new.field"
+
+      # ===== SOUND NOTIFIERS =====
+      MINIO_NOTIFY_KAFKA_ENABLE_plants: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_plants: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_plants: "sound.new.plants"
+
+      MINIO_NOTIFY_KAFKA_ENABLE_sounds: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_sounds: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_sounds: "sound.new.sounds"
+    ports:
+      - "9001:9000" # HOT S3
+      - "9002:9001" # HOT Console
+    networks: [ ag_cloud ]
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready" ]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+    volumes:
+      - minio-hot-data:/data
+
+  minio-cold:
+    build:
+      context: ./storage_with_mqtt/storage/minio-storage
+    container_name: minio-cold
+    environment:
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9101:9000" # COLD S3
+      - "9102:9001" # COLD Console
+    networks: [ ag_cloud ]
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:9000/minio/health/ready" ]
+      interval: 3s
+      timeout: 2s
+      retries: 40
+    volumes:
+      - minio-cold-data:/data
+
+  mc-bootstrap:
+    build:
+      context: ./storage_with_mqtt/storage/Lifecycle_rules/minio-bootstrap
+    container_name: mc-bootstrap
+    volumes:
+      - ./storage_with_mqtt/storage/combined_minio_setup/config:/config:ro
+      - ./storage_with_mqtt/data/config:/config
+    depends_on:
+      minio-hot:
+        condition: service_healthy
+      minio-cold:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      HOT_ENDPOINT: http://minio-hot:9000
+      COLD_ENDPOINT: http://minio-cold:9000
+      MC_ALIAS_HOT: hot
+      MC_ALIAS_COLD: cold
+      BUCKET_IMAGERY: imagery
+      BUCKET_SOUND: sound
+    networks: [ ag_cloud ]
+    restart: unless-stopped
+
+  # --------------------------
+  # MQTT Ingest & Publisher
+  # --------------------------
+  mqtt_ingest:
+    build:
+      context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+    container_name: mqtt_ingest
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      BUCKET_IMAGERY: imagery
+      BUCKET_SOUND: sound
+      MQTT_BROKER: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/imagery/#
+      MQTT_PUB_TOPIC: imagery/ingested
+      DUMMY_DB: 0
+      DB_API_BASE: http://db_api_service:8001
+      DB_API_TOKEN: auto
+      OUTBOX_DIR: /app/outbox
+      DB_API_AUTH_MODE: service
+      DB_API_SERVICE_NAME: mqtt_ingest
+      INGEST_WORKERS: 8
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  mqtt_ingest_sound:
+    build:
+      context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+    container_name: mqtt_ingest_sound
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      S3_BUCKET: sound
+      MQTT_BROKER: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/sound/#
+      DEFAULT_PREFIX: MIC-01
+      CAMERA_PREFIX: camera
+      MICROPHONE_PREFIX: microphone
+      DUMMY_DB: 0
+      DB_API_BASE: http://db_api_service:8001
+      DB_API_TOKEN: auto
+      OUTBOX_DIR: /app/outbox
+      DB_API_AUTH_MODE: service
+      DB_API_SERVICE_NAME: mqtt_ingest_sound
+      INGEST_WORKERS: 8
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  mqtt_publisher:
+    build:
+      context: ./storage_with_mqtt/mqtt_images/mqtt_publisher
+    container_name: mqtt_publisher
+    environment:
+      - MQTT_HOST=large-mosquitto
+      - MQTT_PORT=1885
+      - MQTT_TOPIC_BASE=MQTT/imagery
+      - IMAGES_DIR=/images
+      - CAMERA_ID=camera-01
+      - LIMIT=0
+      - SHUFFLE=1
+      - MQTT_QOS=2
+      - PUBLISH_DELAY_MS=100
+    volumes:
+      - ./storage_with_mqtt/mqtt_images/data/real_images:/images:ro
+    depends_on:
+      - large-mosquitto
+      - mqtt_ingest
+    networks:
+      - ag_cloud
+
+  # ------------------------
+  # Classifier - Sounds
+  # ------------------------
+  sounds_classifier:
+    build:
+      context: ./services/sounds_classifier
+      dockerfile: Dockerfile.classifier-svc
+    container_name: sounds_classifier
+    restart: unless-stopped
+    environment:
+      # Runtime mode
+      - DEVICE=cpu
+      - BACKBONE=cnn14
+
+      # Model artifacts (must exist inside the image)
+      - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
+      - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
+      - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
+
+      # DB 
+      - WRITE_DB=false
+      - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - DB_SCHEMA=agcloud_audio
+      - DB_RUN_ID=api-default
+
+      # Kafka 
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTS_TOPIC=alerts
+      - ENABLE_ALERTS=true
+
+      # MinIO 
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=false
+
+      # Request validation
+      - ALLOWED_BUCKETS=imagery
+      - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
+      - MAX_BYTES=104857600
+
+      # Tuning params 
+      - UNKNOWN_THRESHOLD=0.4
+      - WINDOW_SEC=2.0
+      - HOP_SEC=0.5
+      - PAD_LAST=true
+      - AGG=mean
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+    ports:
+      - "8088:8088"
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health').read()" ]
+      interval: 45s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # --------------------------
+  # DB API Service
+  # --------------------------
+
+
+
+  contracts-gen:
+    build:
+      context: ./services/db_api_service
+      dockerfile: app/contracts/Dockerfile
+    env_file:
+      - ./services/db_api_service/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - contracts:/app/app/contracts
+    networks:
+      - ag_cloud
+    restart: "no"
+
+  db_api_service:
+    build:
+      context: ./services/db_api_service
+      dockerfile: Dockerfile
+    container_name: db_api_service
+    env_file:
+      - ./services/db_api_service/.env
+    environment:
+      DB_DSN: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
+      ENV: dev
+      JWT_SECRET: change-me-please-very-secret
+      JWT_ALGO: HS256
+      ACCESS_TTL_MIN: 15
+      REFRESH_TTL_DAYS: 14
+      DEV_SA_NAME: my-ingest-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/db_api_service/app:/app/app
+      - contracts:/app/app/contracts
+    depends_on:
+      contracts-gen:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  notification_api:
+    build:
+      context: ./services/API-notifications/src
+      dockerfile: Dockerfile
+    container_name: notification_api
+    environment:
+      - FLASK_ENV=development
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+
+  ripeness-api:
+    build:
+      context: ./services/ripeness-ml
+      dockerfile: deploy/Dockerfile
+    image: ripeness-api:latest
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=missions_db
+      - PGUSER=missions_user
+      - PGPASSWORD=pg123
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_SECURE=false
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MODEL_NAME=best_conditional
+      - BATCH_LIMIT=500
+      - FRUITS=Apple,Banana,Orange
+    depends_on:
+      - postgres
+      - minio-hot
+    volumes:
+      - ./services/ripeness-ml/checkpoints:/app/checkpoints
+      - ./services/ripeness-ml/configs:/app/configs
+      - ./services/ripeness-ml/model:/app/model
+    container_name: ripeness-api
+    networks: [ ag_cloud ]
+    ports:
+      - "8091:8088"
+    restart: unless-stopped
+ 
+  # --------------------------
+  # Flink JobManager & TaskManager
+  # --------------------------
+  flink-jobmanager:
+    build:
+      context: ./streaming/flink
+      dockerfile: Dockerfile.flink-py
+    image: agcloud-flink-py:1.18
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    networks: [ ag_cloud ]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        taskmanager.numberOfTaskSlots: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        s3.endpoint: http://minio-hot:9000
+        s3.path.style.access: true
+        s3.access.key: minioadmin
+        s3.secret.key: minioadmin123
+        fs.s3a.connection.ssl.enabled: false
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    restart: unless-stopped
+
+  audio_compression:
+    build:
+      context: ./services/compression
+      dockerfile: Dockerfile
+    container_name: audio_compression
+    environment:
+      - RAW_MAX_AGE_DAYS=30
+      - COMPRESSION_CODEC=opus
+      - COMPRESSED_MAX_AGE_DAYS=90
+      - CHECK_INTERVAL_SECONDS=3600
+      - MINIO_ENDPOINT=minio-hot:9000
+      - ACCESS_KEY=minioadmin
+      - SECRET_KEY=minioadmin123
+      - BUCKET_NAME=imagery
+    depends_on:
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  flink_writer_db:
+    build:
+      context: ./services/flink_writer_db
+      dockerfile: Dockerfile.flink
+    container_name: flink_writer_db
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections
+      - DB_API_BASE=http://db_api_service:8001
+      - DB_API_AUTH_MODE=service
+      - DB_API_SERVICE_NAME=flink-writer-db
+      - DB_API_TOKEN_FILE=/opt/app/secrets/db_api_token
+      - FLINK_PARALLELISM=1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db_api_service:
+        condition: service_started
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  flink-taskmanager:
+    image: agcloud-flink-py:1.18
+    container_name: flink-taskmanager
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+    networks: [ ag_cloud ]
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        parallelism.default: 2
+        taskmanager.numberOfTaskSlots: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        s3.endpoint: http://minio-hot:9000
+        s3.path.style.access: true
+        s3.access.key: minioadmin
+        s3.secret.key: minioadmin123
+        fs.s3a.connection.ssl.enabled: false
+        python.client.executable: /usr/bin/python3
+        python.executable: /usr/bin/python3
+      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+    volumes:
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    restart: unless-stopped
+
+  # --------------------------
+  # Inference HTTP Service
+  # --------------------------
+  fruit-inference-http:
+    build:
+      context: ./services/inference_http
+      dockerfile: Dockerfile
+    environment:
+      - TEAM=fruit
+      - WEIGHTS_PATH=/app/weights/fruit_cls_best.ts
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=0
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+    container_name: fruit-inference-http
+    networks: [ ag_cloud ]
+    ports:
+      - "8011:8000"
+    restart: unless-stopped
+
+  # --------------------------
+  # Flink Jobs
+  # --------------------------
+  flink-dispatcher-fruit:
+    image: agcloud-flink-py:1.18
+    container_name: flink-dispatcher-fruit
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      fruit-inference-http: { condition: service_started }
+    networks: [ ag_cloud ]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=imagery.new.fruit
+      - TEAM=fruit
+      - HTTP_URL=http://fruit-inference-http:8000/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-fruit
+      - PARALLELISM=2
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
+      - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
+      - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
+      - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
+      - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
+    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8000/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+
+  flink-alerts-job:
+    build:
+      context: ./services/alerts_forwarder
+      dockerfile: Dockerfile.flink
+    container_name: alerts-forwarder
+    depends_on:
+      kafka:
+        condition: service_healthy
+      alertmanager_service:
+        condition: service_started
+    environment:
+      - PYTHONPATH=/opt/app
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTMANAGER_SERVICE_URL=http://alertmanager_service:8090/alerts
+    command: [ "python", "/opt/app/alerts_forwarder.py" ]
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--log.level=debug"
+    volumes:
+      - ./services/alertmanager_service/compose/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    networks:
+      - ag_cloud
+    restart: always
+
+  alertmanager_service:
+    build:
+      context: ./services/alertmanager_service/src
+      dockerfile: Dockerfile
+    container_name: alertmanager_service
+    ports:
+      - "8090:8090"
+    command: [ "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8090" ]
+    volumes:
+      - ./templates:/app/templates:ro
+    environment:
+      - CFG_PATH=/app/templates/templates.yml
+      - ALERTMANAGER_URL=http://alertmanager:9093
+      - GATEWAY_URL=http://alerts-gateway:8000/internal/alert
+    depends_on:
+      - alertmanager
+      - alerts-gateway
+    networks:
+      - ag_cloud
+
+  alerts-gateway:
+    build:
+      context: ./services/alertmanager_service/src
+      dockerfile: Dockerfile
+    container_name: alerts_gateway
+    command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
+    ports:
+      - "8010:8000" # host:container
+    networks:
+      - ag_cloud
