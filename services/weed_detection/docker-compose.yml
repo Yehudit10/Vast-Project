@@ -1,0 +1,13 @@
+services:
+  weed-detector:
+    build: .
+    container_name: weed-detector
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data_minio_cache:/app/data_minio_cache
+    command: ["python", "-m", "scripts.run_detection", "--storage", "minio"]
+    # (Optional) if you have a proxy/certificates:
+    # environment:
+    #   - REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
