@@ -1,19 +1,20 @@
-from __future__ import annotations
-from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
-    QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar, QStackedWidget,
-    QVBoxLayout, QWidget, QToolButton, QLabel, QHBoxLayout
+    QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar,
+    QStackedWidget, QToolButton, QLabel, QWidget, QHBoxLayout, QVBoxLayout,
+    QGraphicsDropShadowEffect, QPushButton
 )
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtGui import QAction, QIcon, QFont, QColor
+import os
+
 from home_view import HomeView
 from views.sensors_view import SensorsView
-from views.security.incident_player_vlc import IncidentPlayerVLC
 from views.alerts_panel import AlertsPanel
 from views.notification_view import NotificationView
 from views.fruits_view import FruitsView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
-import os
+
 
 
 class MainWindow(QMainWindow):
@@ -22,74 +23,155 @@ class MainWindow(QMainWindow):
     def __init__(self, api: DashboardApi, parent=None):
         super().__init__(parent)
         self.setWindowTitle("VAST – Dashboard")
-        self.resize(1100, 700)
+        self.resize(1280, 760)
         self.api = api
 
-        # ---------- Menu ----------
-        file_menu = self.menuBar().addMenu("&File")
+        # ───────────────────────────────
+        # GLOBAL STYLE
+        # ───────────────────────────────
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f9fafb;
+            }
+            QMenuBar {
+                background-color: #e5e7eb;
+                font-size: 11.5pt;
+                padding: 4px 10px;
+            }
+            QToolBar {
+                background: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #ffffff,
+                    stop:1 #f3f4f6
+                );
+                border-bottom: 1px solid #d1d5db;
+                padding: 2px 10px;
+                min-height: 42px;
+            }
+            QToolButton {
+                background-color: transparent;
+                border: none;
+                padding: 4px;
+                border-radius: 8px;
+                font-size: 20px;
+            }
+            QToolButton:hover {
+                background-color: #e5e7eb;
+            }
+            QListWidget {
+                background-color: #ffffff;
+                border: none;
+                font-size: 12pt;
+                color: #111827;
+            }
+            QListWidget::item {
+                padding: 10px;
+                border-radius: 6px;
+            }
+            QListWidget::item:selected {
+                background-color: #10b981;
+                color: white;
+            }
+            QStatusBar {
+                background-color: #f3f4f6;
+                font-size: 10pt;
+            }
+        """)
 
-        # Back
+        # ───────────────────────────────
+        # MENU
+        # ───────────────────────────────
+        file_menu = self.menuBar().addMenu("&File")
         self.back_action = QAction(QIcon.fromTheme("go-previous"), "Back", self)
         self.back_action.setShortcut("Alt+Left")
         self.back_action.triggered.connect(self.go_back)
         file_menu.addAction(self.back_action)
 
-        # Logout
-        self.logout_action = QAction(QIcon.fromTheme("system-log-out"), "Log out", self)
+        self.logout_action = QAction("Log out", self)
         self.logout_action.triggered.connect(self._logout)
         file_menu.addAction(self.logout_action)
 
-        # ---------- Toolbar ----------
+        # ───────────────────────────────
+        # TOP BAR
+        # ───────────────────────────────
         toolbar = self.addToolBar("Main Toolbar")
         toolbar.setMovable(False)
         toolbar.setFloatable(False)
-        toolbar.setIconSize(QSize(24, 24))
-        toolbar.addAction(self.back_action)
-        toolbar.addAction(self.logout_action)
-        toolbar.addSeparator()
+        toolbar.setIconSize(QSize(32, 32))
 
-        # ---------- Alert Bell Button ----------
+        top_bar = QWidget()
+        top_bar_layout = QHBoxLayout(top_bar)
+        top_bar_layout.setContentsMargins(8, 0, 8, 0)
+        top_bar_layout.setSpacing(10)
+
+        # Back button
+        back_btn = QToolButton()
+        back_btn.setIcon(QIcon.fromTheme("go-previous"))
+        back_btn.setIconSize(QSize(28, 28))
+        back_btn.setToolTip("Go back")
+        back_btn.clicked.connect(self.go_back)
+
+        # Logout button
+        logout_btn = QPushButton("Logout")
+        logout_btn.setToolTip("Log out")
+        logout_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        logout_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #10b981;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 6px 16px;
+                font-size: 11pt;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #059669;
+            }
+            QPushButton:pressed {
+                background-color: #047857;
+            }
+        """)
+        logout_btn.clicked.connect(self._logout)
+
+        # Bell button
         self.alert_button = QToolButton()
         self.alert_button.setToolTip("Show alerts")
         self.alert_button.setText("🔔")
-        self.alert_button.setIconSize(QSize(32,32))
+        self.alert_button.setIconSize(QSize(40, 40))
         self.alert_button.setStyleSheet("""
             QToolButton {
+                font-size: 30px;
                 border: none;
                 background: transparent;
                 padding: 4px;
-                font-size: 20px;
+                border-radius: 8px;
             }
             QToolButton:hover {
-                background-color: #f0f0f0;
-                border-radius: 6px;
+                background-color: #e5e7eb;
             }
         """)
 
-        # --- Badge overlay ---
+        # Larger blue badge
         self.alert_badge = QLabel("0", self.alert_button)
         self.alert_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.alert_badge.setFixedSize(18,18)
-        self.alert_badge.setFixedSize(14, 14)  # smaller badge
+        self.alert_badge.setFixedSize(24, 24)
         self.alert_badge.setStyleSheet("""
             QLabel {
-                background-color: #1976D2;
+                background-color: #3b82f6; /* blue */
                 color: white;
-                font-size: 8pt;
+                font-size: 10pt;
                 font-weight: bold;
-                border-radius: 7px;  /* half of size = perfect circle */
-                border: 1px solid white;
+                border-radius: 12px;
+                border: 2px solid white;
             }
         """)
-
         self.alert_badge.hide()
 
-        # Keep badge positioned on the top-right corner
+        # Position badge dynamically
         def reposition_badge():
             btn_w = self.alert_button.width()
-            btn_h = self.alert_button.height()
-            # move badge to bottom-right corner of bell
-            self.alert_badge.move(btn_w - 16, btn_h - 18)
+            self.alert_badge.move(btn_w - 22, 2)
             self.alert_badge.raise_()
 
         self.alert_button.resizeEvent = lambda e: (
@@ -98,48 +180,81 @@ class MainWindow(QMainWindow):
         )
         reposition_badge()
 
-        # Add bell to toolbar
-        toolbar.addWidget(self.alert_button)
+        # Title
+        title_label = QLabel("VAST Dashboard")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 17pt;
+                font-weight: 600;
+                color: #111827;
+            }
+        """)
 
-        # ---------- Navigation Dock ----------
+        # Shadow
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(8)
+        shadow.setColor(QColor(0, 0, 0, 35))
+        shadow.setOffset(0, 2)
+        top_bar.setGraphicsEffect(shadow)
+
+        top_bar_layout.addWidget(logout_btn)
+        top_bar_layout.addWidget(self.alert_button)
+        top_bar_layout.addStretch()
+        top_bar_layout.addWidget(title_label)
+        top_bar_layout.addStretch()
+
+        toolbar.addWidget(top_bar)
+
+        # ───────────────────────────────
+        # NAVIGATION DOCK
+        # ───────────────────────────────
         self.nav_dock = QDockWidget("Navigation", self)
         self.nav_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.nav_dock)
 
         self.nav_list = QListWidget(self.nav_dock)
         self.nav_dock.setWidget(self.nav_list)
+        self.nav_dock.setMinimumWidth(220)
+
+        font = QFont()
+        font.setPointSize(12)
+        self.nav_list.setFont(font)
 
         for name in [
             "Home", "Sensors", "Sound", "Ground Image",
             "Aerial Image", "Fruits", "Security", "Settings", "Notifications"
         ]:
-            QListWidgetItem(name, self.nav_list)
+            QListWidgetItem(f"  {name}", self.nav_list)
 
         self.nav_list.setCurrentRow(0)
         self.nav_list.currentRowChanged.connect(self._on_nav_change)
 
-        # ---------- Alert Service ----------
+        # ───────────────────────────────
+        # ALERT SERVICE
+        # ───────────────────────────────
         ws_url = os.getenv("ALERTS_WS", "ws://alerts-gateway:8000/ws/alerts")
         self.alert_service = AlertService(ws_url, api)
         self.alert_service.alertsUpdated.connect(self.update_alert_badge)
         self.alert_service.alertAdded.connect(lambda _: self.update_alert_badge())
 
-        # ---------- Alerts Panel ----------
+        # Alerts panel
         self.alerts_panel = AlertsPanel(self.alert_service)
         self.alerts_panel.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
         self.alerts_panel.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.alerts_panel.setStyleSheet("""
             QWidget {
                 background-color: #ffffff;
-                border: 1px solid #ccc;
+                border: 1px solid #d1d5db;
                 border-radius: 10px;
             }
         """)
         self.alerts_panel.hide()
-
         self.alert_button.clicked.connect(self.toggle_alert_panel)
 
-        # ---------- Views ----------
+        # ───────────────────────────────
+        # CENTRAL STACKED VIEWS
+        # ───────────────────────────────
         self.home = HomeView(api, self.alert_service, self)
         self.sensors_view = SensorsView(api, self)
         self.notification_view = NotificationView(self)
@@ -152,23 +267,32 @@ class MainWindow(QMainWindow):
             "Home": self.home,
             "Sensors": self.sensors_view,
             "Notifications": self.notification_view,
-            "Fruits": self.fruits_view
+            "Fruits": self.fruits_view,
+            
         }
-
         for view in self.views.values():
             self.stack.addWidget(view)
-
         self.stack.setCurrentWidget(self.home)
         self.history: list = []
 
-        # ---------- Status bar ----------
+        # ───────────────────────────────
+        # STATUS BAR
+        # ───────────────────────────────
         sb = QStatusBar(self)
+        sb.setStyleSheet("""
+            QStatusBar {
+                background-color: #f3f4f6;
+                color: #374151;
+                font-size: 10.5pt;
+            }
+        """)
         self.setStatusBar(sb)
         sb.showMessage("Ready")
 
-    # ---------- Alert Badge Management ----------
+    # ───────────────────────────────
+    # ALERT BADGE
+    # ───────────────────────────────
     def update_alert_badge(self):
-        """Show unread (unacknowledged) alert count."""
         unacked = sum(1 for a in self.alert_service.alerts if not a.get("ack", False))
         if unacked > 0:
             self.alert_badge.setText(str(unacked))
@@ -177,35 +301,30 @@ class MainWindow(QMainWindow):
             self.alert_badge.hide()
 
     def toggle_alert_panel(self):
-        """Show or hide the floating AlertsPanel directly below the bell icon."""
         if self.alerts_panel.isVisible():
             self.alerts_panel.hide()
             return
 
-        panel_width = 400
-        panel_height = 520
+        panel_width, panel_height = 420, 540
         self.alerts_panel.resize(panel_width, panel_height)
-
-        # Compute position of bell in global coords
         rect = self.alert_button.geometry()
         bottom_left = self.alert_button.mapToGlobal(rect.bottomLeft())
         bottom_right = self.alert_button.mapToGlobal(rect.bottomRight())
         center_x = (bottom_left.x() + bottom_right.x()) // 2 - (panel_width // 2)
-        pos_y = bottom_left.y() + 6
-
+        pos_y = bottom_left.y() + 8
         self.alerts_panel.move(center_x, pos_y)
         self.alerts_panel.show()
         self.alerts_panel.raise_()
 
-        # Mark alerts as acknowledged
         if hasattr(self.alert_service, "mark_all_acknowledged"):
             self.alert_service.mark_all_acknowledged()
         self.update_alert_badge()
 
-    # ---------- Navigation ----------
+    # ───────────────────────────────
+    # NAVIGATION
+    # ───────────────────────────────
     def _on_nav_change(self, row: int) -> None:
-        name = self.nav_list.item(row).text()
-        print(f"[MainWindow] Navigation changed to: {name}")
+        name = self.nav_list.item(row).text().strip()
         if name in self.views:
             self.navigate_to(self.views[name])
         else:

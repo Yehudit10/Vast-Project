@@ -425,6 +425,11 @@ services:
       MINIO_NOTIFY_KAFKA_ENABLE_sounds: "on"
       MINIO_NOTIFY_KAFKA_BROKERS_sounds: "kafka:9092"
       MINIO_NOTIFY_KAFKA_TOPIC_sounds: "sound.new.sounds"
+
+      # ===== SECURITY NOTIFIER =====
+      MINIO_NOTIFY_KAFKA_ENABLE_security: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_security: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_security: "image.new.security"
     ports:
       - "9001:9000" # HOT S3
       - "9002:9001" # HOT Console
@@ -810,7 +815,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections
+      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,image_new_security_connections,alerts
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
