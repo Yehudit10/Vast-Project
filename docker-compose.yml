@@ -972,3 +972,50 @@ services:
       - "8010:8000" # host:container
     networks:
       - ag_cloud
+      
+  image-linker-jobmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-jobmanager
+    command: jobmanager
+    ports:
+      - "8084:8081"   # ✅ unique external port (no overlap)
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    networks:
+      - ag_cloud
+
+  image-linker-taskmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    networks:
+      - ag_cloud
+
+  image-linker-submitter:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-submit
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    command: >
+      bash -lc "sleep 10 &&
+                flink run -m image-linker-jobmanager:8081 -py /opt/app/job_linker.py &&
+                echo 'Image-Linker job submitted successfully' &&
+                sleep 1"
+    networks:
+      - ag_cloud
