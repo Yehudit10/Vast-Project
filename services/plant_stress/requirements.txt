@@ -8,3 +8,4 @@ urllib3
 pytz
 minio
 keras
+kafka-python
