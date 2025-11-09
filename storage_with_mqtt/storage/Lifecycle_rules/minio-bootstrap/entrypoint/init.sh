@@ -71,6 +71,12 @@ mc admin config set "${MC_ALIAS_HOT}" notify_kafka:field \
   brokers="kafka:9092" \
   topic="image.new.field"
 
+echo "[bootstrap] → security"
+mc admin config set "${MC_ALIAS_HOT}" notify_kafka:security \
+  brokers="kafka:9092" \
+  topic="image.new.security"
+
+
 # Configure SOUND notifiers
 echo "[bootstrap] → plants"
 mc admin config set "${MC_ALIAS_HOT}" notify_kafka:plants \
@@ -181,6 +187,11 @@ mc event add "${MC_ALIAS_HOT}/imagery" \
   arn:minio:sqs::field:kafka \
   --event put \
   --prefix "field/"
+
+mc event add "${MC_ALIAS_HOT}/imagery" \
+  arn:minio:sqs::security:kafka \
+  --event put \
+  --prefix "security/"
 
 echo "[bootstrap] Adding Kafka event rules for SOUND..."
 mc event add "${MC_ALIAS_HOT}/sound" \

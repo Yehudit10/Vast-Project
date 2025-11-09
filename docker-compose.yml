@@ -8,6 +8,7 @@ version: "3.9"
 # --------------------------
 networks:
   ag_cloud:
+    name: ag_cloud
     driver: bridge
 
 # --------------------------
@@ -424,6 +425,11 @@ services:
       MINIO_NOTIFY_KAFKA_ENABLE_sounds: "on"
       MINIO_NOTIFY_KAFKA_BROKERS_sounds: "kafka:9092"
       MINIO_NOTIFY_KAFKA_TOPIC_sounds: "sound.new.sounds"
+
+      # ===== SECURITY NOTIFIER =====
+      MINIO_NOTIFY_KAFKA_ENABLE_security: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_security: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_security: "image.new.security"
     ports:
       - "9001:9000" # HOT S3
       - "9002:9001" # HOT Console
@@ -676,7 +682,7 @@ services:
     env_file:
       - ./services/db_api_service/.env
     environment:
-      DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+      DB_DSN: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
       ENV: dev
       JWT_SECRET: change-me-please-very-secret
       JWT_ALGO: HS256
@@ -686,6 +692,7 @@ services:
     ports:
       - "8001:8001"
     volumes:
+      - ./services/db_api_service/app:/app/app
       - contracts:/app/app/contracts
     depends_on:
       contracts-gen:
@@ -808,7 +815,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections
+      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,image_new_security_connections,alerts
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
@@ -970,5 +977,52 @@ services:
     command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
     ports:
       - "8010:8000" # host:container
+    networks:
+      - ag_cloud
+      
+  image-linker-jobmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-jobmanager
+    command: jobmanager
+    ports:
+      - "8084:8081"   # ✅ unique external port (no overlap)
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    networks:
+      - ag_cloud
+
+  image-linker-taskmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    networks:
+      - ag_cloud
+
+  image-linker-submitter:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-submit
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    command: >
+      bash -lc "sleep 10 &&
+                flink run -m image-linker-jobmanager:8081 -py /opt/app/job_linker.py &&
+                echo 'Image-Linker job submitted successfully' &&
+                sleep 1"
     networks:
       - ag_cloud
