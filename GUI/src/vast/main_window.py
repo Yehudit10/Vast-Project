@@ -14,7 +14,7 @@ from views.notification_view import NotificationView
 from views.fruits_view import FruitsView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
-from src.vast.views.security.analytics.analytics_page import GeoAnalyticsView
+
 
 
 class MainWindow(QMainWindow):
