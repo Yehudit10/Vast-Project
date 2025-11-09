@@ -61,6 +61,13 @@ TOPICS=(
   # --- sound(sound) (MinIO -> Kafka) ---
   sound.new.plants
   sound.new.sounds
+  sounds.ultra.keys
+  sounds.keys
+  sound_new_plants_connections
+  sound_new_sounds_connections
+
+  inference.dispatched.sounds
+  dlq.inference.http
 )
 
 # Idempotent creation with retention.ms
