@@ -3,7 +3,6 @@ import os, json, uuid, requests
 from datetime import datetime, timedelta, timezone
 from kafka import KafkaProducer
 from token_bootstrap import get_service_token
-from datetime import datetime, timezone
 
 # === Environment ===
 DB_API_BASE = os.getenv("DB_API_BASE", "http://db_api_service:8001")
