@@ -12,6 +12,7 @@ from views.sensors_view import SensorsView
 from views.alerts_panel import AlertsPanel
 from views.notification_view import NotificationView
 from views.fruits_view import FruitsView
+from views.ground_view import GroundView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
 
@@ -259,7 +260,7 @@ class MainWindow(QMainWindow):
         self.sensors_view = SensorsView(api, self)
         self.notification_view = NotificationView(self)
         self.fruits_view = FruitsView(api, self)
-
+        self.ground_view = GroundView(api, self)    
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
 
@@ -268,7 +269,7 @@ class MainWindow(QMainWindow):
             "Sensors": self.sensors_view,
             "Notifications": self.notification_view,
             "Fruits": self.fruits_view,
-            
+            "Ground" : self.ground_view
         }
         for view in self.views.values():
             self.stack.addWidget(view)
