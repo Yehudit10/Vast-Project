@@ -40,7 +40,7 @@ def parse_args():
     p.add_argument("--input-topic", default=os.getenv("INPUT_TOPIC", "imagery.new.fruit"))
     p.add_argument("--team", default=os.getenv("TEAM", "fruit"))
     p.add_argument("--http-url",
-                   default=os.getenv("HTTP_URL", "http://fruit-inference-http:8000/infer_json"))
+                   default=os.getenv("HTTP_URL", "http://fruit-inference-http:8004/infer_json"))
     p.add_argument("--dlq-topic", default=os.getenv("DLQ_TOPIC", "dlq.inference.http"))
     p.add_argument("--group-id", default=os.getenv("GROUP_ID", "http-dispatcher-fruit"))
 
