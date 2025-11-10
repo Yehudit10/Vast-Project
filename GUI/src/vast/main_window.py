@@ -13,9 +13,9 @@ from views.alerts_panel import AlertsPanel
 from views.notification_view import NotificationView
 from views.fruits_view import FruitsView
 from views.ground_view import GroundView
+from views.auth_status_view import AuthStatusView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
-
 
 
 class MainWindow(QMainWindow):
@@ -105,14 +105,6 @@ class MainWindow(QMainWindow):
         top_bar_layout.setContentsMargins(8, 0, 8, 0)
         top_bar_layout.setSpacing(10)
 
-        # Back button
-        back_btn = QToolButton()
-        back_btn.setIcon(QIcon.fromTheme("go-previous"))
-        back_btn.setIconSize(QSize(28, 28))
-        back_btn.setToolTip("Go back")
-        back_btn.clicked.connect(self.go_back)
-
-        # Logout button
         logout_btn = QPushButton("Logout")
         logout_btn.setToolTip("Log out")
         logout_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -135,7 +127,6 @@ class MainWindow(QMainWindow):
         """)
         logout_btn.clicked.connect(self._logout)
 
-        # Bell button
         self.alert_button = QToolButton()
         self.alert_button.setToolTip("Show alerts")
         self.alert_button.setText("🔔")
@@ -153,13 +144,12 @@ class MainWindow(QMainWindow):
             }
         """)
 
-        # Larger blue badge
         self.alert_badge = QLabel("0", self.alert_button)
         self.alert_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.alert_badge.setFixedSize(24, 24)
         self.alert_badge.setStyleSheet("""
             QLabel {
-                background-color: #3b82f6; /* blue */
+                background-color: #3b82f6;
                 color: white;
                 font-size: 10pt;
                 font-weight: bold;
@@ -169,7 +159,6 @@ class MainWindow(QMainWindow):
         """)
         self.alert_badge.hide()
 
-        # Position badge dynamically
         def reposition_badge():
             btn_w = self.alert_button.width()
             self.alert_badge.move(btn_w - 22, 2)
@@ -181,7 +170,6 @@ class MainWindow(QMainWindow):
         )
         reposition_badge()
 
-        # Title
         title_label = QLabel("VAST Dashboard")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
@@ -192,7 +180,6 @@ class MainWindow(QMainWindow):
             }
         """)
 
-        # Shadow
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(8)
         shadow.setColor(QColor(0, 0, 0, 35))
@@ -204,7 +191,6 @@ class MainWindow(QMainWindow):
         top_bar_layout.addStretch()
         top_bar_layout.addWidget(title_label)
         top_bar_layout.addStretch()
-
         toolbar.addWidget(top_bar)
 
         # ───────────────────────────────
@@ -224,7 +210,8 @@ class MainWindow(QMainWindow):
 
         for name in [
             "Home", "Sensors", "Sound", "Ground Image",
-            "Aerial Image", "Fruits", "Security", "Settings", "Notifications"
+            "Aerial Image", "Fruits", "Security", "Settings",
+            "Notifications", "Auth"
         ]:
             QListWidgetItem(f"  {name}", self.nav_list)
 
@@ -239,7 +226,6 @@ class MainWindow(QMainWindow):
         self.alert_service.alertsUpdated.connect(self.update_alert_badge)
         self.alert_service.alertAdded.connect(lambda _: self.update_alert_badge())
 
-        # Alerts panel
         self.alerts_panel = AlertsPanel(self.alert_service)
         self.alerts_panel.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
         self.alerts_panel.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -260,7 +246,9 @@ class MainWindow(QMainWindow):
         self.sensors_view = SensorsView(api, self)
         self.notification_view = NotificationView(self)
         self.fruits_view = FruitsView(api, self)
-        self.ground_view = GroundView(api, self)    
+        self.ground_view = GroundView(api, self)
+        self.auth_status = AuthStatusView(api, self)
+
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
 
@@ -269,7 +257,8 @@ class MainWindow(QMainWindow):
             "Sensors": self.sensors_view,
             "Notifications": self.notification_view,
             "Fruits": self.fruits_view,
-            "Ground" : self.ground_view
+            "Ground": self.ground_view,
+            "Auth": self.auth_status,
         }
         for view in self.views.values():
             self.stack.addWidget(view)
