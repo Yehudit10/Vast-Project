@@ -50,7 +50,7 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
 MINIO_SECURE = os.getenv("MINIO_SECURE", "false").strip().lower() in ("1", "true", "yes", "on")
 
-ALLOWED_BUCKETS: List[str] = [b.strip() for b in os.getenv("ALLOWED_BUCKETS", "").split(",") if b.strip()]
+ALLOWED_BUCKETS: List[str] = [b.strip() for b in os.getenv("ALLOWED_BUCKETS", "sound").split(",") if b.strip()]
 ALLOWED_CONTENT_TYPES: List[str] = [t.strip() for t in os.getenv(
     "ALLOWED_CONTENT_TYPES",
     "audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4"
