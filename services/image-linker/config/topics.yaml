@@ -3,6 +3,10 @@ teams:
     metadata_topic: dev-aerial-images-keys
     minio_topic: image.new.aerial # imagery_image_camera-air
     output_topic: image_new_aerial_connections # # imagery_image_camera-air_connections
+  security:
+    metadata_topic: dev-security-images-keys
+    minio_topic: image.new.security
+    output_topic: image_new_security_connections
 
 
   # fruits:

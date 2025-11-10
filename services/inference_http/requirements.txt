@@ -1,7 +1,13 @@
+
 fastapi
-uvicorn[standard]
-minio
-pillow
-numpy==1.26.4
+uvicorn
 pydantic
+minio
+requests
+torch
+numpy<2
+opencv-python-headless
+ultralytics==8.2.34
+boto3
+pillow
 numpy==1.26.4
