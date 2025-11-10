@@ -32,5 +32,5 @@ class RipenessWeeklyRollupRead(RipenessWeeklyRollupBase):
         orm_mode = True
 
 class RipenessWeeklyRollupOut(RipenessWeeklyRollupBase):
-    """Schema for API responses (alias of Read)."""
-    pass
+    id: int
+
