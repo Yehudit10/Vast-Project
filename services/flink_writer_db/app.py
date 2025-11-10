@@ -4,6 +4,7 @@ from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import KafkaSource
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.common.watermark_strategy import WatermarkStrategy
+from pyflink.common import Configuration
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -128,7 +129,20 @@ def handle_message(topic: str, raw: str) -> bool:
 
 
 def main():
-    env = StreamExecutionEnvironment.get_execution_environment()
+    # env = StreamExecutionEnvironment.get_execution_environment()
+    # env.set_parallelism(int(os.getenv("FLINK_PARALLELISM", "1")))
+
+    # cfg = env.get_configuration()
+    # cfg.set_string("restart-strategy", "fixed-delay")
+    # cfg.set_string("restart-strategy.fixed-delay.attempts", "9999")
+    # cfg.set_string("restart-strategy.fixed-delay.delay", "5 s")
+
+    conf = Configuration()
+    conf.set_string("restart-strategy", "fixed-delay")
+    conf.set_string("restart-strategy.fixed-delay.attempts", "9999")
+    conf.set_string("restart-strategy.fixed-delay.delay", "5 s")
+
+    env = StreamExecutionEnvironment.get_execution_environment(conf)
     env.set_parallelism(int(os.getenv("FLINK_PARALLELISM", "1")))
 
     for topic in TOPICS:
@@ -140,6 +154,9 @@ def main():
             .set_topics(topic)
             .set_group_id(f"flink-writer-db-{topic}")
             .set_value_only_deserializer(SimpleStringSchema())
+
+            .set_property("allow.auto.create.topics", "true")
+            .set_property("metadata.max.age.ms", "10000")
             .build()
         )
 
