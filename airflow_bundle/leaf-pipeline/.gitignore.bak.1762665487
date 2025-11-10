@@ -1,0 +1,76 @@
+# === OS / Editors ===
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+.build/
+build/
+dist/
+.mypy_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+.cache/
+.ipynb_checkpoints/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# === Docker / Compose ===
+docker.env
+.env            # סודות מקומיים - לא מעלים (נפרסם .env.example בהמשך)
+
+# === Airflow (רק ארטיפקטים/לוגים/DB) ===
+airflow/logs/
+airflow/airflow.db
+airflow/airflow.db-journal
+airflow/*.pid
+airflow/*webserver*.log
+airflow/*webserver*.out
+airflow/*webserver*.err
+airflow/*scheduler*.log
+airflow/*scheduler*.out
+airflow/*scheduler*.err
+# קבצי גיבוי של DAG (אלו *.bak.*)
+airflow/dags/*.bak.*
+
+# קלט/פלט זמני של Airflow (staging) — לא קוד
+airflow/staging/
+
+# === Projects: leaf-counting (ארטיפקטים בלבד) ===
+projects/leaf-counting/out_detect/
+projects/leaf-counting/out_crops/
+projects/leaf-counting/out_pwb/
+projects/leaf-counting/runs_local/
+projects/leaf-counting/.venv/
+
+# === Projects: Detection_Jobs / disease-monitor (ארטיפקטים כלליים) ===
+projects/Detection_Jobs/**/__pycache__/
+projects/Detection_Jobs/**/.mypy_cache/
+projects/Detection_Jobs/**/.pytest_cache/
+projects/disease-monitor/**/__pycache__/
+projects/disease-monitor/**/.mypy_cache/
+projects/disease-monitor/**/.pytest_cache/
+
+# === Secrets / Certs (למקרה שיש) ===
+*.key
+*.pem
+*.crt
+*.p12
+*credentials*.json
+*service_account*.json
+*.secrets.*
+.secrets/
+secrets/

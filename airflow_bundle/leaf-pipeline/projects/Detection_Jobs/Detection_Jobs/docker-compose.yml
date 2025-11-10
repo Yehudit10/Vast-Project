@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agri_app
+    # exec-form to avoid spacing/quoting issues
+    command: ["python", "-m", "agri_baseline.scripts.run_batch", "--storage", "minio"]
+    env_file:
+      - agri_baseline/.env
+    volumes:
+      - ./agri_baseline:/app/agri_baseline
+      - ./tests:/app/tests            
+      - ./data:/app/data
+      - ./models:/root/.cache/torch/hub/checkpoints
+    networks:
+      - agri_net
+      - minio_net   # ← MinIO network
+
+networks:
+  agri_net:
+    external: true
+  minio_net:
+    external: true
+    name: storage_with_mqtt_minionet   # ← MinIO network name
