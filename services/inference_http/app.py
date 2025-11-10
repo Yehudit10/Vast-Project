@@ -61,11 +61,13 @@ def infer_json(
             obj.release_conn()
 
         # Attempt to run the model with bytes input first
+        # Attempt to run the model with bytes input first
         try:
-            result = runner.run(image_bytes)
+            result = runner.run(image_bytes, extra={"bucket": req.bucket, "key": req.key})
         except TypeError:
             # If the function does not accept bytes, try with URI instead
-            result = runner.run(s3_uri)
+            result = runner.run(s3_uri, extra={"bucket": req.bucket, "key": req.key})
+
 
         latency_ms = int((time.perf_counter() - started) * 1000)
         return {
