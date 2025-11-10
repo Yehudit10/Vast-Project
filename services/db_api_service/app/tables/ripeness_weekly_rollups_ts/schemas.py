@@ -16,7 +16,7 @@ class RipenessWeeklyRollupBase(BaseModel):
     cnt_ripe: conint(ge=0) = Field(..., description="Ripe fruit count")
     cnt_unripe: conint(ge=0) = Field(..., description="Unripe fruit count")
     cnt_overripe: conint(ge=0) = Field(..., description="Overripe fruit count")
-    pct_ripe: confloat(ge=0, le=1) = Field(..., description="Ripe ratio (0–1)")
+    pct_ripe: confloat(ge=0, le=1) = Field(..., description="Ripe ratio (0â€“1)")
 
 
 class RipenessWeeklyRollupCreate(RipenessWeeklyRollupBase):
@@ -30,3 +30,7 @@ class RipenessWeeklyRollupRead(RipenessWeeklyRollupBase):
 
     class Config:
         orm_mode = True
+
+class RipenessWeeklyRollupOut(RipenessWeeklyRollupBase):
+    """Schema for API responses (alias of Read)."""
+    pass
