@@ -129,7 +129,7 @@ services:
 
       # ==== Alerts → Kafka ====
       ENABLE_ALERTS: "true"
-      KAFKA_BOOTSTRAP: "kafka:9092"       # הברוקר הפנימי שלך
+      KAFKA_BOOTSTRAP: "kafka:9092"       
       ALERT_TOPIC: "alerts"
       ALERT_TYPE: "plant_drought_detected"
       KAFKA_CLIENT_ID: "plant-stress-producer"
@@ -143,7 +143,7 @@ services:
         condition: service_healthy
       mc-bootstrap:
         condition: service_started
-      kafka:                    # ← חדש: נוודא שהברוקר עלה ובריא
+      kafka:                  
         condition: service_healthy
     networks: [ag_cloud]
 
@@ -608,7 +608,7 @@ services:
       - MINIO_SECURE=false
 
       # Request validation
-      - ALLOWED_BUCKETS=imagery
+      - ALLOWED_BUCKETS=sound
       - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
       - MAX_BYTES=104857600
 
@@ -639,8 +639,6 @@ services:
   # --------------------------
   # DB API Service
   # --------------------------
-
-
 
   contracts-gen:
     build:
@@ -943,7 +941,6 @@ services:
       - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
     command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.camera --team camera --http-url http://camera-inference-http:8004/infer_json --group-id http-dispatcher-camera --dlq-topic dlq.inference.http; tail -f /dev/null" ]
     restart: always
-
 
   flink-alerts-job:
     build:

@@ -6,6 +6,7 @@ from typing import Dict, Optional
 import os
 import numpy as np
 import joblib
+from psycopg2 import extensions
 
 from panns_inference import AudioTagging
 from classification.core.model_io import SAMPLE_RATE
@@ -43,6 +44,14 @@ class ClassifyOut(BaseModel):
     alert_topic: Optional[str] = None
     alert_skip_reason: Optional[str] = None
 
+def _ensure_conn_clean(conn):
+    """Rollback any non-idle transaction so the connection is usable."""
+    try:
+        if conn is not None and conn.get_transaction_status() != extensions.TRANSACTION_STATUS_IDLE:
+            conn.rollback()
+    except Exception:
+        # swallow – if rollback itself fails, next ops will raise and be handled
+        pass
 
 @app.on_event("startup")
 def load_models_on_startup() -> None:
@@ -119,12 +128,14 @@ def classify(body: ClassifyIn):
     """
     start = time.perf_counter()
     status_code = 200
+    _ensure_conn_clean(DB_CONN)
     try:
-        # 1) Require the file to already exist in public.files → else 404
+        # 1) Require the file to already exist in public.sound_new_sounds_connections → else 404
         try:
             file_id = resolve_file_id(DB_CONN, bucket=body.s3_bucket, object_key=body.s3_key)
         except ValueError as e:
-            # file not found in public.files → return 404 (do NOT create)
+            DB_CONN.rollback()
+            # file not found in public.sound_new_sounds_connections → return 404 (do NOT create)
             raise HTTPException(status_code=404, detail=str(e))
 
         # 2) Run classification
@@ -164,6 +175,10 @@ def classify(body: ClassifyIn):
         status_code = e.status_code
         raise
     except Exception as e:
+        try:
+            DB_CONN.rollback()
+        except Exception:
+            pass
         status_code = 500
         raise HTTPException(status_code=500, detail=str(e))
     finally:
