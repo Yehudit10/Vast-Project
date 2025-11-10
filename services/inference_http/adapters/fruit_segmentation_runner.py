@@ -37,27 +37,35 @@ class FruitSegmentationRunner:
             aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "minioadmin123")
         )
-
-    def run(self, image_bytes: bytes, model_tag=None, extra=None) -> Dict[str, Any]:
+    def run(self, image_bytes: bytes | None = None, model_tag=None, extra=None) -> Dict[str, Any]:
         """Main inference entrypoint for HTTP"""
-        bucket_in = extra.get("bucket") if extra else "imagery-hot"
+        bucket_in = extra.get("bucket") if extra else "imagery"
         key = extra.get("key") if extra else None
         if not key:
             return {"error": "missing key"}
+    
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            local_path = os.path.join(tmpdir, os.path.basename(key))
-            self.s3.download_file(bucket_in, key, local_path)
-            img = cv2.imread(local_path)
+        if image_bytes:
+            img_array = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
             if img is None:
-                return {"error": "failed to read image"}
-
-            t0 = time.time()
-            results = self.model.predict(img, conf=0.3, iou=0.45, verbose=False)
-            latency_ms = int((time.time() - t0) * 1000)
-            boxes = results[0].boxes
-            count = 0
-            if boxes:
+                return {"error": "failed to decode image from bytes"}
+        else:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                local_path = os.path.join(tmpdir, os.path.basename(key))
+                self.s3.download_file(bucket_in, key, local_path)
+                img = cv2.imread(local_path)
+                if img is None:
+                    return {"error": "failed to read image"}
+    
+        t0 = time.time()
+        results = self.model.predict(img, conf=0.3, iou=0.45, verbose=False)
+        latency_ms = int((time.time() - t0) * 1000)
+        boxes = results[0].boxes
+        count = 0
+    
+        if boxes:
+            with tempfile.TemporaryDirectory() as tmpdir:
                 for i, box in enumerate(boxes):
                     label = results[0].names[int(box.cls[0])]
                     if label.lower() not in [
@@ -75,9 +83,10 @@ class FruitSegmentationRunner:
                     cv2.imwrite(out_path, crop)
                     self.s3.upload_file(out_path, bucket_in, out_key)
                     count += 1
-
-            return {
-                "label": "fruit",
-                "count": count,
-                "latency_ms_model": latency_ms,
-            }
+    
+        return {
+            "label": "fruit",
+            "count": count,
+            "latency_ms_model": latency_ms,
+            "bucket_out": bucket_in
+        }

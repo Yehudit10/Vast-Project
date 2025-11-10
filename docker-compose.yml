@@ -759,7 +759,7 @@ services:
         fs.s3a.connection.ssl.enabled: false
         python.client.executable: /usr/bin/python3
         python.executable: /usr/bin/python3
-      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+      - HTTP_INFER_URL=http://fruit-inference-http:8004/infer_json
     volumes:
       - ./streaming/flink/jobs:/opt/flink/jobs:ro
       - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
@@ -838,7 +838,7 @@ services:
         fs.s3a.connection.ssl.enabled: false
         python.client.executable: /usr/bin/python3
         python.executable: /usr/bin/python3
-      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+      - HTTP_INFER_URL=http://fruit-inference-http:8004/infer_json
     volumes:
       - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
       - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
@@ -867,7 +867,7 @@ services:
     container_name: fruit-inference-http
     networks: [ ag_cloud ]
     ports:
-      - "8011:8000"
+      - "8011:8004"
     restart: unless-stopped
 
   camera-inference-http:
@@ -905,7 +905,7 @@ services:
       - KAFKA_BOOTSTRAP=kafka:9092
       - INPUT_TOPIC=imagery.new.fruit
       - TEAM=fruit
-      - HTTP_URL=http://fruit-inference-http:8000/infer_json
+      - HTTP_URL=http://fruit-inference-http:8004/infer_json
       - DLQ_TOPIC=dlq.inference.http
       - GROUP_ID=http-dispatcher-fruit
       - PARALLELISM=2
@@ -941,7 +941,8 @@ services:
     volumes:
       - ./streaming/flink/jobs:/opt/flink/jobs:ro
       - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
-    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8004/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]    restart: always
+    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8004/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]    
+    restart: always
 
 
   flink-alerts-job:
