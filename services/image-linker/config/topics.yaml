@@ -7,7 +7,16 @@ teams:
     metadata_topic: dev-security-images-keys
     minio_topic: image.new.security
     output_topic: image_new_security_connections
+  
+  sounds:
+    metadata_topic: sounds.keys
+    minio_topic: sound.new.sounds
+    output_topic: sound_new_sounds_connections
 
+  plants:
+    metadata_topic: sounds.ultra.keys
+    minio_topic: sound.new.plants
+    output_topic: sound_new_plants_connections
 
   # fruits:
   #   metadata: dev-fruits-images-keys
