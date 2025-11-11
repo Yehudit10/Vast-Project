@@ -1,16 +1,16 @@
--- agcloud_audio unified initialization (schema + tables + indexes + 11-class view)
--- Safe to run multiple times.
+-- agcloud_audio initialization (schema + tables + indexes + 11-class view)
 
 BEGIN;
 
 -- 1) Schema
-CREATE SCHEMA IF NOT EXISTS agcloud_audio;
+DROP SCHEMA IF EXISTS agcloud_audio CASCADE;
+CREATE SCHEMA agcloud_audio;
 
 -- Use schema for subsequent CREATEs
 SET search_path TO agcloud_audio, public;
 
 -- 2) runs: per-run metadata
-CREATE TABLE IF NOT EXISTS runs (
+CREATE TABLE runs (
   run_id        TEXT PRIMARY KEY,
   started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   finished_at   TIMESTAMPTZ,
@@ -31,20 +31,8 @@ CREATE TABLE IF NOT EXISTS runs (
   notes         TEXT
 );
 
--- 3) files: input file facts
-CREATE TABLE IF NOT EXISTS files (
-  file_id      BIGSERIAL PRIMARY KEY,
-  path         TEXT UNIQUE NOT NULL,
-  duration_s   DOUBLE PRECISION CHECK (duration_s IS NULL OR duration_s >= 0),
-  sample_rate  INTEGER,
-  size_bytes   BIGINT
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS ux_agcloud_files_path
-  ON files(path);
-
--- 4) file_aggregates: final per-file outputs (JSON-based head outputs)
-CREATE TABLE IF NOT EXISTS file_aggregates (
+-- 3) file_aggregates: final per-file outputs; references public.files(file_id)
+CREATE TABLE file_aggregates (
   run_id                 TEXT   NOT NULL,
   file_id                BIGINT NOT NULL,
 
@@ -65,27 +53,26 @@ CREATE TABLE IF NOT EXISTS file_aggregates (
   processing_ms          INTEGER CHECK (processing_ms IS NULL OR processing_ms >= 0),
 
   PRIMARY KEY (run_id, file_id),
-  FOREIGN KEY (run_id)  REFERENCES runs(run_id)   ON DELETE CASCADE,
-  FOREIGN KEY (file_id) REFERENCES files(file_id) ON DELETE CASCADE
+  FOREIGN KEY (run_id)  REFERENCES runs(run_id)        ON DELETE CASCADE,
+  FOREIGN KEY (file_id) REFERENCES public.files(file_id) ON DELETE CASCADE
 );
 
 -- Helpful indexes
-CREATE INDEX IF NOT EXISTS ix_agcloud_file_agg_run
+CREATE INDEX ix_agcloud_file_agg_run
   ON file_aggregates(run_id);
 
-CREATE INDEX IF NOT EXISTS ix_agcloud_file_agg_pred_label
+CREATE INDEX ix_agcloud_file_agg_pred_label
   ON file_aggregates(head_pred_label);
 
 -- JSONB GIN index to enable key/containment queries on probabilities map
-CREATE INDEX IF NOT EXISTS ix_agcloud_file_agg_probs_gin
+CREATE INDEX ix_agcloud_file_agg_probs_gin
   ON file_aggregates USING GIN (head_probs_json);
 
--- 5) Views
--- If a 10-class view existed before, drop it to avoid confusion.
+-- 4) Views
 DROP VIEW IF EXISTS v_file_aggregates_probs10;
+DROP VIEW IF EXISTS v_file_aggregates_probs11;
 
 -- 11-class columns view (current head taxonomy)
-DROP VIEW IF EXISTS v_file_aggregates_probs11;
 CREATE VIEW v_file_aggregates_probs11 AS
 SELECT
   fa.run_id,
