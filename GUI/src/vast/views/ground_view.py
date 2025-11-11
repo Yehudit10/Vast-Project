@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional, Any, Dict, List
 
 from PyQt6.QtCore import Qt, QTimer, QSize, QRectF
-from PyQt6.QtGui import QPixmap, QKeyEvent, QPainter, QColor, QPen, QBrush
+from PyQt6.QtGui import QPixmap, QKeyEvent, QPainter, QColor, QPen, QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QProgressBar, QMessageBox, QSizePolicy, QFrame
@@ -13,10 +13,8 @@ from PyQt6.QtWidgets import (
 # GUI never touches MinIO directly – it uses DashboardApi only.
 from vast.dashboard_api import DashboardApi
 
-
 GROUND_BUCKET = os.getenv("GROUND_BUCKET", "ground")
 GROUND_PREFIX = os.getenv("GROUND_PREFIX", "")
-
 
 # ----------------------------
 # PHI data model
@@ -29,7 +27,7 @@ class PhiSnapshot:
     severity_avg: Optional[float]  # usually 0..1 (clamped)
     trend: Optional[float]
     week_start: Optional[str]
-    source: str = ""               # textual hint of data source
+    source: str = ""               # textual hint of data source (NOT shown in UI)
 
 
 def _phi_band_color(v: float) -> str:
@@ -51,37 +49,44 @@ def _safe_float(x) -> Optional[float]:
 
 
 # ----------------------------
-# Visual PHI circle
+# Visual PHI circle (pie)
 # ----------------------------
 class PhiCircleWidget(QWidget):
     """
-    Draws a full circle:
-      - green background (healthy part)
-      - red pie slice for the infected part (severity in 0..1)
+    Draws a pie:
+      - red slice = severity in [0..1]
+      - green slice = 1 - severity (healthy remainder)
+    Always draws red on top so it's never hidden.
+    Also draws the severity percentage text centered on the pie.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
         self._severity = 0.0  # 0..1
-        self.setMinimumHeight(140)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setToolTip("Red slice = severity (0..1). Green = healthy remainder.")
 
+    def sizeHint(self):
+        return QSize(120, 120)
+
+    def minimumSizeHint(self):
+        return QSize(100, 100)
+
     def setSeverity(self, value: float) -> None:
-        # Clamp to [0,1] and repaint
         try:
             v = float(value)
         except Exception:
             v = 0.0
         self._severity = max(0.0, min(1.0, v))
-        self.update()
+        self.update()   # ensure repaint
 
     def paintEvent(self, event) -> None:
-        # Guard rendering so drawing can never crash the app
         try:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setPen(Qt.PenStyle.NoPen)
 
-            pad = 12
+            pad = 10
             size = min(self.width(), self.height()) - 2 * pad
             if size <= 0:
                 return
@@ -89,17 +94,28 @@ class PhiCircleWidget(QWidget):
             cy = (self.height() - size) / 2
             rect = QRectF(cx, cy, size, size)
 
-            # Healthy background (green)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QBrush(QColor("#16a34a")))
-            painter.drawEllipse(rect)
+            start = 90 * 16  # 12 o'clock (Qt: 0° is 3 o'clock)
+            full = -360 * 16
 
-            # Infected slice (red) from 12 o'clock clockwise
-            if self._severity > 0.0:
-                start_angle = 90 * 16                   # 12 o'clock
-                span_angle = -360 * float(self._severity) * 16  # clockwise negative
-                painter.setBrush(QBrush(QColor("#dc2626")))
-                painter.drawPie(rect, start_angle, span_angle)
+            s = self._severity
+            # Degenerate cases
+            if s <= 1e-6:
+                painter.setBrush(QColor("#16a34a"))
+                painter.drawEllipse(rect)
+            elif s >= 1 - 1e-6:
+                painter.setBrush(QColor("#dc2626"))
+                painter.drawEllipse(rect)
+            else:
+                span_red = int(round(full * s))          # negative (clockwise)
+                span_green = full - span_red             # the remainder
+
+                # Draw green remainder first
+                painter.setBrush(QColor("#16a34a"))
+                painter.drawPie(rect, start + span_red, span_green)
+
+                # Draw red slice on top (so it's always visible)
+                painter.setBrush(QColor("#dc2626"))
+                painter.drawPie(rect, start, span_red)
 
             # Outline
             pen = QPen(QColor("#334155"))
@@ -107,6 +123,21 @@ class PhiCircleWidget(QWidget):
             painter.setPen(pen)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(rect)
+
+            # Percentage text (centered)
+            percent_text = f"{int(round(s * 100))}%"
+            font = QFont()
+            font.setBold(True)
+            font.setPointSize(int(size * 0.22))  # responsive sizing
+            painter.setFont(font)
+
+            # Soft shadow for readability
+            painter.setPen(QColor(0, 0, 0, 160))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, percent_text)
+            # Foreground text
+            painter.setPen(QColor("#ffffff"))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, percent_text)
+
         except Exception as e:
             print(f"[PhiCircleWidget] paintEvent error: {e}")
 
@@ -191,26 +222,38 @@ class GroundView(QWidget):
         phi_layout.setContentsMargins(12, 12, 12, 12)
         phi_layout.setSpacing(8)
 
+        # Row with headline + (trimmed) details
         row = QHBoxLayout()
         self.phi_label = QLabel("PHI: –")
         self.phi_label.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
         row.addWidget(self.phi_label)
         row.addStretch(1)
-        self.phi_details = QLabel("")
+        self.phi_details = QLabel("")  # will show severity/coverage/trend (without src)
         self.phi_details.setStyleSheet("color:#475569;font-size:12px;")
         row.addWidget(self.phi_details)
         phi_layout.addLayout(row)
 
+        # PHI progress (axis-like) + pie at its side
         self.phi_bar = QProgressBar()
         self.phi_bar.setRange(0, 100)
         self.phi_bar.setValue(0)
         self.phi_bar.setFormat("%v")
         self._style_phi_bar(None)
-        phi_layout.addWidget(self.phi_bar)
 
-        # PHI circle (green background, red severity slice)
+        phi_row2 = QHBoxLayout()
+        phi_row2.setContentsMargins(0, 0, 0, 0)
+        phi_row2.setSpacing(10)
+        phi_row2.addWidget(self.phi_bar, stretch=1)
+
         self.phi_circle = PhiCircleWidget()
-        phi_layout.addWidget(self.phi_circle)
+        self.phi_circle.setFixedSize(120, 120)
+        phi_row2.addWidget(self.phi_circle)
+
+        phi_layout.addLayout(phi_row2)
+
+        legend = QLabel("אדום = Severity | ירוק = Healthy")
+        legend.setStyleSheet("color:#64748b;font-size:11px;")
+        phi_layout.addWidget(legend)
 
         root.addWidget(phi_frame, stretch=1)
 
@@ -297,6 +340,7 @@ class GroundView(QWidget):
             self._keys = keys
             self._idx = 0 if self._keys else -1
             self._update_counter()
+            self._update_nav_buttons()
             if self._idx >= 0:
                 self.load_current_image()
             else:
@@ -311,6 +355,11 @@ class GroundView(QWidget):
         total = len(self._keys)
         pos = (self._idx + 1) if self._idx >= 0 else 0
         self.counter_label.setText(f"({pos} / {total})")
+
+    def _update_nav_buttons(self) -> None:
+        has = bool(self._keys)
+        for b in (self.btn_prev, self.btn_next, self.btn_show_phi):
+            b.setEnabled(has)
 
     def prev_image(self) -> None:
         if not self._keys:
@@ -348,6 +397,7 @@ class GroundView(QWidget):
         target_size: QSize = self.image_label.size()
         if target_size.width() <= 4 or target_size.height() <= 4:
             self.image_label.setPixmap(pix)
+            self.image_label.setText("")
             return
         scaled = pix.scaled(
             target_size.width(),
@@ -377,14 +427,14 @@ class GroundView(QWidget):
             getter = getattr(self.api, "get_image_bytes_from_minio", None)
             if not callable(getter):
                 self._warn("DashboardApi.get_image_bytes_from_minio is missing.")
+                self._set_image(None)
+                self._render_phi_none()
                 return
 
             data = None
             try:
-                # Prefer signature with bucket param
                 data = getter(key, bucket=GROUND_BUCKET)
             except TypeError:
-                # Older signature without bucket
                 data = getter(key)
             except Exception as e:
                 self._warn(f"Failed fetching image bytes: {e}")
@@ -411,6 +461,7 @@ class GroundView(QWidget):
 
         except Exception as e:
             self._warn(f"load_current_image error: {e}")
+            self._render_phi_none()
 
     # ----------------------------
     # PHI flow
@@ -496,6 +547,7 @@ class GroundView(QWidget):
         val = max(0, min(100, int(round(snap.phi))))
         self.phi_label.setText(f"PHI: {val}")
         parts = []
+        # keep useful metrics, but DO NOT show 'src=' anymore
         if snap.density is not None:
             parts.append(f"density={snap.density:.2f}")
         if snap.coverage is not None:
@@ -506,9 +558,7 @@ class GroundView(QWidget):
             parts.append(f"trend={snap.trend:+.2f}")
         if snap.week_start:
             parts.append(f"week={snap.week_start}")
-        if snap.source:
-            parts.append(f"src={snap.source}")
-        self.phi_details.setText(" | ".join(parts))
+        self.phi_details.setText(" | ".join(parts))  # no src here
         self.phi_bar.setValue(val)
         self._style_phi_bar(val)
 
