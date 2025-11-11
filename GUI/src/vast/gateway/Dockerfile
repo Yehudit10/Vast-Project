@@ -3,7 +3,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # build arg
-ARG USE_NETFREE=true
+# ARG USE_NETFREE=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY certs /app/certs
@@ -22,12 +22,12 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 
 
 # # System CA + add NetFree certs
-# RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-# COPY certs/*.crt /usr/local/share/ca-certificates/
-# RUN update-ca-certificates || true
-# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-#     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-#     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates || true
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Python deps
 COPY requirements.txt /app/requirements.txt
