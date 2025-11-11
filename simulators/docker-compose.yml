@@ -23,7 +23,7 @@ services:
     env_file: .env.ultra
     volumes:
       - ./data/ultra-sound/sounds:/data/ultra/sounds:ro
-      - ./data/ultra-ultra-sound/metadata:/data/metadata:ro
+      - ./data/ultra-sound/metadata:/data/metadata:ro
     command: ["python", "-u", "/app/data_publisher.py"]
     
 networks:
