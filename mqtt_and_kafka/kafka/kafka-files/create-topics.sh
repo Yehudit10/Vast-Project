@@ -68,8 +68,7 @@ TOPICS=(
   sound.new.sounds
 
   aerial_images_keys
-  aerial_image_object_detections
-  aerial_image_anomaly_detections
+ 
 )
 
 # Idempotent creation with retention.ms
