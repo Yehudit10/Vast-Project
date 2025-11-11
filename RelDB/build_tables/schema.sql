@@ -426,6 +426,149 @@ CREATE TABLE public.image_new_aerial_connections (
   linked_time TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS public.aerial_images_metadata (
+    id SERIAL PRIMARY KEY,
+
+    -- File and drone metadata
+    file_name TEXT NOT NULL,
+    drone_id TEXT NOT NULL,
+    capture_time TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    -- Raw JSON as received (latitude/longitude)
+    gis_origin JSONB NOT NULL,
+
+    -- Geometry point auto-generated from JSON
+    geom_point geometry(Point, 4326)
+        GENERATED ALWAYS AS (
+            ST_SetSRID(
+                ST_MakePoint(
+                    (gis_origin->>'longitude')::double precision,
+                    (gis_origin->>'latitude')::double precision
+                ),
+                4326
+            )
+        ) STORED,
+
+    -- Flight attributes
+    altitude_m DOUBLE PRECISION,
+    done BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_aerial_geom_point_gist
+ON public.aerial_images_metadata USING GIST (geom_point);
+
+
+CREATE TABLE IF NOT EXISTS public.aerial_image_object_detections (
+    id SERIAL PRIMARY KEY,
+    img_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    confidence DOUBLE PRECISION NOT NULL,
+    bbox_x1 DOUBLE PRECISION NOT NULL,
+    bbox_y1 DOUBLE PRECISION NOT NULL,
+    bbox_x2 DOUBLE PRECISION NOT NULL,
+    bbox_y2 DOUBLE PRECISION NOT NULL,
+    detected_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_image_object_detections_key
+    ON public.aerial_image_object_detections (img_key);
+
+
+CREATE TABLE IF NOT EXISTS public.aerial_image_anomaly_detections (
+    id SERIAL PRIMARY KEY,
+    img_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    confidence DOUBLE PRECISION NOT NULL,
+    bbox_x1 DOUBLE PRECISION NOT NULL,
+    bbox_y1 DOUBLE PRECISION NOT NULL,
+    bbox_x2 DOUBLE PRECISION NOT NULL,
+    bbox_y2 DOUBLE PRECISION NOT NULL,
+    detected_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_image_anomaly_detections_key
+    ON public.aerial_image_anomaly_detections (img_key);
+
+
+CREATE TABLE IF NOT EXISTS public.aerial_images_complete_metadata (
+    id SERIAL PRIMARY KEY,
+    file_name TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    gis_origin JSONB,
+    gis geometry(Point, 4326)
+        GENERATED ALWAYS AS (
+            ST_SetSRID(
+                ST_MakePoint(
+                    (gis_origin->>'longitude')::double precision,
+                    (gis_origin->>'latitude')::double precision
+                ),
+                4326
+            )
+        ) STORED,
+    img_key TEXT NOT NULL UNIQUE,
+    timestamp_utc TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_aerial_metadata_device_id
+    ON public.aerial_images_complete_metadata (device_id);
+
+CREATE INDEX IF NOT EXISTS idx_aerial_metadata_timestamp
+    ON public.aerial_images_complete_metadata (timestamp_utc);
+
+CREATE INDEX IF NOT EXISTS idx_aerial_metadata_gis
+    ON public.aerial_images_complete_metadata USING GIST (gis);
+
+
+CREATE TABLE IF NOT EXISTS public.field_polygons (
+    id SERIAL PRIMARY KEY,
+    gis geometry(Point, 4326) NOT NULL,
+    boundary geometry(Polygon, 4326) NOT NULL,
+    area_sq_m DOUBLE PRECISION GENERATED ALWAYS AS (
+        ST_Area(geography(boundary))
+    ) STORED,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_field_polygons_gis
+    ON public.field_polygons USING GIST (gis);
+
+
+CREATE TABLE IF NOT EXISTS public.aerial_image_segmentation (
+    id SERIAL PRIMARY KEY,
+    img_key TEXT NOT NULL,
+    mask_path TEXT,
+    other FLOAT DEFAULT 0,
+    bareland FLOAT DEFAULT 0,
+    rangeland FLOAT DEFAULT 0,
+    developed_space FLOAT DEFAULT 0,
+    road FLOAT DEFAULT 0,
+    tree FLOAT DEFAULT 0,
+    water FLOAT DEFAULT 0,
+    agriculture FLOAT DEFAULT 0,
+    building FLOAT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_segmentation_img_key
+    ON public.aerial_image_segmentation (img_key);
+
+
+CREATE TABLE public.sound_new_sounds_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
+
+CREATE TABLE public.sound_new_plants_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
+
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
 

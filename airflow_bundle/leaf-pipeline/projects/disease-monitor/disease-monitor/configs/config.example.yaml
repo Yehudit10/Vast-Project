@@ -1,0 +1,70 @@
+io:
+  postgres_url: "postgresql+psycopg2://missions_user:pg123@localhost:5432/missions_db"
+
+windows:
+  frequency: "D"
+  timezone: "UTC"
+
+source_mapping:
+  entity_dim: "mission"        # or "region"/"device"
+  area_strategy: "none"        # or "region_area"
+  filters:
+    start_time: null
+    end_time: null
+  anomaly_codes: null
+
+baseline:
+  method: "median"
+  lookback_periods: 28
+  min_history: 7
+  seasonality: null
+
+rules:
+  count_anomaly:
+    enabled: true
+    method: "zscore"
+    z_threshold: 3.0
+    iqr_k: 1.5
+    min_count: 3
+  worsening:
+    enabled: true
+    method: "slope"
+    slope_lookback: 7
+    slope_min: 0.02
+    min_periods: 5
+    ewma_span: 7
+    ewma_threshold: 0.6
+
+alerting:
+  dedup_cooldown_windows: 3
+  resolve_after_no_anomaly: 3
+  rate_limit_per_run: 100
+  group_by_window: true
+
+delivery:
+  slack:
+    enabled: false
+    webhook_url: ""   # paste Slack Webhook URL here if you want to enable
+  webhook:
+    enabled: false
+    url: ""           # paste your Webhook URL here if you want to enable
+    headers: {}       # optional headers map
+  email:
+    enabled: false
+    smtp_host: ""     # paste your SMTP server address here if you want to enable
+    smtp_port: 587
+    username: ""
+    password_env: "SMTP_PASSWORD"
+    from_addr: ""
+    to_addrs: []
+
+  alertmanager:
+    enabled: false
+    url: "http://localhost:9093"
+    default_severity: "warning"
+    extra_labels:
+      system: "disease-monitor"
+      team: "ag"
+
+run:
+  dry_run: false

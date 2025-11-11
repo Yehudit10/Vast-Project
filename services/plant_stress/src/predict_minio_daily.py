@@ -24,6 +24,14 @@ MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "sound")
 MINIO_PREFIX   = os.getenv("MINIO_PREFIX", "plants/")
 MINIO_SECURE   = os.getenv("MINIO_SECURE", "false").lower() == "true"
 
+# Defaults for required GUI fields
+DEFAULT_AREA = os.getenv("DEFAULT_AREA", "unknown").strip()
+DEFAULT_LAT  = os.getenv("DEFAULT_LAT", "0.0").strip()
+DEFAULT_LON  = os.getenv("DEFAULT_LON", "0.0").strip()
+DEFAULT_IMAGE_URL = os.getenv("DEFAULT_IMAGE_URL", "https://example.com/placeholder.jpg").strip()
+DEFAULT_VOD       = os.getenv("DEFAULT_VOD", "https://example.com/placeholder.mp4").strip()
+DEFAULT_HLS       = os.getenv("DEFAULT_HLS", "https://example.com/placeholder.m3u8").strip()
+
 # Date / TZ
 TIMEZONE       = os.getenv("TIMEZONE", "Asia/Jerusalem")
 PROCESS_DATE   = os.getenv("PROCESS_DATE", "").strip()  # YYYY-MM-DD (optional backfill)
@@ -60,7 +68,7 @@ ALERT_HLS       = os.getenv("ALERT_HLS", "").strip()
 
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "kafka:9092")
 KAFKA_CLIENT_ID = os.getenv("KAFKA_CLIENT_ID", "plant-stress-producer")
-KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "").strip()  # e.g., SASL_SSL / SSL / PLAINTEXT
+KAFKA_SECURITY_PROTOCOL = os.getenv("KAFKA_SECURITY_PROTOCOL", "").strip()
 KAFKA_SASL_MECHANISM    = os.getenv("KAFKA_SASL_MECHANISM", "").strip()
 KAFKA_SASL_USERNAME     = os.getenv("KAFKA_SASL_USERNAME", "").strip()
 KAFKA_SASL_PASSWORD     = os.getenv("KAFKA_SASL_PASSWORD", "").strip()
@@ -84,9 +92,11 @@ try:
 except Exception as e_keras3:
     print(f"[!] Keras 3 load failed: {e_keras3} -- falling back to tf.keras")
     MODEL = tf.keras.models.load_model(model_path, compile=False)
+
 sc = np.load(scaler_path)
 SCALER_MEAN  = sc["mean"]
 SCALER_SCALE = sc["scale"]
+
 with open(le_path, "rb") as f:
     LABEL_ENCODER = pickle.load(f)
 
@@ -100,25 +110,16 @@ class _KafkaProducer:
     def _init_producer(self):
         if not ENABLE_ALERTS:
             return
-        # Try confluent-kafka
         try:
             from confluent_kafka import Producer
             conf = {"bootstrap.servers": KAFKA_BOOTSTRAP, "client.id": KAFKA_CLIENT_ID}
-            if KAFKA_SECURITY_PROTOCOL:
-                conf["security.protocol"] = KAFKA_SECURITY_PROTOCOL
-            if KAFKA_SASL_MECHANISM:
-                conf["sasl.mechanisms"] = KAFKA_SASL_MECHANISM
-            if KAFKA_SASL_USERNAME:
-                conf["sasl.username"] = KAFKA_SASL_USERNAME
-            if KAFKA_SASL_PASSWORD:
-                conf["sasl.password"] = KAFKA_SASL_PASSWORD
-            # SSL files if provided (PEM paths)
-            if KAFKA_SSL_CA:
-                conf["ssl.ca.location"] = KAFKA_SSL_CA
-            if KAFKA_SSL_CERT:
-                conf["ssl.certificate.location"] = KAFKA_SSL_CERT
-            if KAFKA_SSL_KEY:
-                conf["ssl.key.location"] = KAFKA_SSL_KEY
+            if KAFKA_SECURITY_PROTOCOL: conf["security.protocol"] = KAFKA_SECURITY_PROTOCOL
+            if KAFKA_SASL_MECHANISM:    conf["sasl.mechanisms"]   = KAFKA_SASL_MECHANISM
+            if KAFKA_SASL_USERNAME:     conf["sasl.username"]     = KAFKA_SASL_USERNAME
+            if KAFKA_SASL_PASSWORD:     conf["sasl.password"]     = KAFKA_SASL_PASSWORD
+            if KAFKA_SSL_CA:   conf["ssl.ca.location"]        = KAFKA_SSL_CA
+            if KAFKA_SSL_CERT: conf["ssl.certificate.location"]= KAFKA_SSL_CERT
+            if KAFKA_SSL_KEY:  conf["ssl.key.location"]       = KAFKA_SSL_KEY
             self.impl = Producer(conf)
             self.mode = "confluent"
             print("[Kafka] Using confluent-kafka Producer")
@@ -126,7 +127,6 @@ class _KafkaProducer:
         except Exception as e:
             print(f"[Kafka] confluent-kafka unavailable: {e}")
 
-        # Fallback: kafka-python
         try:
             from kafka import KafkaProducer
             kwargs = {
@@ -136,21 +136,14 @@ class _KafkaProducer:
                 "linger_ms": 10,
                 "acks": "all",
             }
-            # Basic SASL/SSL if needed
-            if KAFKA_SECURITY_PROTOCOL:
-                kwargs["security_protocol"] = KAFKA_SECURITY_PROTOCOL  # "SASL_SSL","SSL","PLAINTEXT"
-            if KAFKA_SASL_MECHANISM:
-                kwargs["sasl_mechanism"] = KAFKA_SASL_MECHANISM
+            if KAFKA_SECURITY_PROTOCOL: kwargs["security_protocol"] = KAFKA_SECURITY_PROTOCOL
+            if KAFKA_SASL_MECHANISM:    kwargs["sasl_mechanism"]    = KAFKA_SASL_MECHANISM
             if KAFKA_SASL_USERNAME and KAFKA_SASL_PASSWORD:
                 kwargs["sasl_plain_username"] = KAFKA_SASL_USERNAME
                 kwargs["sasl_plain_password"] = KAFKA_SASL_PASSWORD
-            if KAFKA_SSL_CA:
-                kwargs["ssl_cafile"] = KAFKA_SSL_CA
-            if KAFKA_SSL_CERT:
-                kwargs["ssl_certfile"] = KAFKA_SSL_CERT
-            if KAFKA_SSL_KEY:
-                kwargs["ssl_keyfile"] = KAFKA_SSL_KEY
-
+            if KAFKA_SSL_CA:   kwargs["ssl_cafile"] = KAFKA_SSL_CA
+            if KAFKA_SSL_CERT: kwargs["ssl_certfile"] = KAFKA_SSL_CERT
+            if KAFKA_SSL_KEY:  kwargs["ssl_keyfile"] = KAFKA_SSL_KEY
             self.impl = KafkaProducer(**kwargs)
             self.mode = "kafka-python"
             print("[Kafka] Using kafka-python Producer")
@@ -160,22 +153,16 @@ class _KafkaProducer:
             self.mode = None
 
     def send(self, topic: str, value: dict):
-        if not ENABLE_ALERTS:
+        if not ENABLE_ALERTS or self.impl is None:
             return False
-        if self.impl is None:
-            return False
-
         if self.mode == "confluent":
-            # confluent expects bytes; we serialize
-            payload = json.dumps(value).encode("utf-8")
             try:
-                self.impl.produce(topic, value=payload)
+                self.impl.produce(topic, value=json.dumps(value).encode("utf-8"))
                 self.impl.poll(0)
                 return True
             except Exception as e:
                 print(f"[Kafka] produce error (confluent): {e}")
                 return False
-
         elif self.mode == "kafka-python":
             try:
                 fut = self.impl.send(topic, value=value)
@@ -184,7 +171,6 @@ class _KafkaProducer:
             except Exception as e:
                 print(f"[Kafka] produce error (kafka-python): {e}")
                 return False
-
         return False
 
     def flush(self):
@@ -220,10 +206,8 @@ def parse_from_name(key: str):
     if not m:
         return None, None
     sensor = m.group("sensor")
-    d = m.group("date")
-    hh = int(m.group("hour"))
-    mm = int(m.group("minute"))
-    y, mon, dd = map(int, d.split("-"))
+    y, mon, dd = map(int, m.group("date").split("-"))
+    hh = int(m.group("hour")); mm = int(m.group("minute"))
     local_dt = _tz().localize(dt.datetime(y, mon, dd, hh, mm, 0))
     return sensor, local_dt
 
@@ -295,14 +279,13 @@ def normalize_features(x: np.ndarray):
     return (x - SCALER_MEAN) / SCALER_SCALE
 
 # ======== DB ========
-def ensure_table(conn):
+def ensure_predictions_table(conn):
+    """Match your schema exactly: no sensor_id, no recording_time."""
     with conn.cursor() as cur:
         cur.execute("""
         CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
           id               BIGSERIAL PRIMARY KEY,
           file             TEXT,
-          sensor_id        TEXT,
-          recording_time   TIMESTAMPTZ,
           predicted_class  TEXT,
           confidence       DOUBLE PRECISION,
           watering_status  TEXT,
@@ -310,36 +293,112 @@ def ensure_table(conn):
           prediction_time  TIMESTAMPTZ DEFAULT now()
         );
         """)
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_upp_rec_time ON ultrasonic_plant_predictions(recording_time);")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_upp_sensor ON ultrasonic_plant_predictions(sensor_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_upp_pred_time ON ultrasonic_plant_predictions(prediction_time DESC);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_upp_class ON ultrasonic_plant_predictions(predicted_class);")
+    conn.commit()
+
+def ensure_alerts_table(conn):
+    with conn.cursor() as cur:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            alert_id    TEXT PRIMARY KEY,
+            alert_type  TEXT,
+            device_id   TEXT,
+            started_at  TIMESTAMPTZ,
+            ended_at    TIMESTAMPTZ,
+            confidence  DOUBLE PRECISION,
+            area        TEXT,
+            lat         DOUBLE PRECISION,
+            lon         DOUBLE PRECISION,
+            severity    INT DEFAULT 1,
+            image_url   TEXT,
+            vod         TEXT,
+            hls         TEXT,
+            ack         BOOLEAN DEFAULT FALSE,
+            meta        JSONB,
+            created_at  TIMESTAMPTZ DEFAULT now(),
+            updated_at  TIMESTAMPTZ DEFAULT now()
+        );
+        """)
         cur.execute("""
         DO $$
         BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_constraint
-            WHERE conname = 'uniq_sensor_time_file'
-          ) THEN
-            ALTER TABLE ultrasonic_plant_predictions
-            ADD CONSTRAINT uniq_sensor_time_file UNIQUE (sensor_id, recording_time, file);
+          IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at') THEN
+            CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $f$
+            BEGIN
+              NEW.updated_at = now();
+              RETURN NEW;
+            END;
+            $f$ LANGUAGE plpgsql;
+          END IF;
+        END$$;
+        """)
+        cur.execute("""
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_alerts_updated_at') THEN
+            CREATE TRIGGER trg_alerts_updated_at
+            BEFORE UPDATE ON alerts
+            FOR EACH ROW
+            EXECUTE PROCEDURE set_updated_at();
           END IF;
         END$$;
         """)
     conn.commit()
 
-def insert_rows(conn, rows):
+def insert_prediction_rows(conn, rows):
+    """
+    rows: iterable of tuples shaped exactly as the table:
+      (file, predicted_class, confidence, watering_status, status, prediction_time)
+    """
     sql = """
     INSERT INTO ultrasonic_plant_predictions
-      (file, sensor_id, recording_time, predicted_class, confidence, watering_status, status, prediction_time)
+      (file, predicted_class, confidence, watering_status, status, prediction_time)
     VALUES %s
-    ON CONFLICT ON CONSTRAINT uniq_sensor_time_file DO NOTHING
     """
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(cur, sql, rows, page_size=500)
     conn.commit()
 
+def insert_alert_row(conn, alert: dict, started_at_dt: dt.datetime, ended_at_dt: dt.datetime | None = None, ack: bool = False):
+    from psycopg2.extras import Json
+    sql = """
+    INSERT INTO alerts (
+        alert_id, alert_type, device_id, started_at, ended_at,
+        confidence, area, lat, lon, severity,
+        image_url, vod, hls, ack, meta
+    )
+    VALUES (
+        %(alert_id)s, %(alert_type)s, %(device_id)s, %(started_at)s, %(ended_at)s,
+        %(confidence)s, %(area)s, %(lat)s, %(lon)s, %(severity)s,
+        %(image_url)s, %(vod)s, %(hls)s, %(ack)s, %(meta)s
+    )
+    ON CONFLICT (alert_id) DO UPDATE
+      SET updated_at = now()
+    """
+    params = {
+        "alert_id":   alert["alert_id"],
+        "alert_type": alert.get("alert_type"),
+        "device_id":  alert.get("device_id"),
+        "started_at": started_at_dt,
+        "ended_at":   ended_at_dt,
+        "confidence": alert.get("confidence"),
+        "area":       alert.get("area"),
+        "lat":        alert.get("lat"),
+        "lon":        alert.get("lon"),
+        "severity":   alert.get("severity"),
+        "image_url":  alert.get("image_url"),
+        "vod":        alert.get("vod"),
+        "hls":        alert.get("hls"),
+        "ack":        ack,
+        "meta":       Json(alert.get("meta", {})),
+    }
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+    conn.commit()
+
 # ======== Alert helpers ========
 def _severity_from_confidence(conf: float) -> int:
-    # 1..5 (רק הצעה; אפשר לכייל אחרת)
     if conf >= 0.95: return 5
     if conf >= 0.90: return 4
     if conf >= 0.80: return 3
@@ -363,46 +422,46 @@ def build_alert_payload(
     hls: str = "",
     extra_meta: dict | None = None,
 ) -> dict:
+    def _to_float_or_default(v, default_s: str):
+        try:
+            if v is None or (isinstance(v, str) and v.strip() == ""):
+                return float(default_s)
+            return float(v)
+        except Exception:
+            return float(default_s)
+
+    def _non_empty(value: str, default_value: str) -> str:
+        v = (value or "").strip()
+        return v if v else default_value
+
+    area_f = _non_empty(area, DEFAULT_AREA)
+    lat_f  = _to_float_or_default(lat, DEFAULT_LAT)
+    lon_f  = _to_float_or_default(lon, DEFAULT_LON)
+    image_f = _non_empty(image_url, DEFAULT_IMAGE_URL)
+    vod_f   = _non_empty(vod, DEFAULT_VOD)
+    hls_f   = _non_empty(hls, DEFAULT_HLS)
+
     payload = {
         "alert_id": str(uuid.uuid4()),
         "alert_type": alert_type,
         "device_id": device_id,
         "started_at": _iso_utc(started_at_utc),
-        # Optionals
         "confidence": round(confidence, 6),
         "severity": _severity_from_confidence(confidence),
+        "area": area_f,
+        "lat": lat_f,
+        "lon": lon_f,
+        "image_url": image_f,
+        "vod": vod_f,
+        "hls": hls_f,
         "meta": {
             "source": "ultrasonic_plant_classifier",
             "file": s3url,
-        }
+        },
     }
-    if area:
-        payload["area"] = area
-    # Add lat/lon only if parseable floats
-    try:
-        if lat != "":
-            payload["lat"] = float(lat)
-        if lon != "":
-            payload["lon"] = float(lon)
-    except Exception:
-        pass
-    if image_url:
-        payload["image_url"] = image_url
-    if vod:
-        payload["vod"] = vod
-    if hls:
-        payload["hls"] = hls
     if extra_meta:
         payload["meta"].update(extra_meta)
     return payload
-
-def send_alert(alert: dict) -> bool:
-    ok = KAFKA_PRODUCER.send(ALERT_TOPIC, alert)
-    if ok:
-        print(f"[Alert] sent to topic={ALERT_TOPIC}: {alert['alert_id']} device={alert.get('device_id')} severity={alert.get('severity')}")
-    else:
-        print(f"[Alert] FAILED to send alert for device={alert.get('device_id')}")
-    return ok
 
 # ======== Main ========
 def main():
@@ -417,7 +476,8 @@ def main():
 
     try:
         conn = psycopg2.connect(POSTGRES_DSN)
-        ensure_table(conn)
+        ensure_alerts_table(conn)
+        ensure_predictions_table(conn)
     except Exception as e:
         print(f"[!] Postgres connection error: {e}")
         return 2
@@ -452,23 +512,21 @@ def main():
             if conf < CONFIDENCE_THRESHOLD:
                 watering_status = f"{watering_status} (Uncertain)"
 
-            # Save to DB (UTC time)
-            rec_utc = rec_local_dt.astimezone(pytz.UTC)
+            # Save prediction row (schema: no sensor_id/recording_time)
             batch.append((
-                s3url,
-                str(sensor),
-                rec_utc,
-                str(pred_class),
-                conf,
-                watering_status,
-                "Success",
+                s3url,              # file
+                str(pred_class),    # predicted_class
+                conf,               # confidence
+                watering_status,    # watering_status
+                "Success",          # status
                 dt.datetime.utcnow()
             ))
             ok += 1
             print(f"OK {s3url} [{sensor} @ {rec_local_dt.isoformat()}] -> {pred_class} ({conf:.3f})")
 
-            # ===== Alerts on drought classes =====
+            # Alerts for drought classes
             if ENABLE_ALERTS and pred_class in ("Drought_Tomato", "Drought_Tobacco"):
+                rec_utc = rec_local_dt.astimezone(pytz.UTC) if rec_local_dt.tzinfo else pytz.UTC.localize(rec_local_dt)
                 alert = build_alert_payload(
                     alert_type=ALERT_TYPE,
                     device_id=str(sensor),
@@ -490,19 +548,38 @@ def main():
                         "n_mels": N_MELS
                     }
                 )
-                send_alert(alert)
+                try:
+                    insert_alert_row(conn, alert, started_at_dt=rec_utc, ended_at_dt=None, ack=False)
+                    print(f"[Alert][DB] upsert alert_id={alert['alert_id']} device={alert['device_id']} severity={alert['severity']}")
+                except Exception as e:
+                    print(f"[Alert][DB] insert failed: {e}")
+
+                # Send to Kafka (best effort)
+                try:
+                    ok_send = KAFKA_PRODUCER.send(ALERT_TOPIC, alert)
+                    if ok_send:
+                        print(f"[Alert] sent to topic={ALERT_TOPIC}: {alert['alert_id']}")
+                    else:
+                        print(f"[Alert] FAILED to send alert to topic={ALERT_TOPIC}")
+                except Exception as e:
+                    print(f"[Alert] send exception: {e}")
 
         except Exception as e:
             fail += 1
-            batch.append((s3url, str(sensor) if sensor else None,
-                          rec_local_dt.astimezone(pytz.UTC) if rec_local_dt else None,
-                          "", None, "", f"Error: {e}", dt.datetime.utcnow()))
             print(f"[ERR] {s3url} -> {e}")
+            batch.append((
+                s3url,          # file
+                "",             # predicted_class
+                None,           # confidence
+                "",             # watering_status
+                f"Error: {e}",  # status
+                dt.datetime.utcnow()
+            ))
 
     try:
         if batch:
-            insert_rows(conn, batch)
-            print(f"Inserted {len(batch)} rows (dedup via UNIQUE).")
+            insert_prediction_rows(conn, batch)
+            print(f"Inserted {len(batch)} rows.")
     except Exception as e:
         print(f"[!] Insert error: {e}")
         return 3
