@@ -1,5 +1,5 @@
 projects/leaf-counting/weights/*.pt filter=lfs diff=lfs merge=lfs -text
 projects/leaf-counting/weights/*.pth filter=lfs diff=lfs merge=lfs -text
 projects/leaf-counting/weights/*.safetensors filter=lfs diff=lfs merge=lfs -text
-# אם יש גם מודלים בתיקיות אחרות (דוגמה):
+
 projects/Detection_Jobs/**/models/* filter=lfs diff=lfs merge=lfs -text
