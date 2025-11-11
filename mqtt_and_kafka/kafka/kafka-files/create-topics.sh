@@ -48,6 +48,11 @@ TOPICS=(
   dev-security-images-keys
   alerts
 
+  aerial_image_object_detections
+  aerial_image_anomaly_detections
+  aerial_image_segmentation
+  aerial_images_complete_metadata
+  
   # --- imagery (MinIO -> Kafka) ---
   image.new.aerial
   image_new_aerial_connections
