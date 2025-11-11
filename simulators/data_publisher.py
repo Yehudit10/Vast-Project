@@ -18,7 +18,7 @@ MQTT_TOPIC_DATA = os.getenv("MQTT_TOPIC_DATA", "MQTT/imagery/air")
 
 MQTT_HOST_META = os.getenv("MQTT_HOST_META", "mosquitto")
 MQTT_PORT_META = int(os.getenv("MQTT_PORT_META", "1883"))
-MQTT_TOPIC_META = os.getenv("MQTT_TOPIC_META", "dev-aerial-images-keys")
+MQTT_TOPIC_META = os.getenv("MQTT_TOPIC_META", "mqtt/aerial/images/metadata")
 
 CAMERA_ID = os.getenv("CAMERA_ID", "DRN-482A")
 INTERVAL_CHECK = int(os.getenv("INTERVAL_CHECK", "10"))
