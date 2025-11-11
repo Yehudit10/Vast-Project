@@ -576,7 +576,7 @@ services:
         MQTT_TOPIC: MQTT/sounds_ultra/#
         MQTT_PUB_TOPIC: sound/sounds_ultra/ingested
         DEFAULT_PREFIX: MIC-02
-        CAMERA_PREFIX: camera
+        CAMERA_PREFIX: microphone
         MICROPHONE_PREFIX: microphone
         DUMMY_DB: 0
         DB_API_BASE: http://db_api_service:8001
@@ -851,7 +851,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,field_polygons,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db

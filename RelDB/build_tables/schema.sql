@@ -572,70 +572,85 @@ CREATE TABLE public.sound_new_plants_connections (
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
 
+-- sounds_metadata (recommended "aerial-style")
 CREATE TABLE IF NOT EXISTS public.sounds_metadata (
   id              BIGSERIAL PRIMARY KEY,
   file_name       TEXT        NOT NULL,
   device_id       TEXT        NOT NULL REFERENCES public.devices(device_id),
-  capture_time    TIMESTAMPTZ NOT NULL,                       -- UTC
-  duration_sec    DOUBLE PRECISION CHECK (duration_sec >= 0), -- non-negative
-  done            BOOLEAN     NOT NULL DEFAULT FALSE,
-  sample_rate_hz  INTEGER     CHECK (sample_rate_hz > 0),
-  channels        SMALLINT    CHECK (channels > 0),
-  content_type    TEXT,
-  gis_origin      geometry(Point, 4326) NOT NULL,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  -- optional: prevent duplicates per device & time
-  CONSTRAINT ux_sounds_dev_time UNIQUE (device_id, capture_time)
-);
-
--- Indexes for sounds_metadata
-CREATE INDEX IF NOT EXISTS ix_sounds_meta_ts_brin
-  ON public.sounds_metadata USING BRIN (capture_time);
-
-CREATE INDEX IF NOT EXISTS ix_sounds_meta_device_time
-  ON public.sounds_metadata (device_id, capture_time);
-
-CREATE INDEX IF NOT EXISTS ix_sounds_meta_geom_gist
-  ON public.sounds_metadata USING GIST (gis_origin);
-
-CREATE INDEX IF NOT EXISTS ix_sounds_meta_file_name
-  ON public.sounds_metadata (file_name);
-
-CREATE INDEX IF NOT EXISTS ix_sounds_meta_created_brin
-  ON public.sounds_metadata USING BRIN (created_at);
-  
-
-CREATE TABLE IF NOT EXISTS public.sounds_ultra_metadata (
-  id              BIGSERIAL PRIMARY KEY,
-  file_name       TEXT        NOT NULL,
-  device_id       TEXT        NOT NULL REFERENCES public.devices(device_id),
-  capture_time    TIMESTAMPTZ NOT NULL,                       -- UTC
+  capture_time    TIMESTAMPTZ NOT NULL,
   duration_sec    DOUBLE PRECISION CHECK (duration_sec >= 0),
   done            BOOLEAN     NOT NULL DEFAULT FALSE,
   sample_rate_hz  INTEGER     CHECK (sample_rate_hz > 0),
   channels        SMALLINT    CHECK (channels > 0),
   content_type    TEXT,
-  gis_origin      geometry(Point, 4326) NOT NULL,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-  -- optional: prevent duplicates per device & time
+  -- raw JSON as produced upstream
+  gis_origin_json JSONB NOT NULL,
+
+  -- generated Point from JSON (lon, lat)
+  geom_point geometry(Point, 4326)
+      GENERATED ALWAYS AS (
+          ST_SetSRID(
+              ST_MakePoint(
+                  (gis_origin_json->>'longitude')::double precision,
+                  (gis_origin_json->>'latitude')::double precision
+              ),
+              4326
+          )
+      ) STORED,
+
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT ux_sounds_dev_time UNIQUE (device_id, capture_time)
+);
+
+CREATE INDEX IF NOT EXISTS ix_sounds_meta_ts_brin
+  ON public.sounds_metadata USING BRIN (capture_time);
+CREATE INDEX IF NOT EXISTS ix_sounds_meta_device_time
+  ON public.sounds_metadata (device_id, capture_time);
+CREATE INDEX IF NOT EXISTS ix_sounds_meta_geom_point_gist
+  ON public.sounds_metadata USING GIST (geom_point);
+CREATE INDEX IF NOT EXISTS ix_sounds_meta_file_name
+  ON public.sounds_metadata (file_name);
+CREATE INDEX IF NOT EXISTS ix_sounds_meta_created_brin
+  ON public.sounds_metadata USING BRIN (created_at);
+
+
+CREATE TABLE IF NOT EXISTS public.sounds_ultra_metadata (
+  id              BIGSERIAL PRIMARY KEY,
+  file_name       TEXT        NOT NULL,
+  device_id       TEXT        NOT NULL REFERENCES public.devices(device_id),
+  capture_time    TIMESTAMPTZ NOT NULL,
+  duration_sec    DOUBLE PRECISION CHECK (duration_sec >= 0),
+  done            BOOLEAN     NOT NULL DEFAULT FALSE,
+  sample_rate_hz  INTEGER     CHECK (sample_rate_hz > 0),
+  channels        SMALLINT    CHECK (channels > 0),
+  content_type    TEXT,
+
+  gis_origin_json JSONB NOT NULL,
+
+  geom_point geometry(Point, 4326)
+      GENERATED ALWAYS AS (
+          ST_SetSRID(
+              ST_MakePoint(
+                  (gis_origin_json->>'longitude')::double precision,
+                  (gis_origin_json->>'latitude')::double precision
+              ),
+              4326
+          )
+      ) STORED,
+
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT ux_ultra_sounds_dev_time UNIQUE (device_id, capture_time)
 );
 
--- Indexes for sounds_ultra_metadata
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_ts_brin
   ON public.sounds_ultra_metadata USING BRIN (capture_time);
-
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_device_time
   ON public.sounds_ultra_metadata (device_id, capture_time);
-
-CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_geom_gist
-  ON public.sounds_ultra_metadata USING GIST (gis_origin);
-
+CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_geom_point_gist
+  ON public.sounds_ultra_metadata USING GIST (geom_point);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_file_name
   ON public.sounds_ultra_metadata (file_name);
-
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_created_brin
   ON public.sounds_ultra_metadata USING BRIN (created_at);
 
