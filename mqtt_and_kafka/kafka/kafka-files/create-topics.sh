@@ -66,16 +66,10 @@ TOPICS=(
   # --- sound(sound) (MinIO -> Kafka) ---
   sound.new.plants
   sound.new.sounds
-  sounds_ultra_metadata
-  sounds_metadata
-  sound_new_plants_connections
-  sound_new_sounds_connections
-
-  inference.dispatched.sounds
-  dlq.inference.http
 
   aerial_images_keys
-  
+  aerial_image_object_detections
+  aerial_image_anomaly_detections
 )
 
 # Idempotent creation with retention.ms
