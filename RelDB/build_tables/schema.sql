@@ -426,6 +426,35 @@ CREATE TABLE public.image_new_aerial_connections (
   linked_time TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS public.aerial_images_metadata (
+    id SERIAL PRIMARY KEY,
+
+    -- File and drone metadata
+    file_name TEXT NOT NULL,
+    drone_id TEXT NOT NULL,
+    capture_time TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    -- Raw JSON as received (latitude/longitude)
+    gis_origin JSONB NOT NULL,
+
+    -- Geometry point auto-generated from JSON
+    geom_point geometry(Point, 4326)
+        GENERATED ALWAYS AS (
+            ST_SetSRID(
+                ST_MakePoint(
+                    (gis_origin->>'longitude')::double precision,
+                    (gis_origin->>'latitude')::double precision
+                ),
+                4326
+            )
+        ) STORED,
+
+    -- Flight attributes
+    altitude_m DOUBLE PRECISION,
+    done BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
 
