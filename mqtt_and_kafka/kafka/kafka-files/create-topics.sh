@@ -73,6 +73,9 @@ TOPICS=(
 
   inference.dispatched.sounds
   dlq.inference.http
+
+  aerial_images_keys
+  
 )
 
 # Idempotent creation with retention.ms
