@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "disease-monitor"
+version = "0.1.0"
+description = "Offline anomaly & worsening detection for disease cases in trees/plots/regions."
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"

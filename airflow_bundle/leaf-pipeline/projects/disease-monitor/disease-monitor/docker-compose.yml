@@ -1,0 +1,21 @@
+services:
+  disease-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: disease-monitor:latest
+    command: ["--config", "/app/configs/config.docker.yaml", "--log-level", "INFO"]
+    environment:
+      TZ: "UTC"
+      # If you enable email delivery and use password_env=SMTP_PASSWORD:
+      # SMTP_PASSWORD: "your-smtp-password"
+    volumes:
+      - ./configs:/app/configs:ro
+    networks:
+      - worktree-main_ag_cloud
+    restart: on-failure
+
+networks:
+  # Use the external network created by your worktree-main compose
+  worktree-main_ag_cloud:
+    external: true
