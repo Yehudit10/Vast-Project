@@ -44,7 +44,7 @@ TOPICS=(
   irrigation.control.dlq
   sound.new
   image.new
-  dev-aerial-images-keys
+  aerial_images_metadata
   dev-security-images-keys
   alerts
 
