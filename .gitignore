@@ -45,3 +45,33 @@ venv/
 # --- OS files ---
 .DS_Store
 Thumbs.db
+
+
+# ==== Training/experiment outputs (never version) ====
+# Any top-level or nested "runs" folders created by Ultralytics or notebooks
+runs*/
+**/runs*/
+
+# ==== Model weights from training (PyTorch checkpoints) ====
+# Keep weights out of Git; publish via Releases/Artifacts instead.
+runs_fence/**/weights/*.pt
+
+# ==== Prediction artifacts (images + txt) ====
+# Generic preds folders created by `yolo predict`
+runs_fence/**/preds/**
+runs_fence/*_preds/**
+
+# Specific experiment outputs you listed (safe to ignore entirely)
+runs_fence/y8n_baseline_no_roi/**
+runs_fence/y8n_baseline_vote_soft/**
+runs_fence/y8n_realtime_preds_no_roi/**
+runs_fence/y8s_cpu_v1_preds/**
+
+# ==== Logs / plots (reproducible – don’t store) ====
+**/results.png
+**/confusion_matrix.png
+**/*.log
+
+# ==== Optional: large exported models (keep if you plan to ship them) ====
+# Uncomment to ignore ONNX as well; otherwise keep the single runtime ONNX in repo.
+# runs_fence/**/weights/*.onnx
