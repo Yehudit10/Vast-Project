@@ -8,6 +8,7 @@ version: "3.9"
 # --------------------------
 networks:
   ag_cloud:
+    name: ag_cloud
     driver: bridge
 
 # --------------------------
@@ -105,28 +106,48 @@ services:
   #     - ag_cloud
   #   restart: unless-stopped
 
+
   # -------------------------
-  # Plant Stress Detector
+  # Plant Stress Daily Batch
   # -------------------------
 
-  # plant_stress:
+  # plant_stress_daily:
   #   build: ./services/plant_stress
+  #   env_file:
+  #     - ./services/plant_stress/.env
+  #   restart: "no"
   #   environment:
-  #     - INPUT_DIR=/data/inbox
-  #     - MODEL_DIR=/models
-  #     - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-  #     - PERIOD_DAYS=0
-  #     - CONFIDENCE_THRESHOLD=0.6
-  #     # - TF_ENABLE_ONEDNN_OPTS=0  # optional
+  #     MODEL_DIR: /models
+  #     CONFIDENCE_THRESHOLD: "0.60"
+  #     TF_CPP_MIN_LOG_LEVEL: "2"
+  #     TIMEZONE: Asia/Jerusalem
+  #     POSTGRES_DSN: postgresql://missions_user:pg123@postgres:5432/missions_db
+  #     MINIO_ENDPOINT: minio-hot:9000
+  #     MINIO_ACCESS_KEY: minioadmin
+  #     MINIO_SECRET_KEY: minioadmin123
+  #     MINIO_BUCKET: sound
+  #     MINIO_PREFIX: plants/
+  #     MINIO_SECURE: "false"
+
+  #     # ==== Alerts → Kafka ====
+  #     ENABLE_ALERTS: "true"
+  #     KAFKA_BOOTSTRAP: "kafka:9092"
+  #     ALERT_TOPIC: "alerts"
+  #     ALERT_TYPE: "plant_drought_detected"
+  #     KAFKA_CLIENT_ID: "plant-stress-producer"
+  #   command: ["python","-u","/app/predict_minio_daily.py"]
   #   volumes:
   #     - "./services/plant_stress/models:/models:ro"
-  #     - "./services/plant_stress/samples:/data/inbox:ro"
-
   #   depends_on:
-  #     - postgres
-  #   command: [ "python", "-u", "/app/app.py" ]
-  #   networks:
-  #     - ag_cloud
+  #     postgres:
+  #       condition: service_healthy
+  #     minio-hot:
+  #       condition: service_healthy
+  #     mc-bootstrap:
+  #       condition: service_started
+  #     kafka:
+  #       condition: service_healthy
+  #   networks: [ag_cloud]
 
   # -------------------------
   # MQTT + Kafka + Connect + Init
@@ -181,55 +202,32 @@ services:
       timeout: 5s
       retries: 12
 
-  connect:
-    build:
-      context: ./mqtt_and_kafka
-      dockerfile: connect.Dockerfile
-    image: local/connect-with-mqtt:1.0.0
-    container_name: connect
-    depends_on:
-      kafka:
-        condition: service_healthy
-      mosquitto:
-        condition: service_healthy
-    ports:
-      - "8083:8083"
-    environment:
-      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
-      - CONNECT_GROUP_ID=agcloud-connect
-      - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
-      - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offsets
-      - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
-      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
-      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
-      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
-      - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
-    networks:
-      - ag_cloud
-    healthcheck:
-      test: [ "CMD", "curl", "-sf", "http://localhost:8083/connectors" ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+  mqtt-router:
+      build:
+        context: ./mqtt_and_kafka/mqtt-router
+      image: local/mqtt-router:1.0.0
+      depends_on:
+        kafka:
+          condition: service_healthy
+        mosquitto:
+          condition: service_healthy
+      environment:
+        - MQTT_HOST=mosquitto
+        - MQTT_PORT=1883
+        - MQTT_TOPIC_FILTER=mqtt/#
 
-  init-connector:
-    image: curlimages/curl:8.7.1
-    depends_on:
-      connect:
-        condition: service_healthy
-    volumes:
-      - ./mqtt_and_kafka/connectors:/connectors
-    networks:
-      - ag_cloud
-    entrypoint: >
-      sh -c "
-        echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
-        echo '==> Done.';
-      "
+        - KAFKA_BOOTSTRAP=kafka:9092
+        - CREATE_TOPICS=false
+        - DEFAULT_PARTITIONS=1
+        - DEFAULT_REPLICATION=1
+      networks:
+        - ag_cloud
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "python", "-c", "import socket; socket.create_connection(('mosquitto',1883),3); socket.create_connection(('kafka',9092),3)"]
+        interval: 15s
+        timeout: 5s
+        retries: 5
 
   # --------------------------
   # GUI / Runner / Gateway
@@ -266,21 +264,21 @@ services:
       - runner
     restart: unless-stopped
 
-  sensors_metrics:
-    build:
-      context: ./GUI
-      dockerfile: src/vast/services/Dockerfile
-    container_name: sensors_metrics
-    environment:
-      - SQLITE_DB=/data/app.db
-      - GATEWAY_URL=http://gateway:8000
-    volumes:
-      - ./GUI/data:/data:ro
-    depends_on:
-      - gateway
-    networks:
-      - ag_cloud
-    restart: unless-stopped
+  # sensors_metrics:
+  #   build:
+  #     context: ./GUI
+  #     dockerfile: src/vast/services/Dockerfile
+  #   container_name: sensors_metrics
+  #   environment:
+  #     - SQLITE_DB=/data/app.db
+  #     - GATEWAY_URL=http://gateway:8000
+  #   volumes:
+  #     - ./GUI/data:/data:ro
+  #   depends_on:
+  #     - gateway
+  #   networks:
+  #     - ag_cloud
+  #   restart: unless-stopped
 
   # --------------------------
   # Prometheus / Grafana
@@ -414,6 +412,11 @@ services:
       MINIO_NOTIFY_KAFKA_ENABLE_sounds: "on"
       MINIO_NOTIFY_KAFKA_BROKERS_sounds: "kafka:9092"
       MINIO_NOTIFY_KAFKA_TOPIC_sounds: "sound.new.sounds"
+
+      # ===== SECURITY NOTIFIER =====
+      MINIO_NOTIFY_KAFKA_ENABLE_security: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_security: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_security: "image.new.security"
     ports:
       - "9001:9000" # HOT S3
       - "9002:9001" # HOT Console
@@ -696,7 +699,7 @@ services:
     env_file:
       - ./services/db_api_service/.env
     environment:
-      DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+      DB_DSN: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
       ENV: dev
       JWT_SECRET: change-me-please-very-secret
       JWT_ALGO: HS256
@@ -706,6 +709,7 @@ services:
     ports:
       - "8001:8001"
     volumes:
+      - ./services/db_api_service/app:/app/app
       - contracts:/app/app/contracts
     depends_on:
       contracts-gen:
@@ -728,6 +732,37 @@ services:
     depends_on:
       - postgres
 
+  # ripeness-api:
+  #   build:
+  #     context: ./services/ripeness-ml
+  #     dockerfile: deploy/Dockerfile
+  #   image: ripeness-api:latest
+  #   environment:
+  #     - PGHOST=postgres
+  #     - PGPORT=5432
+  #     - PGDATABASE=missions_db
+  #     - PGUSER=missions_user
+  #     - PGPASSWORD=pg123
+  #     - MINIO_ENDPOINT=minio-hot:9000
+  #     - MINIO_SECURE=false
+  #     - MINIO_ACCESS_KEY=minioadmin
+  #     - MINIO_SECRET_KEY=minioadmin123
+  #     - MODEL_NAME=best_conditional
+  #     - BATCH_LIMIT=500
+  #     - FRUITS=Apple,Banana,Orange
+  #   depends_on:
+  #     - postgres
+  #     - minio-hot
+  #   volumes:
+  #     - ./services/ripeness-ml/checkpoints:/app/checkpoints
+  #     - ./services/ripeness-ml/configs:/app/configs
+  #     - ./services/ripeness-ml/model:/app/model
+  #   container_name: ripeness-api
+  #   networks: [ ag_cloud ]
+  #   ports:
+  #     - "8091:8088"
+  #   restart: unless-stopped
+ 
   # --------------------------
   # Flink JobManager & TaskManager
   # --------------------------
@@ -797,8 +832,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      # - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,alerts
-      - TOPICS=alerts
+      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,image_new_security_connections,alerts
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
@@ -1001,6 +1035,53 @@ services:
     container_name: alerts_gateway
     command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
     ports:
-      - "8010:8000" # host:container
+      - "8010:8000" 
+    networks:
+      - ag_cloud
+      
+  image-linker-jobmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-jobmanager
+    command: jobmanager
+    ports:
+      - "8084:8081"   
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    networks:
+      - ag_cloud
+
+  image-linker-taskmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    networks:
+      - ag_cloud
+
+  image-linker-submitter:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-submit
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    command: >
+      bash -lc "sleep 10 &&
+                flink run -m image-linker-jobmanager:8081 -py /opt/app/job_linker.py &&
+                echo 'Image-Linker job submitted successfully' &&
+                sleep 1"
     networks:
       - ag_cloud

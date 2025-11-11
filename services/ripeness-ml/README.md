@@ -1,7 +1,7 @@
 # Ripeness ML – API & Weekly Job
 
 A small **FastAPI** service that:
-- Predicts fruit ripeness (**ripe / unripe / rotten**) for new images from **MinIO** based on the trained conditional model, and writes results to **Postgres**.
+- Predicts fruit ripeness (**ripe / unripe / overripe**) for new images from **MinIO** based on the trained conditional model, and writes results to **Postgres**.
 - Creates a **weekly rollup snapshot** (with TS window) per fruit.
 
 ---
@@ -10,14 +10,23 @@ A small **FastAPI** service that:
 
 ```
 services/ripeness-ml/
-├─ scripts/
-│  ├─ ripeness_api.py           # FastAPI endpoints (predict + rollup)
-│  └─ weekly_ripeness_job.py    # model/minio/db helpers reused by the API
+├─ api/
+│  └─ ripeness_api.py          # FastAPI endpoints (predict + rollup)
+├─ jobs/
+│  └─ weekly_ripeness_job.py   # model/minio/db helpers reused by the API
+├─ model/
+│  ├─ architecture/
+│  │  └─ mobilenet_v3_large_head.py  # Model architecture definition
+│  └─ data/
+│     └─ data_multitask.py     # Data loading and preprocessing
 ├─ checkpoints/
 │  └─ mobilenet_v3_large/
-│     └─ best_conditional.pt    # your trained model weights (mounted into /models)
-├─ Dockerfile
-├─ docker-compose.ripeness.yml
+│     └─ best_conditional.pt    # trained model weights
+├─ deploy/
+│  ├─ Dockerfile
+│  └─ docker-compose.ripeness.yml
+├─ configs/
+│  └─ config.yaml              # Model and training configuration
 ├─ requirements.txt
 └─ .env (optional)
 ```
@@ -127,7 +136,7 @@ CREATE TABLE IF NOT EXISTS ripeness_predictions (
   id BIGSERIAL PRIMARY KEY,
   inference_log_id BIGINT NOT NULL REFERENCES inference_logs(id) ON DELETE CASCADE,
   ts TIMESTAMPTZ NOT NULL DEFAULT now(),
-  ripeness_label TEXT NOT NULL CHECK (ripeness_label IN ('ripe','unripe','rotten')),
+  ripeness_label TEXT NOT NULL CHECK (ripeness_label IN ('ripe','unripe','overripe')),
   ripeness_score DOUBLE PRECISION NOT NULL,
   model_name TEXT NOT NULL,
   UNIQUE (inference_log_id)
@@ -145,7 +154,7 @@ CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (
   cnt_total INTEGER NOT NULL,
   cnt_ripe INTEGER NOT NULL,
   cnt_unripe INTEGER NOT NULL,
-  cnt_rotten INTEGER NOT NULL,
+  cnt_overripe INTEGER NOT NULL,
   pct_ripe DOUBLE PRECISION NOT NULL
 );
 ```
@@ -166,7 +175,7 @@ LIMIT 20;
 **Show rollup snapshots:**
 ```sql
 SELECT ts::date AS snapshot_day, fruit_type, cnt_total,
-cnt_ripe, cnt_unripe, cnt_rotten,
+cnt_ripe, cnt_unripe, cnt_overripe,
 ROUND(pct_ripe*100,2) AS pct_ripe_pct
 FROM ripeness_weekly_rollups_ts
 ORDER BY ts DESC, fruit_type;
@@ -174,7 +183,7 @@ ORDER BY ts DESC, fruit_type;
 
 **From Docker (network agcloud_ag_cloud):**
 ```bash
-docker run --rm --network agcloud_ag_cloud -e PGPASSWORD=pg123 postgres:16-alpine   psql -h postgres -U missions_user -d missions_db -c   "SELECT ts::date AS snapshot_day, fruit_type, cnt_total, cnt_ripe, cnt_unripe, cnt_rotten, ROUND(pct_ripe*100,2) AS pct_ripe_pct
+docker run --rm --network agcloud_ag_cloud -e PGPASSWORD=pg123 postgres:16-alpine   psql -h postgres -U missions_user -d missions_db -c   "SELECT ts::date AS snapshot_day, fruit_type, cnt_total, cnt_ripe, cnt_unripe, cnt_overripe, ROUND(pct_ripe*100,2) AS pct_ripe_pct
    FROM ripeness_weekly_rollups_ts
    ORDER BY ts DESC, fruit_type;"
 ```
@@ -188,8 +197,8 @@ Create a weekly job that first predicts, then rolls up.
 **run_weekly.ps1:**
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:8088/predict-last-week"
-Start-Sleep -Seconds 5
-Invoke-RestMethod -Method Post -Uri "http://localhost:8088/rollup/weekly"
+# note: /predict-last-week now triggers the weekly rollup automatically,
+# so a single call is sufficient (no duplicate predictions are inserted).
 ```
 
 **Register task:**

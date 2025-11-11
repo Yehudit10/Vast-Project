@@ -22,14 +22,23 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 
 # Python deps from repo root
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN python -m pip install --upgrade pip setuptools wheel --no-cache-dir && \
+    pip config set global.timeout 600 && pip config set global.retries 10 && \
+    for i in 1 2 3 4 5; do \
+        pip install --no-cache-dir --timeout 600 -r /app/requirements.txt && break; \
+        echo "pip failed on attempt $i; retrying in $((i*5))s..."; sleep $((i*5)); \
+    done
 
 # Copy source under /app/vast/*
 COPY src/vast/runner /app/vast/runner
 COPY src/vast/dsl    /app/vast/dsl
 COPY src/vast/proto  /app/vast/proto
 
+
 # Generate stubs
+RUN pip install --no-cache-dir grpcio-tools==1.62.2 && \
+    pip install --no-cache-dir "protobuf==6.31.1"
 RUN python -m grpc_tools.protoc -I./vast/proto \
     --python_out=. --grpc_python_out=. \
     ./vast/proto/query.proto
