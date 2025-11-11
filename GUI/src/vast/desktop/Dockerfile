@@ -22,16 +22,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-randr0 && rm -rf /var/lib/apt/lists/*
 
 # ───────── optional CA certs ─────────
-# COPY certs /app/certs
-# RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-#     echo "Configuring NetFree certificates..."; \
-#     cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-#     update-ca-certificates; \
-#     fi
+COPY certs /app/certs
+RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+    echo "Configuring NetFree certificates..."; \
+    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+    update-ca-certificates; \
+    fi
 
-# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-# ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-# ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # ───────── noVNC for remote GUI ─────────
 RUN mkdir -p /opt && \
