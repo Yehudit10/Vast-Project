@@ -148,12 +148,12 @@ services:
     networks: [ag_cloud]
 
   # -------------------------
-  # MQTT + Kafka + Connect + Init
+  # MQTT + Kafka + MQTT-router
   # -------------------------
   kafka:
     build:
       context: ./mqtt_and_kafka/kafka
-      dockerfile: dsesockerfile
+      dockerfile: dockerfile
     container_name: kafka
     environment:
       - ALLOW_PLAINTEXT_LISTENER=yes
@@ -798,7 +798,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,image_new_security_connections,alerts
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,field_polygons,aerial_image_segmentation
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
@@ -1051,5 +1051,80 @@ services:
                 flink run -m image-linker-jobmanager:8081 -py /opt/app/job_linker.py &&
                 echo 'Image-Linker job submitted successfully' &&
                 sleep 1"
+    networks:
+      - ag_cloud
+
+  flink-sounds-http-jobmanager:
+    build:
+      context: ./services/sounds_flink
+      dockerfile: Dockerfile
+    container_name: flink-sounds-http-jobmanager
+    command: jobmanager
+    ports:
+      - "8083:8081" 
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-sounds-http-jobmanager
+      KAFKA_BROKERS: kafka:9092
+      SOURCE_TOPIC: sound_new_sounds_connections
+      SINK_TOPIC: ""
+      GROUP_ID: flink-classifier-sounds
+      CLASSIFIER_HTTP_URL: http://sounds_classifier:8088/classify
+      DEFAULT_PARALLELISM: 2
+      KAFKA_START: earliest
+      PYTHON: /opt/venv/bin/python
+      FLINK_PYTHON: /opt/venv/bin/python
+    networks:
+      - ag_cloud
+
+  flink-sounds-http-taskmanager:
+    build:
+      context: ./services/sounds_flink
+      dockerfile: Dockerfile
+    container_name: flink-sounds-http-taskmanager
+    command: taskmanager
+    depends_on:
+      flink-sounds-http-jobmanager:
+        condition: service_started
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-sounds-http-jobmanager
+      PYTHON: /opt/venv/bin/python
+      FLINK_PYTHON: /opt/venv/bin/python
+      FLINK_PROPERTIES: |-
+        jobmanager.rpc.address: flink-sounds-http-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    networks:
+      - ag_cloud
+
+  flink-sounds-http-submit:
+    build:
+      context: ./services/sounds_flink
+      dockerfile: Dockerfile
+    container_name: flink-sounds-http-submit
+    depends_on:
+      flink-sounds-http-jobmanager:
+        condition: service_started
+      flink-sounds-http-taskmanager:
+        condition: service_started
+    command:
+      - /opt/flink/bin/flink
+      - run
+      - -d
+      - -m
+      - flink-sounds-http-jobmanager:8081
+      - -Dpython.client.executable=/opt/venv/bin/python
+      - -Dpython.executable=/opt/venv/bin/python
+      - -py
+      - /opt/app/flink_job.py
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-sounds-http-jobmanager
+      KAFKA_BROKERS: kafka:9092
+      SOURCE_TOPIC: sound_new_sounds_connections
+      SINK_TOPIC: ""
+      GROUP_ID: flink-classifier-sounds
+      CLASSIFIER_HTTP_URL: http://sounds_classifier:8088/classify
+      DEFAULT_PARALLELISM: 2
+      KAFKA_START: earliest
+      PYTHON: /opt/venv/bin/python
+      FLINK_PYTHON: /opt/venv/bin/python
     networks:
       - ag_cloud
