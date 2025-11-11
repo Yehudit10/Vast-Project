@@ -4,14 +4,8 @@ from . import repo
 
 router = APIRouter(prefix="/task_thresholds", tags=["task_thresholds"])
 
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Body, Query
-from . import repo  # נניח שיש בו list_all(), get_one(task), upsert_one(), upsert_batch()
-
-router = APIRouter(prefix="/task_thresholds", tags=["task_thresholds"])
-
 # --- READ ---
-@router.get("", response_model=List[dict])  # או מודל סכימה אם יש לך
+@router.get("", response_model=List[dict])  
 def list_thresholds():
     try:
         return repo.list_all()  # מחזיר [{task, label, threshold, updated_by, ...}, ...]
