@@ -9,12 +9,12 @@ teams:
     output_topic: image_new_security_connections
   
   sounds:
-    metadata_topic: sounds.keys
+    metadata_topic: sounds_metadata
     minio_topic: sound.new.sounds
     output_topic: sound_new_sounds_connections
 
   plants:
-    metadata_topic: sounds.ultra.keys
+    metadata_topic: sounds_ultra_metadata
     minio_topic: sound.new.plants
     output_topic: sound_new_plants_connections
 
