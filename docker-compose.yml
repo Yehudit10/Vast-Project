@@ -340,10 +340,10 @@ services:
     ports:
       - "5900:5900"
       - "8080:8080"
-    # depends_on:
-    #   - db_api_service
-    #   - notification_api
-    #   - alerts-gateway
+    depends_on:
+      - db_api_service
+      - notification_api
+      - alerts-gateway
     volumes:
       - ./GUI/src/vast:/app/src/vast
       - ./templates:/app/templates:ro
