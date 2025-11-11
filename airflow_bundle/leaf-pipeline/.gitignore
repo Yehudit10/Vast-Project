@@ -83,3 +83,4 @@ airflow/dags/leaf-counting/out_*/
 projects/disease-monitor/disease-monitor/alerts.db
 projects/**/.git.backup-*.tar.gz
 .gitignore.bak*
+airflow/dags/leaf-counting/
