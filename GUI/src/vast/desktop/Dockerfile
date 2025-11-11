@@ -21,13 +21,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-xinerama0 libxcb-cursor0 libxcb-keysyms1 libxcb-render-util0 \
     libxcb-randr0 && rm -rf /var/lib/apt/lists/*
 
-# # ───────── optional CA certs ─────────
-# COPY certs /app/certs
-# RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-#     echo "Configuring NetFree certificates..."; \
-#     cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-#     update-ca-certificates; \
-#     fi
+# ───────── optional CA certs ─────────
+COPY certs /app/certs
+RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+    echo "Configuring NetFree certificates..."; \
+    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+    update-ca-certificates; \
+    fi
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
