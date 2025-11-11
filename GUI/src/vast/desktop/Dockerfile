@@ -22,12 +22,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-randr0 && rm -rf /var/lib/apt/lists/*
 
 # # ───────── optional CA certs ─────────
-COPY certs /app/certs
-RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-    echo "Configuring NetFree certificates..."; \
-    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-    update-ca-certificates; \
-    fi
+# COPY certs /app/certs
+# RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+#     echo "Configuring NetFree certificates..."; \
+#     cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+#     update-ca-certificates; \
+#     fi
 
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
@@ -44,8 +44,19 @@ RUN mkdir -p /opt && \
 # ───────── Python deps ─────────
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-
-
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir \
+        "PyQt6==6.8.0" \
+        "PyQt6-WebEngine==6.8.0" \
+        "argon2-cffi" \
+        "requests" \
+        "numpy" \
+        --extra-index-url https://pypi.org/simple \
+        --prefer-binary \
+        --break-system-packages \
+    && pip show PyQt6 PyQt6-WebEngine argon2-cffi
+RUN pip install plotly
+RUN pip install PyJWT
 # ───────── app setup ─────────
 RUN useradd -m -s /bin/bash appuser \
     && mkdir -p /app /tmp/.X11-unix \
