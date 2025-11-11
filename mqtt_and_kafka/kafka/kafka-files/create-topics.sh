@@ -44,10 +44,15 @@ TOPICS=(
   irrigation.control.dlq
   sound.new
   image.new
-  dev-aerial-images-keys
+  aerial_images_metadata
   dev-security-images-keys
   alerts
 
+  aerial_image_object_detections
+  aerial_image_anomaly_detections
+  aerial_image_segmentation
+  aerial_images_complete_metadata
+  
   # --- imagery (MinIO -> Kafka) ---
   image.new.aerial
   image_new_aerial_connections
@@ -61,6 +66,13 @@ TOPICS=(
   # --- sound(sound) (MinIO -> Kafka) ---
   sound.new.plants
   sound.new.sounds
+  sounds.ultra.keys
+  sounds.keys
+  sound_new_plants_connections
+  sound_new_sounds_connections
+
+  inference.dispatched.sounds
+  dlq.inference.http
 )
 
 # Idempotent creation with retention.ms
