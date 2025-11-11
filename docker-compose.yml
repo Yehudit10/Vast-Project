@@ -838,7 +838,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,image_new_security_connections,alerts,sound_new_sounds_connections,sound_new_plants_connections
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,field_polygons,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
