@@ -1,60 +1,118 @@
 # views/fruits_view.py
 from __future__ import annotations
 from typing import Optional, Tuple, Dict, List
-from PyQt6.QtCore import Qt, pyqtSignal # type: ignore
-from PyQt6.QtWidgets import ( # type: ignore
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox,
     QTableWidget, QTableWidgetItem, QAbstractItemView, QDoubleSpinBox,
-    QMessageBox, QHeaderView, 
+    QMessageBox, QHeaderView, QDialog, QLineEdit, QFrame
 )
 
 from dashboard_api import DashboardApi
 
 
-class FruitsView(QWidget):
-    """
-    Thresholds editor per ( task, label).
-    Replaces the previous 'client thresholds' view.
-    """
-    thresholdsSaved = pyqtSignal(dict)  # {( task, label): threshold}
+# ---------- thresholds ----------
+class ThresholdsEditorDialog(QDialog):
+    thresholdsSaved = pyqtSignal(dict)  # {(task,label): threshold}
 
-    def __init__(self, api: DashboardApi, parent=None):
+    TASK_OPTIONS = ["ripeness", "disease", "size", "color"]
+
+    def __init__(self, api: DashboardApi, parent: QWidget | None = None):
         super().__init__(parent)
         self.api = api
+        self.setWindowTitle("Fruits — Task Thresholds")
+        self.setModal(True)
+        self.resize(820, 560)
 
-        # --- Layout scaffolding ---
+        
+        self.setStyleSheet("""
+
+QLineEdit#search {
+    padding: 10px 12px; border: 1px solid #e8dccc; border-radius: 10px; background: #ffffff;
+}
+
+
+/* ====== status====== */
+QLabel#status { color: #6b7280; }
+QLabel.status-ok   { color: #17803a; }  
+QLabel.status-warn { color: #b25a00; } 
+QLabel.status-err  { color: #cc0022; }  
+
+
+QPushButton, QToolButton {
+    padding: 10px 16px; border-radius: 12px; color: white; border: none; font-weight: 700;
+}
+QPushButton:disabled { background: #c8c8c8; color: #f5f5f5; }
+
+/* Add (🍌) */
+QPushButton#btn_add {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #f8e27a, stop:1 #d8c94a);
+    color: #3a3a00;
+}
+QPushButton#btn_add:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #ffef87, stop:1 #e3d65a); }
+
+/* Delete (🍒) */
+QPushButton#btn_delete {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #ff6a7a, stop:1 #e03d4f);
+}
+QPushButton#btn_delete:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #ff7f8d, stop:1 #ea5666); }
+
+/* Save (🥝) */
+QPushButton#btn_save {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4bd27c, stop:1 #2fb765);
+}
+QPushButton#btn_save:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #5fe08b, stop:1 #3fcb75); }
+
+/* Close (🫐) */
+QPushButton#btn_close {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #6a7bff, stop:1 #4757e6);
+}
+QPushButton#btn_close:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #7d8bff, stop:1 #5b6cf0); }
+""")
+
         root = QVBoxLayout(self)
-        root.setSpacing(10)
+        root.setSpacing(12)
 
+        # Title
         title = QLabel("Fruits — Task Thresholds (per task/label)")
-        title.setStyleSheet("font-size: 18px; font-weight: 600;")
+        title.setObjectName("title")
         root.addWidget(title)
 
-        # Action buttons
-        btns = QHBoxLayout()
-        self.btn_add = QPushButton("Add row")
-        self.btn_delete = QPushButton("Delete selected")
-        self.btn_save = QPushButton("Save all")
-        btns.addWidget(self.btn_add)
-        btns.addWidget(self.btn_delete)
-        btns.addStretch(1)
-        btns.addWidget(self.btn_save)
-        root.addLayout(btns)
+        # Toolbar: search + actions
+        toolbar = QFrame()
+        toolbar.setObjectName("toolbar")
+        tl = QHBoxLayout(toolbar)
+        tl.setContentsMargins(12, 12, 12, 12)
+        tl.setSpacing(8)
 
-        # Table: 4 columns
-       
-        # 0: Task (editable text)
-        # 1: Label (editable text, optional; empty string means default bucket)
-        # 2: Threshold (0..1) as spinbox
-        # 3: Updated By (editable text, optional)
+        self.txt_search = QLineEdit(placeholderText="Search by task or label…")
+        self.txt_search.setObjectName("search")
+
+        self.btn_add = QPushButton("🍌 Add row")
+        self.btn_delete = QPushButton("🍒 Delete selected")
+        self.btn_save = QPushButton("🥝 Save all")
+
+        self.btn_add.setObjectName("btn_add")
+        self.btn_delete.setObjectName("btn_delete")
+        self.btn_save.setObjectName("btn_save")
+
+        tl.addWidget(self.txt_search, 1)
+        tl.addStretch(0)
+        tl.addWidget(self.btn_add)
+        tl.addWidget(self.btn_delete)
+        tl.addWidget(self.btn_save)
+
+        root.addWidget(toolbar)
+
+        # Table
         self.tbl = QTableWidget(0, 4, self)
+        self.tbl.setAlternatingRowColors(True)
         self.tbl.setHorizontalHeaderLabels([
-             "Task", "Label (optional)", "Threshold (0..1)", "Updated By"
+            "Task", "Label (optional)", "Threshold (0..1)", "Updated By"
         ])
-        self.tbl.horizontalHeader().setStretchLastSection(True)
-        self.tbl.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Interactive
-        )
+        hdr = self.tbl.horizontalHeader()
+        hdr.setStretchLastSection(True)
+        hdr.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.tbl.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tbl.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.tbl.setEditTriggers(
@@ -62,20 +120,38 @@ class FruitsView(QWidget):
             | QAbstractItemView.EditTrigger.SelectedClicked
             | QAbstractItemView.EditTrigger.EditKeyPressed
         )
-        root.addWidget(self.tbl)
+     
+        self.tbl.verticalHeader().setDefaultSectionSize(36)   
 
-        # Status line
+        root.addWidget(self.tbl, 1)
+
+        # Status + Close
+        bottom = QHBoxLayout()
         self.lbl_status = QLabel("Add rows and click Save.")
-        self.lbl_status.setStyleSheet("color:#555;")
-        root.addWidget(self.lbl_status)
+        self.lbl_status.setObjectName("status")
+        bottom.addWidget(self.lbl_status)
+        bottom.addStretch(1)
+        self.btn_close = QPushButton("🫐 Close")
+        self.btn_close.setObjectName("btn_close")
+        bottom.addWidget(self.btn_close)
+        root.addLayout(bottom)
 
         # Signals
         self.btn_add.clicked.connect(self.add_row)
         self.btn_delete.clicked.connect(self.delete_selected)
         self.btn_save.clicked.connect(self.save_all)
+        self.btn_close.clicked.connect(self.accept)
+        self.txt_search.textChanged.connect(self._apply_filter)
 
-        # Start with an empty demo row
+        # Start with one empty row
         self.add_row()
+
+    def load_rows(self, rows: List[Tuple[str, str, float, str]]):
+        
+        self.tbl.setRowCount(0)
+        for t, l, thr, upd in rows:
+            self.add_row(t, l, thr, upd)
+        self.lbl_status.setText(f"Loaded {len(rows)} rows.")
 
     # -------- Row ops --------
     def add_row(
@@ -88,59 +164,51 @@ class FruitsView(QWidget):
         r = self.tbl.rowCount()
         self.tbl.insertRow(r)
 
-       
-        # Task
+        # Task (combobox)
         cmb = QComboBox(self.tbl)
-        TASK_OPTIONS = ["ripeness", "disease", "size", "color"]
-        cmb.addItems(TASK_OPTIONS)
-        if task in TASK_OPTIONS:
+        cmb.addItems(self.TASK_OPTIONS)
+        if task in self.TASK_OPTIONS:
             cmb.setCurrentText(task)
-        else:
-            cmb.setCurrentIndex(0)
         self.tbl.setCellWidget(r, 0, cmb)
-        # Label (optional)
+
+        # Label (editable)
         self._set_text_cell(r, 1, label)
 
-        # Threshold spinbox
+        # Threshold (spinbox)
         spn = QDoubleSpinBox(self.tbl)
         spn.setRange(0.0, 1.0)
         spn.setSingleStep(0.01)
         spn.setDecimals(2)
         spn.setValue(float(threshold))
+        spn.setAlignment(Qt.AlignmentFlag.AlignRight)  
         self.tbl.setCellWidget(r, 2, spn)
 
         # Updated By
-        self._set_text_cell(r, 3, updated_by)
+        self._set_text_cell(r, 3, updated_by or "gui")
 
         self.lbl_status.setText("Row added.")
 
     def delete_selected(self):
         sel = self.tbl.selectionModel().selectedRows()
         if not sel:
-            self.lbl_status.setText("No row selected.")
+            self._set_status("No row selected.", "warn")
             return
         for m in sel:
             self.tbl.removeRow(m.row())
-        self.lbl_status.setText("Row deleted.")
+        self._set_status("Row deleted.", "ok")
 
     # -------- Helpers --------
     def _set_text_cell(self, row: int, col: int, text: str):
         item = QTableWidgetItem(text or "")
-        # Editable text item
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
         self.tbl.setItem(row, col, item)
 
-    def _read_row(self, r: int) -> Tuple[ str, str, float, str]:
-
+    def _read_row(self, r: int) -> Tuple[str, str, float, str]:
         # Task
         cmb = self.tbl.cellWidget(r, 0)
-        if isinstance(cmb, QComboBox):
-            task = cmb.currentText()
-        else:
-            task = ""
+        task = cmb.currentText() if isinstance(cmb, QComboBox) else ""
 
-
-        # Label (optional; empty string is allowed)
+        # Label (optional)
         label_item = self.tbl.item(r, 1)
         label = (label_item.text().strip() if label_item else "")
 
@@ -152,56 +220,79 @@ class FruitsView(QWidget):
         updated_item = self.tbl.item(r, 3)
         updated_by = (updated_item.text().strip() if updated_item else "")
 
-        return  task, label, threshold, updated_by
+        return task, label, threshold, updated_by
 
-    def _validate(self) -> Tuple[bool, str]:
+    def _apply_filter(self):
+        q = self.txt_search.text().strip().lower()
+        for r in range(self.tbl.rowCount()):
+            t, l, _, _ = self._read_row(r)
+            show = (q in t.lower()) or (q in (l or "").lower()) or (q == "")
+            self.tbl.setRowHidden(r, not show)
+
+    def _set_status(self, text: str, level: str = "info"):
+        # level: ok|warn|err|info
+        self.lbl_status.setText(text)
+        for cls in ["status-ok", "status-warn", "status-err"]:
+            self.lbl_status.setProperty("class", "")
+        if level == "ok":
+            self.lbl_status.setProperty("class", "status-ok")
+        elif level == "warn":
+            self.lbl_status.setProperty("class", "status-warn")
+        elif level == "err":
+            self.lbl_status.setProperty("class", "status-err")
+        self.lbl_status.style().unpolish(self.lbl_status)
+        self.lbl_status.style().polish(self.lbl_status)
+
+    def _validate(self) -> Tuple[bool, str, List[int]]:
         """
         Rules:
         - Task: required
-        - Label: optional (dedup still enforced using the triple)
+        - Label: optional (dedup by (task,label))
         - Threshold: 0..1
-        - No duplicate (mission_id, task, label)
+        - No duplicate (task, label)
         - At least one row
+        Returns: (ok, msg, bad_rows_indices)
         """
         seen = set()
+        bad_rows = []
+
         for r in range(self.tbl.rowCount()):
             t, l, thr, _ = self._read_row(r)
             if not t:
-                return False, f"Row {r+1}: Task is empty."
+                bad_rows.append(r)
+                return False, f"Row {r+1}: Task is empty.", bad_rows
             if not (0.0 <= thr <= 1.0):
-                return False, f"Row {r+1}: Threshold must be between 0 and 1."
+                bad_rows.append(r)
+                return False, f"Row {r+1}: Threshold must be between 0 and 1.", bad_rows
 
             key = (t, l or "")
             if key in seen:
-                return False, (
-                    f"Row {r+1}: Duplicate ( task, label) = "
-                    f"( {t}, {l or '∅'})."
-                )
+                bad_rows.append(r)
+                return False, f"Row {r+1}: Duplicate (task,label)=({t},{l or '∅'}).", bad_rows
             seen.add(key)
 
         if self.tbl.rowCount() == 0:
-            return False, "No rows to save."
+            return False, "No rows to save.", []
 
-        return True, ""
+        return True, "", []
 
     # -------- Save --------
     def save_all(self):
-        ok, msg = self._validate()
+        ok, msg, bad_rows = self._validate()
+       
         if not ok:
+            if bad_rows:
+                self.tbl.selectRow(bad_rows[0])
             QMessageBox.warning(self, "Validation error", msg)
-            self.lbl_status.setStyleSheet("color:#b00020;")
-            self.lbl_status.setText(msg)
+            self._set_status(msg, "err")
             return
 
-        # Build mapping: {( task, label): threshold}
-        mapping: Dict[Tuple[ str, str], float] = {}
-        updated_by_for_row: Dict[Tuple[ str, str], str] = {}
-
+        # Build mapping: {(task,label): threshold}
+        mapping: Dict[Tuple[str, str], float] = {}
         for r in range(self.tbl.rowCount()):
-            t, l, thr, updated_by = self._read_row(r)
-            key = ( t, l or "")
+            t, l, thr, _ = self._read_row(r)
+            key = (t, l or "")
             mapping[key] = thr
-            updated_by_for_row[key] = updated_by or "gui"
 
         # Disable buttons during save
         self.btn_save.setEnabled(False)
@@ -231,13 +322,6 @@ class FruitsView(QWidget):
             return pairs
 
         try:
-            # Flatten mapping into the API’s expected structure
-            # API helper that we assume exists (as agreed earlier):
-            # bulk_set_task_thresholds_labeled(mapping, updated_by="gui")
-            # If your API expects a list of dicts, it should convert internally.
-            # To respect per-row updated_by, we send the majority value,
-            # and rely on server-side to accept it. Alternatively, expose a
-            # dedicated bulk that accepts per-row updated_by list.
             report = self.api.bulk_set_task_thresholds_labeled(mapping, updated_by="gui")
             ok_keys = _normalize_ok_set(report.get("ok", []))
             fail_pairs = _normalize_fail_list(report.get("fail", []))
@@ -247,25 +331,69 @@ class FruitsView(QWidget):
             succeeded = len(ok_keys) if ok_keys else (total - failed)
 
             if failed == 0:
-                self.lbl_status.setStyleSheet("color:#0a7d00;")
-                self.lbl_status.setText(f"Saved {succeeded}/{total} thresholds ✓")
+                self._set_status(f"Saved {succeeded}/{total} thresholds ✓", "ok")
                 QMessageBox.information(self, "Saved", f"All {total} thresholds saved successfully.")
-                # Emit a normalized dict for listeners
                 self.thresholdsSaved.emit({k: v for k, v in mapping.items()})
             else:
-                self.lbl_status.setStyleSheet("color:#cc7a00;")
-                # Show first 10 failures neatly
                 lines = "\n".join(f"- {k}: {reason}" for k, reason in fail_pairs[:10])
                 more = "" if failed <= 10 else f"\n(+{failed-10} more...)"
-                self.lbl_status.setText(f"Partial save: {succeeded}/{total} saved, {failed} failed.")
+                self._set_status(f"Partial save: {succeeded}/{total} saved, {failed} failed.", "warn")
                 QMessageBox.warning(self, "Partial save", f"Saved {succeeded}/{total}.\nFailed:\n{lines}{more}")
 
         except Exception as e:
             import traceback
             traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Failed to save thresholds:\n{type(e).__name__}: {e}")
-
+            self._set_status("Failed to save thresholds.", "err")
         finally:
             self.btn_save.setEnabled(True)
             self.btn_add.setEnabled(True)
             self.btn_delete.setEnabled(True)
+
+
+
+class FruitsView(QWidget):
+    thresholdsSaved = pyqtSignal(dict)  # {(task,label): threshold}
+
+    def __init__(self, api: DashboardApi, parent=None):
+        super().__init__(parent)
+        self.api = api
+
+        root = QVBoxLayout(self)
+        root.setSpacing(10)
+
+        title = QLabel("Fruits")
+        title.setStyleSheet("font-size: 22px; font-weight: 700;")
+        root.addWidget(title)
+
+        
+        row = QHBoxLayout()
+        lbl = QLabel("Manage task thresholds per task/label.")
+        self.btn_open_editor = QPushButton("Change thresholds…")
+        row.addWidget(lbl, 1)
+        row.addStretch(0)
+        row.addWidget(self.btn_open_editor)
+        root.addLayout(row)
+
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setStyleSheet("color:#e5e7eb;")
+        root.addWidget(line)
+
+        
+        self.lbl_status = QLabel("Click “Change thresholds…” to edit.")
+        self.lbl_status.setStyleSheet("color:#555;")
+        root.addWidget(self.lbl_status)
+
+     
+        self.btn_open_editor.clicked.connect(self.open_thresholds_dialog)
+
+    def open_thresholds_dialog(self):
+        dlg = ThresholdsEditorDialog(self.api, self)
+       
+        # rows = self.api.get_current_thresholds() -> List[Tuple[str,str,float,str]]
+        # dlg.load_rows(rows)
+
+        dlg.thresholdsSaved.connect(self.thresholdsSaved.emit)
+        dlg.exec()  # modal
+        self.lbl_status.setText("Threshold editor closed.")

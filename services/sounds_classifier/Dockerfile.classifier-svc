@@ -22,13 +22,24 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PYTHONUNBUFFERED=1
 
+ENV PIP_DEFAULT_TIMEOUT=600 PIP_RETRIES=20 PIP_DISABLE_PIP_VERSION_CHECK=1
 
 COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --upgrade pip \
-    && pip install --no-cache-dir -r /app/requirements.txt
+# RUN python -m pip install --upgrade pip \
+#     && pip install --no-cache-dir -r /app/requirements.txt
+RUN python -m pip install --upgrade pip && \
+    for i in 1 2 3 4 5; do \
+      pip install --no-cache-dir --prefer-binary --timeout 600 --retries 5 -r /app/requirements.txt && break; \
+      echo "pip failed (attempt $i). retrying..." && sleep 10; \
+    done
 
 # Install PyTorch CPU wheels from official index (kept separate for clearer errors/caching)
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.5.1+cpu
+# RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.5.1+cpu
+RUN for i in 1 2 3; do \
+      pip install --no-cache-dir --prefer-binary --timeout 600 --retries 5 \
+        --index-url https://download.pytorch.org/whl/cpu torch==2.5.1+cpu && break; \
+      echo "pip (torch) failed (attempt $i). retrying..." && sleep 10; \
+    done
 
 # ---- Checkpoint bootstrap (download once at build if missing) ----
 # Configure via build-args or ENV:

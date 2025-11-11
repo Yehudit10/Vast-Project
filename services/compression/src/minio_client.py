@@ -4,7 +4,7 @@ import os
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9001")
 ACCESS_KEY = os.getenv("ACCESS_KEY", "minioadmin")
 SECRET_KEY = os.getenv("SECRET_KEY", "minioadmin123")
-BUCKET_NAME = os.getenv("BUCKET_NAME", "imagery")
+BUCKET_NAME = os.getenv("BUCKET_NAME", "telemetry")
 
 client = Minio(
     MINIO_ENDPOINT,
