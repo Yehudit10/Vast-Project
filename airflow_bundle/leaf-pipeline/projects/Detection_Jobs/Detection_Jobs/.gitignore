@@ -1,0 +1,25 @@
+# === Python cache ===
+__pycache__/
+*.pyc
+*.pyo
+
+# === Virtual environments ===
+.env
+.venv/
+venv/
+
+# === IDE / Editors ===
+.idea/
+.vscode/
+
+
+# === Test / Coverage ===
+.pytest_cache/
+
+# === Local databases ===
+*.db
+agri.db
+
+# === Data outputs ===
+data_balanced/
+data/

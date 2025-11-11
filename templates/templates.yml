@@ -13,3 +13,8 @@ templates:
     category: agriculture
     summary: "🍓 High fruit ripeness detected by ${device_id} (${confidence} ≥ ${threshold})"
     recommendation: "Harvest or inspect the plantation area. Ripe/overripe fruits ratio: ${description}"
+  
+  plant_drought_detected:
+    category: agriculture
+    summary: "🌿 Plant drought detected by ${device_id} in ${area} (severity ${severity}, confidence ${confidence})"
+    recommendation: "Check irrigation in ${area}. Status: ${watering_status}. Audio file: ${file}"
