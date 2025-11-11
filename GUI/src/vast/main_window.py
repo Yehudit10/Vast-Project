@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
             "Notifications": self.notification_view,
             "Fruits": self.fruits_view,
             "Ground Image": self.ground_view,
-             "Auth": self.auth_status
+            "Auth": self.auth_status
 
             
 main
