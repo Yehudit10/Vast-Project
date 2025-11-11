@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, api: DashboardApi, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("AgCloud – Dashboard")
+        self.setWindowTitle("VAST – Dashboard")
         self.resize(1280, 760)
         self.api = api
 
@@ -127,6 +127,7 @@ class MainWindow(QMainWindow):
         """)
         self.alert_badge.hide()
 
+        # Position badge dynamically
         def reposition_badge():
             btn_w = self.alert_button.width()
             self.alert_badge.move(btn_w - 22, 2)
@@ -138,38 +139,11 @@ class MainWindow(QMainWindow):
         )
         reposition_badge()
 
-        # ───────────────────────────────
-        # TITLE AREA (Updated)
-        # ───────────────────────────────
-        title_container = QWidget()
-        title_layout = QVBoxLayout(title_container)
-        title_layout.setContentsMargins(0, 0, 0, 0)
-        title_layout.setSpacing(0)
-
-        main_title = QLabel("AgCloud")
-        main_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_title.setStyleSheet("""
-            QLabel {
-                font-size: 22pt;
-                font-weight: 700;
-                color: #047857;
-                letter-spacing: 1px;
-            }
+        title_label = QLabel("VAST Dashboard")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setStyleSheet("""
+            QLabel { font-size: 17pt; font-weight: 600; color: #111827; }
         """)
-
-        subtitle = QLabel("The Smart Platform that Protects and Optimizes Your Field")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setStyleSheet("""
-            QLabel {
-                font-size: 11pt;
-                font-weight: 500;
-                color: #374151;
-                margin-top: 2px;
-            }
-        """)
-
-        title_layout.addWidget(main_title)
-        title_layout.addWidget(subtitle)
 
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(8)
@@ -180,7 +154,7 @@ class MainWindow(QMainWindow):
         top_bar_layout.addWidget(logout_btn)
         top_bar_layout.addWidget(self.alert_button)
         top_bar_layout.addStretch()
-        top_bar_layout.addWidget(title_container)
+        top_bar_layout.addWidget(title_label)
         top_bar_layout.addStretch()
         toolbar.addWidget(top_bar)
 
@@ -197,6 +171,7 @@ class MainWindow(QMainWindow):
         font = QFont(); font.setPointSize(12)
         self.nav_list.setFont(font)
 
+        # Menu with expandable Sensors section
         for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Auth"]:
             item = QListWidgetItem(main_item)
             item.setData(Qt.ItemDataRole.UserRole, {"type": "main"})
@@ -242,6 +217,7 @@ class MainWindow(QMainWindow):
         self.ground_view = GroundView(api, self)
         self.auth_status = AuthStatusView(api, self)
 
+        # New Sensors views
         self.sensors_status_summary = SensorsStatusSummary(api, self)
         self.sensors_health = SensorsView(api, self)
         self.sensors_main = SensorsMainView(api, self)
@@ -258,8 +234,8 @@ class MainWindow(QMainWindow):
             "Fruits": self.fruits_view,
             "Ground Image": self.ground_view,
             "Auth": self.auth_status
-        }
 
+        }
         for view in self.views.values():
             self.stack.addWidget(view)
         self.stack.setCurrentWidget(self.home)
