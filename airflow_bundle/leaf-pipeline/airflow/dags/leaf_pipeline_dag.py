@@ -6,7 +6,9 @@ from airflow.operators.bash import BashOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 
 
-PROJECT_ROOT = "/opt/airflow/dags/leaf-counting"
+
+PROJECT_ROOT = "/opt/leaf-pipeline/projects/leaf-counting"
+
 PYTHON_BIN   = "python"
 WEIGHTS      = f"{PROJECT_ROOT}/weights/best.pt"
 
