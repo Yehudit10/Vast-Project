@@ -555,6 +555,20 @@ CREATE INDEX IF NOT EXISTS idx_segmentation_img_key
     ON public.aerial_image_segmentation (img_key);
 
 
+CREATE TABLE public.sound_new_sounds_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
+
+CREATE TABLE public.sound_new_plants_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
+
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
 
