@@ -155,7 +155,7 @@ def insert_weekly_rollup():
     SELECT
       now(), (SELECT ws FROM w), (SELECT we FROM w),
       fruit_type, device_id, run_id, cnt_total, cnt_ripe, cnt_unripe, cnt_overripe,
-      CASE WHEN cnt_total>0 THEN cnt_ripe::double precision/cnt_total ELSE 0 END
+      CASE WHEN cnt_total>0 THEN (cnt_ripe+cnt_overripe)::double precision/cnt_total ELSE 0 END
     FROM agg;
     """
 
