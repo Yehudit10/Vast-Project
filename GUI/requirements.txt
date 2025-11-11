@@ -1,7 +1,8 @@
-# ───── GUI ─────
-PyQt6==6.9.1
-PyQt6-WebEngine==6.9.0
+
+PyQt6==6.7.1
+PyQt6-WebEngine==6.7.0
 python-vlc
+
 
 # ───── Web/API ─────
 fastapi>=0.110
@@ -28,3 +29,9 @@ shapely
 
 # ───── Async / misc ─────
 aiohttp
+plotly
+shapely
+PyJWT>=2.9.0
+sip
+
+
