@@ -17,6 +17,12 @@ from views.auth_status_view import AuthStatusView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
 
+# === New Sensors GUI imports ===
+from views.sensorsMainView import SensorsMainView
+from views.sensorsMapView import SensorsMapView
+from views.sensorDetailsTab import SensorDetailsTab
+from views.sensors_status_summary import SensorsStatusSummary
+
 
 class MainWindow(QMainWindow):
     logoutRequested = pyqtSignal()
@@ -31,52 +37,18 @@ class MainWindow(QMainWindow):
         # GLOBAL STYLE
         # ───────────────────────────────
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f9fafb;
-            }
-            QMenuBar {
-                background-color: #e5e7eb;
-                font-size: 11.5pt;
-                padding: 4px 10px;
-            }
+            QMainWindow { background-color: #f9fafb; }
+            QMenuBar { background-color: #e5e7eb; font-size: 11.5pt; padding: 4px 10px; }
             QToolBar {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #ffffff,
-                    stop:1 #f3f4f6
-                );
-                border-bottom: 1px solid #d1d5db;
-                padding: 2px 10px;
-                min-height: 42px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffffff, stop:1 #f3f4f6);
+                border-bottom: 1px solid #d1d5db; padding: 2px 10px; min-height: 42px;
             }
-            QToolButton {
-                background-color: transparent;
-                border: none;
-                padding: 4px;
-                border-radius: 8px;
-                font-size: 20px;
-            }
-            QToolButton:hover {
-                background-color: #e5e7eb;
-            }
-            QListWidget {
-                background-color: #ffffff;
-                border: none;
-                font-size: 12pt;
-                color: #111827;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-radius: 6px;
-            }
-            QListWidget::item:selected {
-                background-color: #10b981;
-                color: white;
-            }
-            QStatusBar {
-                background-color: #f3f4f6;
-                font-size: 10pt;
-            }
+            QToolButton { background-color: transparent; border: none; padding: 4px; border-radius: 8px; font-size: 20px; }
+            QToolButton:hover { background-color: #e5e7eb; }
+            QListWidget { background-color: #ffffff; border: none; font-size: 12pt; color: #111827; }
+            QListWidget::item { padding: 10px; border-radius: 6px; }
+            QListWidget::item:selected { background-color: #10b981; color: white; }
+            QStatusBar { background-color: #f3f4f6; font-size: 10pt; }
         """)
 
         # ───────────────────────────────
@@ -87,13 +59,12 @@ class MainWindow(QMainWindow):
         self.back_action.setShortcut("Alt+Left")
         self.back_action.triggered.connect(self.go_back)
         file_menu.addAction(self.back_action)
-
         self.logout_action = QAction("Log out", self)
         self.logout_action.triggered.connect(self._logout)
         file_menu.addAction(self.logout_action)
 
         # ───────────────────────────────
-        # TOP BAR
+        # TOP BAR (toolbar)
         # ───────────────────────────────
         toolbar = self.addToolBar("Main Toolbar")
         toolbar.setMovable(False)
@@ -105,6 +76,7 @@ class MainWindow(QMainWindow):
         top_bar_layout.setContentsMargins(8, 0, 8, 0)
         top_bar_layout.setSpacing(10)
 
+        # Logout button
         logout_btn = QPushButton("Logout")
         logout_btn.setToolTip("Log out")
         logout_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -118,15 +90,12 @@ class MainWindow(QMainWindow):
                 font-size: 11pt;
                 font-weight: 600;
             }
-            QPushButton:hover {
-                background-color: #059669;
-            }
-            QPushButton:pressed {
-                background-color: #047857;
-            }
+            QPushButton:hover { background-color: #059669; }
+            QPushButton:pressed { background-color: #047857; }
         """)
         logout_btn.clicked.connect(self._logout)
 
+        # Alert bell
         self.alert_button = QToolButton()
         self.alert_button.setToolTip("Show alerts")
         self.alert_button.setText("🔔")
@@ -139,11 +108,10 @@ class MainWindow(QMainWindow):
                 padding: 4px;
                 border-radius: 8px;
             }
-            QToolButton:hover {
-                background-color: #e5e7eb;
-            }
+            QToolButton:hover { background-color: #e5e7eb; }
         """)
 
+        # Alert badge
         self.alert_badge = QLabel("0", self.alert_button)
         self.alert_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.alert_badge.setFixedSize(24, 24)
@@ -159,6 +127,7 @@ class MainWindow(QMainWindow):
         """)
         self.alert_badge.hide()
 
+        # Position badge dynamically
         def reposition_badge():
             btn_w = self.alert_button.width()
             self.alert_badge.move(btn_w - 22, 2)
@@ -173,11 +142,7 @@ class MainWindow(QMainWindow):
         title_label = QLabel("VAST Dashboard")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
-            QLabel {
-                font-size: 17pt;
-                font-weight: 600;
-                color: #111827;
-            }
+            QLabel { font-size: 17pt; font-weight: 600; color: #111827; }
         """)
 
         shadow = QGraphicsDropShadowEffect()
@@ -194,32 +159,35 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(top_bar)
 
         # ───────────────────────────────
-        # NAVIGATION DOCK
+        # NAVIGATION
         # ───────────────────────────────
         self.nav_dock = QDockWidget("Navigation", self)
         self.nav_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.nav_dock)
-
         self.nav_list = QListWidget(self.nav_dock)
         self.nav_dock.setWidget(self.nav_list)
         self.nav_dock.setMinimumWidth(220)
 
-        font = QFont()
-        font.setPointSize(12)
+        font = QFont(); font.setPointSize(12)
         self.nav_list.setFont(font)
 
-        for name in [
-            "Home", "Sensors", "Sound", "Ground Image",
-            "Aerial Image", "Fruits", "Security", "Settings",
-            "Notifications", "Auth"
-        ]:
-            QListWidgetItem(f"  {name}", self.nav_list)
+        # Menu with expandable Sensors section
+        for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Auth"]:
+            item = QListWidgetItem(main_item)
+            item.setData(Qt.ItemDataRole.UserRole, {"type": "main"})
+            self.nav_list.addItem(item)
+            if main_item == "Sensors":
+                for sub in ["Live Data", "Sensor Health", "Location Map"]:
+                    sub_item = QListWidgetItem(f"   ↳ {sub}")
+                    sub_item.setData(Qt.ItemDataRole.UserRole, {"type": "sub", "parent": main_item, "name": sub})
+                    sub_item.setHidden(True)
+                    self.nav_list.addItem(sub_item)
 
-        self.nav_list.setCurrentRow(0)
         self.nav_list.currentRowChanged.connect(self._on_nav_change)
+        self.nav_list.itemClicked.connect(self._on_nav_click)
 
         # ───────────────────────────────
-        # ALERT SERVICE
+        # ALERT SERVICE + PANEL
         # ───────────────────────────────
         ws_url = os.getenv("ALERTS_WS", "ws://alerts-gateway:8000/ws/alerts")
         self.alert_service = AlertService(ws_url, api)
@@ -249,12 +217,19 @@ class MainWindow(QMainWindow):
         self.ground_view = GroundView(api, self)
         self.auth_status = AuthStatusView(api, self)
 
+        # New Sensors views
+        self.sensors_status_summary = SensorsStatusSummary(api, self)
+        self.sensors_health = SensorsView(api, self)
+        self.sensors_main = SensorsMainView(api, self)
+
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
-
         self.views = {
             "Home": self.home,
             "Sensors": self.sensors_view,
+            "Sensors - Live Data": self.sensors_status_summary,
+            "Sensors - Sensor Health": self.sensors_health,
+            "Sensors - Location Map": self.sensors_main,
             "Notifications": self.notification_view,
             "Fruits": self.fruits_view,
             "Ground": self.ground_view,
@@ -263,19 +238,13 @@ class MainWindow(QMainWindow):
         for view in self.views.values():
             self.stack.addWidget(view)
         self.stack.setCurrentWidget(self.home)
-        self.history: list = []
+        self.history = []
 
         # ───────────────────────────────
         # STATUS BAR
         # ───────────────────────────────
         sb = QStatusBar(self)
-        sb.setStyleSheet("""
-            QStatusBar {
-                background-color: #f3f4f6;
-                color: #374151;
-                font-size: 10.5pt;
-            }
-        """)
+        sb.setStyleSheet("QStatusBar { background-color: #f3f4f6; color: #374151; font-size: 10.5pt; }")
         self.setStatusBar(sb)
         sb.showMessage("Ready")
 
@@ -319,6 +288,29 @@ class MainWindow(QMainWindow):
             self.navigate_to(self.views[name])
         else:
             self.statusBar().showMessage(f"Section '{name}' not implemented yet.")
+
+    def _on_nav_click(self, item):
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if data and data.get("type") == "main":
+            parent = item.text()
+            expanded = False
+            for i in range(self.nav_list.count()):
+                sub_item = self.nav_list.item(i)
+                sub_data = sub_item.data(Qt.ItemDataRole.UserRole)
+                if sub_data and sub_data.get("type") == "sub" and sub_data.get("parent") == parent:
+                    expanded = sub_item.isHidden()
+                    break
+            for i in range(self.nav_list.count()):
+                sub_item = self.nav_list.item(i)
+                sub_data = sub_item.data(Qt.ItemDataRole.UserRole)
+                if sub_data and sub_data.get("type") == "sub" and sub_data.get("parent") == parent:
+                    sub_item.setHidden(not expanded)
+        elif data and data.get("type") == "sub":
+            parent = data.get("parent")
+            sub_name = data.get("name")
+            key = f"{parent} - {sub_name}"
+            if key in self.views:
+                self.stack.setCurrentWidget(self.views[key])
 
     def navigate_to(self, widget):
         current = self.stack.currentWidget()
