@@ -572,7 +572,7 @@ CREATE TABLE public.sound_new_plants_connections (
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
 CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
 
--- sounds_metadata (recommended "aerial-style")
+
 CREATE TABLE IF NOT EXISTS public.sounds_metadata (
   id              BIGSERIAL PRIMARY KEY,
   file_name       TEXT        NOT NULL,
@@ -584,16 +584,14 @@ CREATE TABLE IF NOT EXISTS public.sounds_metadata (
   channels        SMALLINT    CHECK (channels > 0),
   content_type    TEXT,
 
-  -- raw JSON as produced upstream
-  gis_origin_json JSONB NOT NULL,
+  gis_origin JSONB NOT NULL,
 
-  -- generated Point from JSON (lon, lat)
   geom_point geometry(Point, 4326)
       GENERATED ALWAYS AS (
           ST_SetSRID(
               ST_MakePoint(
-                  (gis_origin_json->>'longitude')::double precision,
-                  (gis_origin_json->>'latitude')::double precision
+                  (gis_origin->>'longitude')::double precision,
+                  (gis_origin->>'latitude')::double precision
               ),
               4326
           )
@@ -626,14 +624,14 @@ CREATE TABLE IF NOT EXISTS public.sounds_ultra_metadata (
   channels        SMALLINT    CHECK (channels > 0),
   content_type    TEXT,
 
-  gis_origin_json JSONB NOT NULL,
+  gis_origin JSONB NOT NULL,
 
   geom_point geometry(Point, 4326)
       GENERATED ALWAYS AS (
           ST_SetSRID(
               ST_MakePoint(
-                  (gis_origin_json->>'longitude')::double precision,
-                  (gis_origin_json->>'latitude')::double precision
+                  (gis_origin->>'longitude')::double precision,
+                  (gis_origin->>'latitude')::double precision
               ),
               4326
           )
