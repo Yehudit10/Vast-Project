@@ -21,7 +21,7 @@ def list_rollups(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{id}", response_model=RipenessWeeklyRollupOut)
+@router.get("/{id}", response_model=schemas.RipenessWeeklyRollupOut)
 def get_rollup(id: int):
     """
     Retrieve a specific rollup entry by ID.
@@ -30,3 +30,4 @@ def get_rollup(id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Rollup not found")
     return row
+
