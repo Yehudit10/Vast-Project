@@ -35,7 +35,7 @@ docker.env
 .env.local
 .envrc
 
-# === Airflow (ארטיפקטים/לוגים/DB) ===
+# === Airflow  ===
 airflow/logs/
 airflow/airflow.db
 airflow/airflow.db-journal
@@ -49,7 +49,7 @@ airflow/*scheduler*.err
 airflow/dags/*.bak.*
 airflow/staging/
 
-# === Projects: leaf-counting (ארטיפקטים בלבד) ===
+# === Projects: leaf-counting  ===
 projects/leaf-counting/out_detect/
 projects/leaf-counting/out_crops/
 projects/leaf-counting/out_pwb/
@@ -57,7 +57,7 @@ projects/leaf-counting/runs_local/
 projects/leaf-counting/.venv/
 projects/leaf-counting/staging/
 
-# === Projects: Detection_Jobs / disease-monitor (ארטיפקטים כלליים) ===
+# === Projects: Detection_Jobs / disease-monitor  ===
 projects/Detection_Jobs/**/__pycache__/
 projects/Detection_Jobs/**/.mypy_cache/
 projects/Detection_Jobs/**/.pytest_cache/
@@ -84,3 +84,6 @@ projects/disease-monitor/disease-monitor/alerts.db
 projects/**/.git.backup-*.tar.gz
 .gitignore.bak*
 airflow/dags/leaf-counting/
+
+
+dags_leaf_counting_backup.tgz
