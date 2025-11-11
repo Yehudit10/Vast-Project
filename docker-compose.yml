@@ -153,7 +153,7 @@ services:
   kafka:
     build:
       context: ./mqtt_and_kafka/kafka
-      dockerfile: dockerfile
+      dockerfile: dsesockerfile
     container_name: kafka
     environment:
       - ALLOW_PLAINTEXT_LISTENER=yes
@@ -340,10 +340,10 @@ services:
     ports:
       - "5900:5900"
       - "8080:8080"
-    depends_on:
-      - db_api_service
-      - notification_api
-      - alerts-gateway
+    # depends_on:
+    #   - db_api_service
+    #   - notification_api
+    #   - alerts-gateway
     volumes:
       - ./GUI/src/vast:/app/src/vast
       - ./templates:/app/templates:ro
