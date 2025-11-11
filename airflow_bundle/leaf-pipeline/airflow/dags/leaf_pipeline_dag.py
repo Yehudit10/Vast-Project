@@ -78,7 +78,7 @@ set -euo pipefail
 PROJECT_ROOT='{{ params.project_root }}'
 PY='{{ params.python_bin }}'; if ! command -v "$PY" >/dev/null 2>&1; then PY='python'; fi
 
-export PYTHONEXECUTABLE="$PY"   # ← להוסיף שורה זו
+export PYTHONEXECUTABLE="$PY"   
 
 INPUT_DIR='{{ params.staging_dir }}'
 OUT_LOCAL_DET='{{ params.out_run }}/detect'
@@ -89,7 +89,7 @@ DATE_ONLY='{{ dag_run.conf.get("run_id") or logical_date.in_timezone("Asia/Jerus
 DEST_PREFIX="leaves/${DATE_ONLY}/detect"
 
 # MinIO:
-#   ל-SDK (minio-py) חייבים host:port בלי סכימה ובלי path → משתמשים בשדות החיבור הישירים:
+#   ל-SDK (minio-py) 
 ENDPOINT_HOSTPORT='{{ (conn.minio_s3.host or "host.docker.internal") }}:{{ (conn.minio_s3.port or 9001) }}'
 #   ל-awscli צריך URL מלא:
 ENDPOINT_URL='{{ conn.minio_s3.extra_dejson.endpoint_url | default("http://host.docker.internal:9001") }}'
@@ -210,12 +210,12 @@ python -m awscli s3 ls "s3://$BUCKET/$DEST_PREFIX/" --recursive --endpoint-url "
     export AWS_DEFAULT_REGION='us-east-1'
     export AWS_S3_FORCE_PATH_STYLE=true
 
-    # מזהה מכשיר ברירת מחדל לנרמול (אפשר להחליף ל-dev שלך)
+   
     export DEVICE_ID="${DEVICE_ID:-dev1}"
 
     mkdir -p "$OUT_LOCAL_CROP"
 
-    # 1) מריצים crop (אם קיים)
+    # 1)crop 
     if [ -f "$PROJECT_ROOT/src/crop_only.py" ]; then
       cd "$PROJECT_ROOT"
       $PY src/crop_only.py --input "$PWB_LOCAL" --out "$OUT_LOCAL_CROP"
@@ -226,10 +226,10 @@ python -m awscli s3 ls "s3://$BUCKET/$DEST_PREFIX/" --recursive --endpoint-url "
       echo "[crop] No crop script found; will only sync if $OUT_LOCAL_CROP has files."
     fi
 
-    # 2) נרמול שמות הקבצים לפני העלאה (פורמט: <device>_<YYYYMMDD>T<HHMMSS>Z[ _suffix].ext)
-    #    - מנסה להוציא EXIF DateTimeOriginal; אם אין, נופל ל-mtime של הקובץ.
+    # 2) (: <device>_<YYYYMMDD>T<HHMMSS>Z[ _suffix].ext)
+    
     python -m pip install -q pillow piexif || true
-    export OUT_LOCAL_CROP  # כדי ש-Python ידע איפה לעבוד
+    export OUT_LOCAL_CROP 
     python - <<'PY'
 import os, re, sys, time
 from datetime import datetime, timezone
@@ -256,7 +256,7 @@ def get_ts_from_exif(path):
              exif_dict["0th"].get(piexif.ImageIFD.DateTime)
         if not dt:
             return None
-        # פורמט EXIF: "YYYY:MM:DD HH:MM:SS"
+        # EXIF: "YYYY:MM:DD HH:MM:SS"
         s = dt.decode() if isinstance(dt, bytes) else dt
         dt_obj = datetime.strptime(s, "%Y:%m:%d %H:%M:%S").replace(tzinfo=timezone.utc)
         return dt_obj
@@ -284,11 +284,11 @@ for root, _, files in os.walk(OUT):
         old = os.path.join(root, f)
         dt = ts_for_file(old)
         ts = dt.strftime("%Y%m%dT%H%M%SZ")
-        # suffix אופציונלי אם יש טקסט לא ריק בשם המקורי (בלי סיומת)
+        # suffix 
         base = os.path.splitext(f)[0]
         suffix = ""
         if base and base.lower() not in {"img","image","photo","dsc","dscn"}:
-            # מנקים רווחים כפולים ותווים בעייתיים
+            
             cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip("-_.")
             if cleaned and cleaned != ts:
                 suffix = f"_{cleaned}"
@@ -297,7 +297,7 @@ for root, _, files in os.walk(OUT):
         if new == old:
             skipped += 1
             continue
-        # הימנעות מדריסה
+        
         i = 1
         new_final = new
         while os.path.exists(new_final):
@@ -310,7 +310,7 @@ for root, _, files in os.walk(OUT):
 print(f"[crop][rename] done: renamed={renamed}, already_ok={skipped}")
 PY
 
-    # 3) העלאה ל-MinIO
+    # 3)MinIO
     pip install -q awscli || true
     if [ -d "$OUT_LOCAL_CROP" ] && [ "$(ls -A "$OUT_LOCAL_CROP" || true)" ]; then
       python -m awscli s3 sync "$OUT_LOCAL_CROP"/ "s3://$BUCKET/leaves/$RUN_ID_CROP/" --endpoint-url "$ENDPOINT_URL"
@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS public.leaf_reports (
     sick BOOLEAN NOT NULL
 );
 
--- אינדקסים קלים לשאילתות/דשבורדים
+
 CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts ON public.leaf_reports (ts);
 CREATE INDEX IF NOT EXISTS ix_leaf_reports_type ON public.leaf_reports (leaf_disease_type_id);
 CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts ON public.leaf_reports (device_id, ts);
@@ -514,21 +514,6 @@ else:
     sys.exit("[DM][db] DDL failed after retries")
 PY
 
-# ---- מריצים את השירות דרך CLI ----
-# if [ -f /app/CLI.py ]; then
-# #   exec python3 /app/CLI.py --config /app/configs/config.docker.yaml --log-level INFO
-# # ---- מריצים את השירות דרך ה-ENTRYPOINT של האימג' ----
-#     exec python -m disease_monitor.cli --config /app/configs/config.docker.yaml --log-level INFO
-
-# elif python3 -c "import importlib.util as u; print(bool(u.find_spec('CLI')))" 2>/dev/null | grep -q True; then
-#   exec python3 -m CLI --config /app/configs/config.docker.yaml --log-level INFO
-# elif command -v CLI >/dev/null 2>&1; then
-#   exec CLI --config /app/configs/config.docker.yaml --log-level INFO
-# else
-#   echo "[DM] ERROR: CLI entrypoint not found" >&2
-#   exit 127
-# fi
-# ---- מריצים את השירות דרך ה-ENTRYPOINT של האימג' ----
 exec python -m disease_monitor.cli --config /app/configs/config.docker.yaml --log-level INFO
 
 '''],
@@ -543,8 +528,6 @@ exec python -m disease_monitor.cli --config /app/configs/config.docker.yaml --lo
     dag=dag,
 )
 
-# stage_input >> detect >> pwb >> crop >> detection_jobs >> disease_monitor
 
-# stage_input >> detect >> pwb >> crop >> detection_jobs >> disease_monitor
 
     stage_input >> detect >> pwb >> crop >> detection_jobs>>disease_monitor
