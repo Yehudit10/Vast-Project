@@ -2,7 +2,7 @@
 # Docker Compose - AG Cloud
 # ==========================
 
-version: "3.9"
+# version: "3.9"
 # --------------------------
 # Networks
 # --------------------------
@@ -128,7 +128,13 @@ services:
       MINIO_BUCKET: sound
       MINIO_PREFIX: plants/
       MINIO_SECURE: "false"
-
+      
+      DEFAULT_AREA: unknown
+      DEFAULT_LAT: 0.0
+      DEFAULT_LON: 0.0
+      DEFAULT_IMAGE_URL: https://example.com/placeholder.jpg
+      DEFAULT_VOD: https://example.com/placeholder.mp4
+      DEFAULT_HLS: https://example.com/placeholder.m3u8
       # ==== Alerts → Kafka ====
       ENABLE_ALERTS: "true"
       KAFKA_BOOTSTRAP: "kafka:9092"       # הברוקר הפנימי שלך
@@ -362,6 +368,10 @@ services:
       - DISPLAY=host.docker.internal:0.0
       - GATEWAY_URL=http://sensors_metrics:8000
       - NOTIFICATION_API_URL=http://notification_api:5000
+
+      - API_BASE_URL=http://db_api_service:8001
+      - AUTH_BOOTSTRAP_URL=http://db_api_service:8001/auth/_dev_bootstrap
+      - ALERTS_WS_URL=ws://alerts-gateway:8000/ws/alerts
     ports:
       - "5900:5900"
       - "8080:8080"
@@ -699,6 +709,7 @@ services:
       ACCESS_TTL_MIN: 15
       REFRESH_TTL_DAYS: 14
       DEV_SA_NAME: my-ingest-service
+      ADDR: 0.0.0.0
     ports:
       - "8001:8001"
     volumes:
