@@ -232,7 +232,9 @@ class MainWindow(QMainWindow):
             "Sensors - Location Map": self.sensors_main,
             "Notifications": self.notification_view,
             "Fruits": self.fruits_view,
-            "Ground Image": self.ground_view
+            "Ground Image": self.ground_view,
+             "Auth": self.auth_status
+
             
 main
         }
