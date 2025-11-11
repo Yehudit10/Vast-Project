@@ -39,7 +39,7 @@ def map_mqtt_to_kafka_topic(mqtt_topic: str) -> Optional[str]:
     if not tail:
         return None
     parts = [seg for seg in tail.split("/") if seg]
-    dotted = ".".join(parts)
+    dotted = "_".join(parts)
     dotted = VALID_CHARS.sub("_", dotted)
     return dotted[:249] if dotted else None
 
@@ -151,3 +151,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

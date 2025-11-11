@@ -21,4 +21,4 @@ services:
 networks:
   default:
     external: true
-    name: agcloud_ag_cloud
+    name: ag_cloud
