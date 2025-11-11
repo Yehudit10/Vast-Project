@@ -535,7 +535,8 @@ services:
       S3_BUCKET: sound
       MQTT_BROKER: large-mosquitto
       MQTT_PORT: 1885
-      MQTT_TOPIC: MQTT/sound/#
+      MQTT_TOPIC: MQTT/sounds/#
+      MQTT_PUB_TOPIC: sound/sounds/ingested
       DEFAULT_PREFIX: MIC-01
       CAMERA_PREFIX: camera
       MICROPHONE_PREFIX: microphone
@@ -560,6 +561,45 @@ services:
     networks:
       - ag_cloud
     restart: unless-stopped
+
+  mqtt_ingest_sounds_ultra:
+      build:
+        context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+      container_name: mqtt_ingest_sounds_ultra
+      environment:
+        MINIO_ENDPOINT: http://minio-hot:9000
+        MINIO_ACCESS_KEY: minioadmin
+        MINIO_SECRET_KEY: minioadmin123
+        S3_BUCKET: sound
+        MQTT_BROKER: large-mosquitto
+        MQTT_PORT: 1885
+        MQTT_TOPIC: MQTT/sounds_ultra/#
+        MQTT_PUB_TOPIC: sound/sounds_ultra/ingested
+        DEFAULT_PREFIX: MIC-02
+        CAMERA_PREFIX: camera
+        MICROPHONE_PREFIX: microphone
+        DUMMY_DB: 0
+        DB_API_BASE: http://db_api_service:8001
+        DB_API_TOKEN: auto
+        OUTBOX_DIR: /app/outbox
+        DB_API_AUTH_MODE: service
+        DB_API_SERVICE_NAME: mqtt_ingest_sounds_ultra
+        INGEST_WORKERS: 8
+        ULTRA_DIR_PREFIX: plants
+      volumes:
+        - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+      depends_on:
+        large-mosquitto:
+          condition: service_started
+        minio-hot:
+          condition: service_healthy
+        mc-bootstrap:
+          condition: service_started
+        db_api_service:
+          condition: service_started
+      networks:
+        - ag_cloud
+      restart: unless-stopped
 
   mqtt_publisher:
     build:
@@ -811,7 +851,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,field_polygons,aerial_image_segmentation
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,field_polygons,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db

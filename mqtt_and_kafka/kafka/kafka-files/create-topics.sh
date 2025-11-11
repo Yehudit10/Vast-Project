@@ -66,8 +66,8 @@ TOPICS=(
   # --- sound(sound) (MinIO -> Kafka) ---
   sound.new.plants
   sound.new.sounds
-  sounds.ultra.keys
-  sounds.keys
+  sounds_ultra_metadata
+  sounds_metadata
   sound_new_plants_connections
   sound_new_sounds_connections
 
