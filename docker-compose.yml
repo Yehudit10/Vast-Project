@@ -1,6 +1,8 @@
 # ==========================
 # Docker Compose - AG Cloud
 # ==========================
+
+# version: "3.9"
 # --------------------------
 # Networks
 # --------------------------
@@ -126,7 +128,13 @@ services:
       MINIO_BUCKET: sound
       MINIO_PREFIX: plants/
       MINIO_SECURE: "false"
-
+      
+      DEFAULT_AREA: unknown
+      DEFAULT_LAT: 0.0
+      DEFAULT_LON: 0.0
+      DEFAULT_IMAGE_URL: https://example.com/placeholder.jpg
+      DEFAULT_VOD: https://example.com/placeholder.mp4
+      DEFAULT_HLS: https://example.com/placeholder.m3u8
       # ==== Alerts → Kafka ====
       ENABLE_ALERTS: "true"
       KAFKA_BOOTSTRAP: "kafka:9092"       
@@ -337,6 +345,10 @@ services:
       - DISPLAY=host.docker.internal:0.0
       - GATEWAY_URL=http://sensors_metrics:8000
       - NOTIFICATION_API_URL=http://notification_api:5000
+
+      - API_BASE_URL=http://db_api_service:8001
+      - AUTH_BOOTSTRAP_URL=http://db_api_service:8001/auth/_dev_bootstrap
+      - ALERTS_WS_URL=ws://alerts-gateway:8000/ws/alerts
     ports:
       - "5900:5900"
       - "8080:8080"
@@ -712,6 +724,7 @@ services:
       ACCESS_TTL_MIN: 15
       REFRESH_TTL_DAYS: 14
       DEV_SA_NAME: my-ingest-service
+      ADDR: 0.0.0.0
     ports:
       - "8001:8001"
     volumes:
@@ -838,7 +851,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections,image_new_security_connections,alerts,sound_new_sounds_connections,sound_new_plants_connections
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,field_polygons,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
