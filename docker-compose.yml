@@ -137,7 +137,7 @@ services:
       DEFAULT_HLS: https://example.com/placeholder.m3u8
       # ==== Alerts → Kafka ====
       ENABLE_ALERTS: "true"
-      KAFKA_BOOTSTRAP: "kafka:9092"       
+      KAFKA_BOOTSTRAP: "kafka:9092"
       ALERT_TOPIC: "alerts"
       ALERT_TYPE: "plant_drought_detected"
       KAFKA_CLIENT_ID: "plant-stress-producer"
@@ -151,7 +151,7 @@ services:
         condition: service_healthy
       mc-bootstrap:
         condition: service_started
-      kafka:                  
+      kafka:
         condition: service_healthy
     networks: [ag_cloud]
 
@@ -622,6 +622,36 @@ services:
       - mqtt_ingest
     networks:
       - ag_cloud
+  
+  mqtt_gateway:
+    build:
+      context: ./services/mqtt_gateway
+      dockerfile: Dockerfile
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: imagery
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: rover.images.meta.v1
+      MQTT_HOST: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/imagery/#
+      MQTT_TOPIC_TEL: MQTT/telemetry/#
+      TELEMETRY_TTL_SEC: 10
+      MQTT_CLIENT_ID: mqtt-gateway
+      METRICS_PORT: 9110
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
 
   # ------------------------
   # Classifier - Sounds
@@ -750,6 +780,8 @@ services:
       - "5000:5000"
     depends_on:
       - postgres
+    networks:
+      - ag_cloud
 
   ripeness-api:
     build:
@@ -900,6 +932,48 @@ services:
     restart: unless-stopped
 
   # --------------------------
+  # Fence Hole Detector (FastAPI + ONNX)
+  # --------------------------
+  fence-hole-detector:
+    build:
+      context: ./services/fence_hole_detector
+      dockerfile: Dockerfile
+    container_name: fence-hole-detector
+    env_file:
+      - ./services/fence_hole_detector/.env
+    environment:
+      # Override anything needed for in-Docker networking
+      MINIO_ENDPOINT: minio-hot:9000
+      MINIO_SECURE: "false"
+      # Use internal base URL so other containers can fetch the image
+      MINIO_PUBLIC_BASE_URL: http://minio-hot:9000/imagery
+
+      # Kafka inside docker network
+      ALERT_ENABLED: "1"
+      KAFKA_BOOTSTRAP: kafka:9092
+      ALERTS_TOPIC: alerts
+      ALERT_TYPE: fence_hole
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    ports:
+      - "8088:8088"   # expose API to host (optional)
+    volumes:
+    - ./services/fence_hole_detector/weights:/app/services/fence_hole_detector/weights:ro
+    command:
+      [
+        "uvicorn",
+        "services.fence_hole_detector.app:app",
+        "--host", "0.0.0.0",
+        "--port", "8088",
+        "--log-level", "info"
+      ]
+
+  # --------------------------
   # Inference HTTP Service
   # --------------------------
   fruit-inference-http:
@@ -939,7 +1013,35 @@ services:
     ports:
       - "8012:8004"
     restart: unless-stopped
+  soil-inference-http:
+    build:
+      context: ./services/inference_http
+      dockerfile: Dockerfile
+    environment:
 
+      - TEAM=soil_moisture
+      - WEIGHTS_PATH=/app/weights/soil_moisture_best.onnx
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=0
+      - PG_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=irrigation.control
+      - KAFKA_DLT=irrigation.control.dlq
+
+
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+      - ./services/inference_http/adapters:/app/adapters
+      - ./services/inference_http/soil_moisture:/app/soil_moisture
+    depends_on:
+      - minio-hot
+      - postgres
+    ports:
+      - "8013:8004"
+    networks: [ag_cloud]
+    restart: unless-stopped
 
   # --------------------------
   # Flink Jobs
@@ -994,6 +1096,28 @@ services:
       - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
     command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.camera --team camera --http-url http://camera-inference-http:8004/infer_json --group-id http-dispatcher-camera --dlq-topic dlq.inference.http; tail -f /dev/null" ]
     restart: always
+
+  flink-dispatcher-soil:
+    image: agcloud-flink-py:1.18
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      soil-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=image.new.ground
+      - TEAM=soil_moisture
+      - HTTP_URL=http://soil-inference-http:8004/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-soil
+      - PARALLELISM=1
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
+    command: [ "bash", "-lc", "set -e; echo 'Waiting...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/... --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic image.new.ground --team soil_moisture --http-url http://soil-inference-http:8004/infer_json --group-id http-dispatcher-soil --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+  
 
   flink-alerts-job:
     build:

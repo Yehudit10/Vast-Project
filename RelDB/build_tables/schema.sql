@@ -328,11 +328,30 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+--- Alerts_leaves table
+
+CREATE TABLE IF NOT EXISTS public.alerts_leaves (
+  id bigserial PRIMARY KEY,
+  entity_id text NOT NULL,
+  rule text NOT NULL,
+  window_start timestamptz NOT NULL,
+  window_end   timestamptz NOT NULL,
+  score double precision NOT NULL,
+  first_seen timestamptz NOT NULL,
+  last_seen  timestamptz NOT NULL,
+  status text NOT NULL CHECK (status IN ('OPEN','ACK','RESOLVED')),
+  meta_json jsonb
+);
+
+CREATE INDEX IF NOT EXISTS ix_alerts_leaves_entity_rule ON public.alerts_leaves(entity_id, rule);
+CREATE INDEX IF NOT EXISTS ix_alerts_leaves_status ON public.alerts_leaves(status);
+
+
 --- === Soil moisture irrigation tables ===
 
 CREATE TABLE IF NOT EXISTS soil_moisture_events (
   id SERIAL PRIMARY KEY,
-  zone_id TEXT NOT NULL,
+  device_id TEXT NOT NULL REFERENCES devices(device_id),
   ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   dry_ratio REAL NOT NULL,
   decision TEXT NOT NULL,
@@ -345,7 +364,8 @@ CREATE TABLE IF NOT EXISTS soil_moisture_events (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idem ON soil_moisture_events (idempotency_key);
 
 CREATE TABLE IF NOT EXISTS irrigation_schedule (
-  zone_id TEXT PRIMARY KEY,
+  device_id TEXT PRIMARY KEY REFERENCES devices(device_id),
+
   next_run_at TIMESTAMPTZ NOT NULL,
   duration_min INT NOT NULL,
   updated_by TEXT NOT NULL,
@@ -355,7 +375,7 @@ CREATE TABLE IF NOT EXISTS irrigation_schedule (
 
 CREATE TABLE IF NOT EXISTS irrigation_schedule_audit (
   id SERIAL PRIMARY KEY,
-  zone_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
   prev_next_run_at TIMESTAMPTZ,
   prev_duration_min INT,
   next_run_at TIMESTAMPTZ NOT NULL,
@@ -364,6 +384,21 @@ CREATE TABLE IF NOT EXISTS irrigation_schedule_audit (
   update_reason TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE irrigation_policies (
+    device_id TEXT NOT NULL,
+    prev_state TEXT,
+    dry_ratio_high REAL,
+    dry_ratio_low REAL,
+    min_patches INT,
+    duration_min INT,
+    updated_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (device_id),
+    CONSTRAINT fk_device
+        FOREIGN KEY (device_id) REFERENCES devices(device_id)
+        ON DELETE CASCADE
+);
+
 
 CREATE TABLE IF NOT EXISTS alerts (
 
