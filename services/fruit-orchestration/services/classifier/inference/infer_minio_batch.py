@@ -12,7 +12,7 @@ from PIL import Image
 from dotenv import load_dotenv
 from minio import Minio
 from minio.deleteobjects import DeleteObject
-from time import perf_counter  # למעלה עם ה-imports
+from time import perf_counter 
 
 
 from inference.utils_infer import build_infer_transforms, load_model

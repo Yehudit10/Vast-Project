@@ -21,7 +21,7 @@ ERRS = Counter("inference_errors_total", "Total inference errors")
 LATENCY = Histogram("inference_latency_seconds", "Inference latency per image (seconds)")
 LOADED = Gauge("model_loaded", "Model loaded (1=yes)")
 
-# --- קונפיג/מודל/טרנספורמציות נטענים פעם אחת ---
+
 from inference.utils_infer import build_infer_transforms, load_model
 from metrics_db.db import insert_inference_log
 
@@ -30,12 +30,11 @@ app = FastAPI()
 MODEL = None
 LABELS = None
 TFMS = None
-CFG = None  # ייטען מה-YAML של הקונפיג
+CFG = None  
 
 def _load_labels(labels_path: str):
     with open(labels_path, "r", encoding="utf-8") as f:
         d = json.load(f)
-    # הפורמט אצלנו: {class_name: index}. צריך גם הפוך.
     idx_to_class = {int(v): k for k, v in d.items()}
     return d, idx_to_class
 
@@ -115,7 +114,6 @@ async def infer(file: UploadFile = File(...)):
         latency_ms = (time.time() - start) * 1000.0
         LATENCY.observe(latency_ms / 1000.0)
 
-        # נסה לכתוב ל-DB, לא להפיל את ה-API אם נכשלים
         try:
             insert_inference_log(
                 model_backbone=CFG.get("backbone", "mobilenet_v3_small"),

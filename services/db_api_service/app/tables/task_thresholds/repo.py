@@ -25,7 +25,7 @@ def list_all() -> list[dict]:
         return [dict(r) for r in rows]
 
 def get_one(task: str, label: Optional[str] = "") -> Optional[dict]:
-    # אם יש לך label ייחודי יחד עם task — שמרי; אחרת אפשר להתעלם מ-label
+    # If you maintain a unique (task, label) pair – keep label; otherwise label can be ignored
     q = text("""
         SELECT
             task::text   AS task,
