@@ -18,3 +18,5 @@ pydantic>=2.9,<3
 argon2-cffi
 python-vlc
 aiohttp
+folium
+
