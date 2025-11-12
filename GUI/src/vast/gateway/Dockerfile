@@ -3,7 +3,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # build arg
-ARG USE_NETFREE=true
+# ARG USE_NETFREE=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY certs /app/certs
@@ -19,23 +19,32 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
-ENV PIP_DEFAULT_TIMEOUT=600
+
+
+# # System CA + add NetFree certs
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates || true
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Python deps
 COPY requirements.txt /app/requirements.txt
-# Install all deps EXCEPT grpcio-tools (we use pre-generated stubs)
-RUN grep -v '^grpcio-tools' /app/requirements.txt > /app/requirements.nogen.txt && \
-    python -m pip install --upgrade pip setuptools wheel --no-cache-dir && \
-    pip install --no-cache-dir --timeout 600 -r /app/requirements.nogen.txt \
-      --index-url https://pypi.org/simple \
-      --trusted-host pypi.org \
-      --trusted-host pypi.python.org \
-      --trusted-host files.pythonhosted.org \
-       && pip install --no-cache-dir "grpcio>=1.74.0"
+RUN pip install --no-cache-dir -r /app/requirements.txt \
+    --index-url https://pypi.org/simple \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org
 
 # Copy source under /app/vast/*
 COPY src/vast/gateway /app/vast/gateway
 COPY src/vast/proto   /app/vast/proto
+
+# Generate stubs
+RUN python -m grpc_tools.protoc -I./vast/proto \
+    --python_out=. --grpc_python_out=. \
+    ./vast/proto/query.proto
 
 ENV PYTHONPATH=/app/vast/proto/generated:/app
 ENV RUNNER_ADDR=runner:50051
