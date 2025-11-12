@@ -1,0 +1,54 @@
+FROM flink:1.19.3-scala_2.12-java11
+
+
+# ---------- Root setup ----------
+USER root
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# ---------- Install Python + tools ----------
+RUN apt-get update && apt-get install -y \
+    python3 python3-venv python3-pip curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------- Add Flink Kafka connectors ----------
+RUN curl -fSL https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.2.0-1.19/flink-connector-kafka-3.2.0-1.19.jar \
+    -o /opt/flink/lib/flink-connector-kafka-3.2.0-1.19.jar && \
+    curl -fSL https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.7.0/kafka-clients-3.7.0.jar \
+    -o /opt/flink/lib/kafka-clients-3.7.0.jar
+
+# ---------- Python virtual environment ----------
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# ---------- Workdir ----------
+WORKDIR /opt/app
+
+# ---------- Copy dependencies first (for caching) ----------
+COPY requirements.txt /opt/app/requirements.txt
+
+# ---------- Install dependencies ----------
+RUN pip install --upgrade pip certifi \
+    && pip install --prefer-binary apache-flink protobuf grpcio \
+    && pip install -r /opt/app/requirements.txt
+
+# ---------- Copy application code ----------
+COPY . /opt/app/
+
+RUN mkdir -p /opt/app/sensorAnomalyPro/reports/models && chown -R flink:flink /opt/app/sensorAnomalyPro && chmod -R 777 /opt/app/sensorAnomalyPro
+
+
+# ---------- Flink environment variables ----------
+ENV PYFLINK_CLIENT_EXECUTABLE=/opt/venv/bin/python
+ENV PYFLINK_PYTHON=/opt/venv/bin/python
+ENV PYTHONPATH="/opt/app/sensorAnomalyPro:/opt/app:$PYTHONPATH"
+ENV KAFKA_BROKERS=kafka:9092
+ENV IN_TOPIC=sensor-telemetry
+ENV OUT_TOPIC=sensor_anomalies
+
+# ---------- Default command ----------
+CMD ["job-cluster", "--job-classname", "org.apache.flink.client.python.PythonDriver", "-py", "/opt/app/sensorAnomalyPro/app.py"]

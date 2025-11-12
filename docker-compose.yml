@@ -851,7 +851,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata,sensors,sensors_anomalies_modal,event_logs_sensors
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
@@ -1231,3 +1231,80 @@ services:
       FLINK_PYTHON: /opt/venv/bin/python
     networks:
       - ag_cloud
+
+  # --------------------------
+  # Sensor Anomaly Pro + Flink
+  # --------------------------
+  sensor_anomaly_pro:
+    build:
+      context: ./services/sensorAnomalyPro/sensorAnomalyPro
+      dockerfile: Dockerfile
+    container_name: sensor-anomaly-pro
+    volumes:
+      - ./services/sensorAnomalyPro/sensorAnomalyPro/data:/app/data
+      - ./services/sensorAnomalyPro/sensorAnomalyPro/reports:/app/reports
+    environment:
+      - DATA_PATH=/app/data/plant_health_data.csv
+    command: >
+      python analyze_sensors.py
+    networks:
+      - ag_cloud
+
+  jobmanager:
+    build:
+      context: ./services/sensorAnomalyPro
+      dockerfile: Dockerfile.flink
+    container_name: flink-jobmanager
+    command: >
+      bash -c "
+      /docker-entrypoint.sh jobmanager &
+      echo '⏳ Waiting for Flink JobManager startup...' &&
+      sleep 10 &&
+      echo '🕓 Waiting for reports to be generated...' &&
+      while [ ! -d /opt/app/sensorAnomalyPro/reports ] || [ -z \"$(ls -A /opt/app/sensorAnomalyPro/reports 2>/dev/null)\" ]; do
+        echo '   ↳ reports directory empty, waiting...';
+        sleep 5;
+      done &&
+      echo '✅ Reports ready, submitting Flink job...' &&
+      flink run -m localhost:8083 -py /opt/app/sensorAnomalyPro/app.py &&
+      tail -f /dev/null"
+    depends_on:
+      - sensor_anomaly_pro
+      - kafka
+    ports:
+      - "8083:8083"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensor_anomalies
+      - ZONE_TOPIC=sensor_zone_stats
+    volumes:
+      - ./services/sensorAnomalyPro/sensorAnomalyPro/reports:/opt/app/sensorAnomalyPro/reports:rw
+    restart: unless-stopped
+    networks:
+      - ag_cloud
+
+  taskmanager:
+    build:
+      context: ./services/sensorAnomalyPro
+      dockerfile: Dockerfile.flink
+    container_name: flink-taskmanager
+    command: taskmanager -D taskmanager.numberOfTaskSlots=4
+    depends_on:
+      - jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensor_anomalies
+      - ZONE_TOPIC=sensor_zone_stats
+      - taskmanager.numberOfTaskSlots=4
+    volumes:
+      - ./services/sensorAnomalyPro/sensorAnomalyPro/reports:/opt/app/sensorAnomalyPro/reports:rw
+    restart: unless-stopped
+    networks:
+      - ag_cloud
+
+
+ 
