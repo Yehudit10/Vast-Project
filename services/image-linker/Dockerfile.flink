@@ -4,82 +4,41 @@ FROM flink:1.19.3-scala_2.12-java11
 
 USER root
 
-# ---------- Build args / env ----------
-# Toggle NetFree CA install (true/false). Default: false for general developers.
-ARG USE_NETFREE=false
+# Add local CA (place netfree-ca.crt next to this Dockerfile before building)
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
 
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PATH="/opt/venv/bin:$PATH" \
-    DEBIAN_FRONTEND=noninteractive
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# ---------- System deps (robust with retries) ----------
-RUN set -eux; \
-    echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries; \
-    echo 'Acquire::http::Timeout "30";' > /etc/apt/apt.conf.d/80-timeouts; \
-    echo 'Acquire::https::Timeout "30";' >> /etc/apt/apt.conf.d/80-timeouts; \
-    apt-get update -o Acquire::CompressionTypes::Order::=gz && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates curl wget python3 python3-pip python3-venv && \
+# --- Install Python and tools ---
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv wget && \
     rm -rf /var/lib/apt/lists/*
 
-# ---------- Optional NetFree certs ----------
-# Always copy the local certs folder (may be empty). Keep a .gitkeep in repo.
-# This avoids COPY failing when certs/ doesn't exist on other machines.
-COPY certs/ /opt/certs/
-# If USE_NETFREE=true AND there are any *.crt files in /opt/certs, install them.
-# chmod 0644 is required so update-ca-certificates will pick them up reliably.
-RUN set -eux; \
-    if [ "${USE_NETFREE}" = "true" ] && find /opt/certs -maxdepth 1 -type f -name '*.crt' -print -quit | grep -q .; then \
-        echo "Configuring additional CA certificates from /opt/certs ..."; \
-        cp /opt/certs/*.crt /usr/local/share/ca-certificates/; \
-        chmod 0644 /usr/local/share/ca-certificates/*.crt; \
-        update-ca-certificates; \
-    else \
-        echo "Skipping extra CA certificates (USE_NETFREE=${USE_NETFREE})."; \
-    fi
-
-# ---------- Python venv ----------
-RUN python3 -m venv /opt/venv
-
-# ---------- Python deps ----------
-# apache-flink (PyFlink), YAML, HTTP client, MinIO SDK.
-# RUN pip install --no-cache-dir apache-flink==1.19.3 pyyaml requests minio
-
-# --- pip.conf 
-RUN rm -f /etc/pip.conf && cat > /etc/pip.conf <<'EOF'
-[global]
-index-url = https://pypi.org/simple
-trusted-host =
-  pypi.org
-  files.pythonhosted.org
-cert = /etc/ssl/certs/ca-certificates.crt
-timeout = 120
-retries = 5
-EOF
-
-RUN pip install --no-cache-dir --upgrade pip wheel setuptools \
- && pip install --no-cache-dir pycodestyle \
- && pip install --no-cache-dir apache-flink==1.19.3 pyyaml requests minio
-# ---------- Workdir ----------
+# Working directory
 WORKDIR /opt/app
 
-# ---------- Flink Kafka connector jars ----------
-# Keep explicit versions aligned with Flink 1.19.x
-RUN mkdir -p /opt/flink/lib && \
+# --- Add Kafka connector JAR ---
+    RUN mkdir -p /opt/flink/lib && \
     wget -v https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.2.0-1.19/flink-connector-kafka-3.2.0-1.19.jar -P /opt/flink/lib/ && \
     wget -v https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.7.0/kafka-clients-3.7.0.jar -P /opt/flink/lib/
 
-# ---------- Project files ----------
+# --- Virtual environment ---
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# --- Install Python dependencies ---
+RUN pip install --no-cache-dir apache-flink==1.19.3 pyyaml requests minio
+
+# --- Copy project files ---
 COPY job_linker.py /opt/app/job_linker.py
 COPY config /opt/app/config
 
-# ---------- Defaults ----------
+# --- Default environment variables ---
 ENV KAFKA_BROKERS=kafka:9092 \
     CONFIG_PATH=/opt/app/config/topics.yaml
 
-# ---------- Entrypoint ----------
+# --- Default command: stay idle (job submitted separately) ---
 CMD ["bash", "-c", "echo 'Flink Python environment ready.' && tail -f /dev/null"]
-

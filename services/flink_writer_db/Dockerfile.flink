@@ -1,9 +1,6 @@
 FROM flink:1.20.0-scala_2.12-java11
 USER root
 
-# COPY certs/*.crt /usr/local/share/ca-certificates/
-# RUN chmod 644 /usr/local/share/ca-certificates/*.crt && update-ca-certificates
-
 # Copy certs dir (may be empty) and trust *.crt if present
 COPY certs/ /tmp/certs/
 

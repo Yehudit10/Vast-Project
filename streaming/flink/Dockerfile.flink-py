@@ -1,31 +1,9 @@
 FROM flink:1.18-scala_2.12-java11
 
 USER root
-
-# --- Trust org CAs before any network access ---
-# Make sure 'certs/' exists in the build context (put a .gitkeep if empty).
-# COPY certs/ /usr/local/share/ca-certificates/
-# RUN find /usr/local/share/ca-certificates -type f ! -name '*.crt' -delete && \
-#     update-ca-certificates
-
-COPY certs/*.crt /usr/local/share/ca-certificates/
-RUN chmod 644 /usr/local/share/ca-certificates/*.crt \
- && update-ca-certificates
-
-
-# --- Harden APT: retries + timeouts ---
-# This prevents "short read / unexpected EOF" on flaky networks.
-RUN set -eux; \
-    printf 'Acquire::Retries "5";\nAcquire::http::Timeout "60";\nAcquire::https::Timeout "60";\n' \
-      > /etc/apt/apt.conf.d/80-retries; \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-      python3 python3-pip python3-venv curl ca-certificates && \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv curl && \
     rm -rf /var/lib/apt/lists/*
-        
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     python3 python3-pip python3-venv curl && \
-#     rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --no-cache-dir \
     "apache-flink==1.18.1" \
