@@ -1,25 +1,32 @@
 # app/router.py
+
 from fastapi import APIRouter, Depends
 from app.auth import require_auth
 from app.tables.files.router import router as files_router
 
 from app.tables.generic.router import build_generic_router
 from app.tables.task_thresholds.router import router as task_thresholds_router
-
+try:
+    from app.tables.ripeness_weekly_rollups_ts.router import router as ripeness_weekly_router
+except Exception:
+    # Router module is optional or may not be present in some environments.
+    ripeness_weekly_router = None
 
 
 def build_router(contract_store) -> APIRouter:
     api = APIRouter(
         prefix="/api",
         tags=["api"],
-        dependencies=[Depends(require_auth)],
+        # dependencies=[Depends(require_auth)],
+        dependencies=[],
     )
 
 
     api.include_router(files_router)
     api.include_router(task_thresholds_router)
+    if ripeness_weekly_router is not None:
+        api.include_router(ripeness_weekly_router)
     api.include_router(build_generic_router(contract_store))
 
     return api
-
 
