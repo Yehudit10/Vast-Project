@@ -77,7 +77,7 @@ COPY app.py model_registry.py /app/
 COPY adapters /app/adapters
 COPY models /app/models
 COPY weights /app/weights
-
+COPY models/soil_moisture/artifacts /app/artifacts
 
 EXPOSE 8004
 
