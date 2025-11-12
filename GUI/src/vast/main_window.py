@@ -12,6 +12,7 @@ from views.sensors_view import SensorsView
 from views.alerts_panel import AlertsPanel
 from views.notification_view import NotificationView
 from views.fruits_view import FruitsView
+from views.sound.sound_view import SoundView
 from views.ground_view import GroundView
 from views.auth_status_view import AuthStatusView
 from dashboard_api import DashboardApi
@@ -239,6 +240,7 @@ class MainWindow(QMainWindow):
         self.sensors_view = SensorsView(api, self)
         self.notification_view = NotificationView(self)
         self.fruits_view = FruitsView(api, self)
+        self.sound_view = SoundView(self)
         self.ground_view = GroundView(api, self)
         self.auth_status = AuthStatusView(api, self)
 
@@ -251,6 +253,7 @@ class MainWindow(QMainWindow):
         self.views = {
             "Home": self.home,
             "Sensors": self.sensors_view,
+            "Sound": self.sound_view,
             "Sensors - Live Data": self.sensors_status_summary,
             "Sensors - Sensor Health": self.sensors_health,
             "Sensors - Location Map": self.sensors_main,

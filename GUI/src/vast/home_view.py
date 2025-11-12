@@ -174,7 +174,3 @@ class HomeView(QWidget):
             print(f"[HomeView] Active alert: {normalized['alert_type']} "
                   f"from {normalized['device_id']} ({normalized['lat']}, {normalized['lon']})")
             self.alert_layer.add_or_update_alert(normalized)
-
-
-
-
