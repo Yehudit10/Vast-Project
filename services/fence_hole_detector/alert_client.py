@@ -10,7 +10,7 @@ from kafka.errors import TopicAlreadyExistsError, NoBrokersAvailable
 # --- Configuration (env-first) ---
 _BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "kafka:9092")
 _TOPIC = os.getenv("ALERTS_TOPIC", "alerts")
-_ALERT_TYPE = os.getenv("ALERT_TYPE", "fence_hole_detected")
+_ALERT_TYPE = os.getenv("ALERT_TYPE", "fence_hole")
 
 # You can tune these if you want faster failures during dev.
 _PRODUCER_KW = dict(

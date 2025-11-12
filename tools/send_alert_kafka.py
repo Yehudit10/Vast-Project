@@ -20,7 +20,7 @@ args = p.parse_args()
 payload = {
     # --- Required fields ---
     "alert_id": str(uuid.uuid4()),
-    "alert_type": args.alert_type,   # e.g. "fence_hole_detected" or "smoke_detected"
+    "alert_type": args.alert_type,   # e.g. "fence_hole" or "smoke_detected"
     "device_id": args.device_id,     # e.g. "camera-01"
     "started_at": (
         args.started_at

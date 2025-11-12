@@ -901,7 +901,7 @@ services:
       ALERT_ENABLED: "1"
       KAFKA_BOOTSTRAP: kafka:9092
       ALERTS_TOPIC: alerts
-      ALERT_TYPE: fence_hole_detected
+      ALERT_TYPE: fence_hole
     depends_on:
       kafka:
         condition: service_healthy
