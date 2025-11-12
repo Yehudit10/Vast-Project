@@ -1,0 +1,28 @@
+version: "3.8"  # docker-compose v1 parser requires explicit version
+
+services:
+  fruit_ripeness_alert:
+    build: .
+    working_dir: /app
+    command: ["python", "app.py"]  # run the built-in app from the image
+    environment:
+      - DB_API_BASE=http://db_api_service:8001
+      - DB_API_SERVICE_NAME=fruit_ripeness_alert
+      - DB_ADMIN_USER=admin
+      - DB_ADMIN_PASS=admin123
+      - DB_API_TOKEN_FILE=/app/secret/db_api_token
+      - KAFKA_BROKER=kafka:9092
+      - ALERT_TOPIC=alerts
+      - WINDOW_HOURS=168
+    volumes:
+      
+      - /opt/services/fruit_ripeness_alert/secret:/app/secret
+    networks:
+      
+      - ag_cloud
+
+networks:
+  
+  ag_cloud:
+    external: true
+    name: ag_cloud

@@ -221,3 +221,17 @@ def delete_file(bucket: str, object_key: str) -> bool:
     with session_scope() as s:
         row = s.execute(q, {"bucket": bucket, "object_key": object_key}).first()
         return bool(row)
+
+def db_query(query: str, params: Any = None):
+    """Generic helper to execute raw SQL and return rows as dictionaries."""
+    from app.db import session_scope
+    from sqlalchemy import text
+
+    with session_scope() as s:
+        if params is not None:
+            result = s.execute(text(query), params)
+        else:
+            result = s.execute(text(query))
+        
+        rows = result.mappings().all()
+        return [dict(r) for r in rows]

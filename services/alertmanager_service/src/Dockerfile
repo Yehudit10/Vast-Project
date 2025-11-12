@@ -3,14 +3,26 @@
 # ─────────────────────────────────────────────
 FROM python:3.11-slim
 
-# System CA tools (needed for optional NetFree certs)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Copy code (including optional ./certs)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY certs/*.crt /usr/local/share/ca-certificates/
+RUN chmod 644 /usr/local/share/ca-certificates/*.crt \
+ && update-ca-certificates
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
+RUN python -m pip install --upgrade --no-cache-dir pip setuptools wheel
+
+# Copy code
 COPY . .
 
 # If ./certs has any *.crt (at any depth) → add to system trust store; otherwise skip
