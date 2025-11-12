@@ -1,0 +1,29 @@
+# Dockerfile.airflow (Option A: bake scripts into the image)
+FROM apache/airflow:2.9.3-python3.11
+
+USER root
+
+# 1) Base setup: certificates + dos2unix (useful for Windows)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates dos2unix \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2) Netfree certificate (optional) — if file is missing, skip without failing
+COPY certs/netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+RUN test -s /usr/local/share/ca-certificates/netfree-ca.crt \
+    && update-ca-certificates || echo "No Netfree CA - skipping"
+
+# 3) Create directories and set permissions
+RUN mkdir -p /opt/airflow/dags /opt/airflow/scripts /opt/airflow/plugins /opt/airflow/logs \
+ && chown -R airflow:0 /opt/airflow \
+ && chmod -R g=u /opt/airflow
+
+# 4) Copy project scripts into the image
+#    Note: source path is ./scripts/ (not airflow/scripts)
+COPY --chown=airflow:0 scripts/ /opt/airflow/scripts/
+
+# 5) Convert CRLF to LF and make scripts executable
+RUN dos2unix /opt/airflow/scripts/*.sh || true \
+ && chmod +x /opt/airflow/scripts/*.sh || true
+
+USER airflow

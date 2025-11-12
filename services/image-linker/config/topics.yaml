@@ -1,9 +1,22 @@
 teams:
   air:
-    metadata_topic: dev-aerial-images-keys
-    minio_topic: image.new.aerial # imagery_image_camera-air
-    output_topic: image_new_aerial_connections # # imagery_image_camera-air_connections
+    metadata_topic: aerial_images_metadata
+    minio_topic: image.new.aerial 
+    output_topic: image_new_aerial_connections
+  security:
+    metadata_topic: dev-security-images-keys
+    minio_topic: image.new.security
+    output_topic: image_new_security_connections
+  
+  sounds:
+    metadata_topic: sounds_metadata
+    minio_topic: sound.new.sounds
+    output_topic: sound_new_sounds_connections
 
+  plants:
+    metadata_topic: sounds_ultra_metadata
+    minio_topic: sound.new.plants
+    output_topic: sound_new_plants_connections
 
   # fruits:
   #   metadata: dev-fruits-images-keys

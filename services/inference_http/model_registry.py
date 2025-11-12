@@ -1,15 +1,13 @@
-from typing import Any, Dict
 from adapters.fruit_defect_runner import FruitDefectRunner
-
-class FruitRunner:
-    def __init__(self):
-        self.impl = FruitDefectRunner()
-
-    def run(self, image_bytes: bytes, model_tag=None, extra=None) -> Dict[str, Any]:
-        return self.impl.run(image_bytes, model_tag=model_tag, extra=extra)
+from adapters.fruit_segmentation_runner import FruitSegmentationRunner
+from adapters.soil_moisture_runner import SoilMoistureRunner
 
 def get_model_runner(team: str):
     t = (team or "").lower()
-    if t == "fruit":
-        return FruitRunner()
+    if t == "fruit_defect":
+        return FruitDefectRunner()
+    if t == "camera":                      
+        return FruitSegmentationRunner()
+    if t == "soil_moisture":
+        return SoilMoistureRunner()
     raise ValueError(f"unknown TEAM {t}")

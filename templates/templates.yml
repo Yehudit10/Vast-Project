@@ -8,3 +8,19 @@ templates:
     category: security
     summary: "Person wearing a mask detected by ${device_id} at ${timestamp}"
     recommendation: "Verify the person’s authorization using the live feed."
+
+  fruit_ripeness_high:
+    category: agriculture
+    summary: "🍓 High fruit ripeness detected by ${device_id} (${confidence} ≥ ${threshold})"
+    recommendation: "Harvest or inspect the plantation area. Ripe/overripe fruits ratio: ${description}"
+
+  fence_hole:
+    category: security
+    summary: "🚧 Fence hole detected by ${device_id} in ${area} (conf ${confidence})"
+    recommendation: "Dispatch a patrol to ${area} and review recent footage."
+
+  
+  plant_drought_detected:
+    category: agriculture
+    summary: "🌿 Plant drought detected by ${device_id} in ${area} (severity ${severity}, confidence ${confidence})"
+    recommendation: "Check irrigation in ${area}. Status: ${watering_status}. Audio file: ${file}"

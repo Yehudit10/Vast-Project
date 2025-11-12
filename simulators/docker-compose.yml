@@ -10,15 +10,23 @@ services:
 
   sound-publisher:
     build: .
-    # image: data-publisher:latest  # or 'build: .' again if you prefer
     container_name: sound-publisher
-    env_file: .env.sound           # separate env file for sound topics/ids
+    env_file: .env.sound
     volumes:
       - ./data/sound/sounds:/data/sound/sounds:ro    
       - ./data/sound/metadata:/data/sound/metadata:ro     
     command: ["python", "-u", "/app/data_publisher.py"]
 
+  ultra-sound-publisher:
+    build: .
+    container_name: ultra-sound-publisher
+    env_file: .env.ultra
+    volumes:
+      - ./data/ultra-sound/sounds:/data/ultra-sound/sounds:ro
+      - ./data/ultra-sound/metadata:/data/ultra-sound/metadata:ro
+    command: ["python", "-u", "/app/data_publisher.py"]
+    
 networks:
   default:
     external: true
-    name: agcloud_ag_cloud
+    name: ag_cloud
