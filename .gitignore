@@ -84,3 +84,5 @@ runs_fence/y8s_cpu_v1_preds/**
 runs_fence/**/weights/*.onnx
 
 models/*.pt
+
+.coverage

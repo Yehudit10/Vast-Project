@@ -79,75 +79,75 @@ services:
   # Sound Metrics Service
   # -------------------------
 
-  # sound_metrics:
-  #   build:
-  #     context: ./services/sound_metrics
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - ADDR=0.0.0.0
-  #     - PORT=8005
-  #     - USE_UTC=false
-  #     - WINDOW_MIN=1
-  #     - STABLE_SEC=1
-  #     - PYTHONUNBUFFERED=1
+  sound_metrics:
+    build:
+      context: ./services/sound_metrics
+      dockerfile: Dockerfile
+    environment:
+      - ADDR=0.0.0.0
+      - PORT=8005
+      - USE_UTC=false
+      - WINDOW_MIN=1
+      - STABLE_SEC=1
+      - PYTHONUNBUFFERED=1
 
-  #     - MINIO_ENDPOINT=minio-hot:9000
-  #     - MINIO_ACCESS_KEY=minioadmin
-  #     - MINIO_SECRET_KEY=minioadmin123
-  #     - MINIO_BUCKET=sound
-  #     - MINIO_PREFIX=sounds/
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_BUCKET=sound
+      - MINIO_PREFIX=sounds/
 
-  #   command: [ "python", "-u", "src/metrics.py" ]
-  #   ports:
-  #     - "8005:8005"
-  #   depends_on:
-  #     - minio-hot
-  #   networks:
-  #     - ag_cloud
-  #   restart: unless-stopped
+    command: [ "python", "-u", "src/metrics.py" ]
+    ports:
+      - "8005:8005"
+    depends_on:
+      - minio-hot
+    networks:
+      - ag_cloud
+    restart: unless-stopped
 
 
   # -------------------------
   # Plant Stress Daily Batch
   # -------------------------
 
-  # plant_stress_daily:
-  #   build: ./services/plant_stress
-  #   env_file:
-  #     - ./services/plant_stress/.env
-  #   restart: "no"
-  #   environment:
-  #     MODEL_DIR: /models
-  #     CONFIDENCE_THRESHOLD: "0.60"
-  #     TF_CPP_MIN_LOG_LEVEL: "2"
-  #     TIMEZONE: Asia/Jerusalem
-  #     POSTGRES_DSN: postgresql://missions_user:pg123@postgres:5432/missions_db
-  #     MINIO_ENDPOINT: minio-hot:9000
-  #     MINIO_ACCESS_KEY: minioadmin
-  #     MINIO_SECRET_KEY: minioadmin123
-  #     MINIO_BUCKET: sound
-  #     MINIO_PREFIX: plants/
-  #     MINIO_SECURE: "false"
+  plant_stress_daily:
+    build: ./services/plant_stress
+    env_file:
+      - ./services/plant_stress/.env
+    restart: "no"
+    environment:
+      MODEL_DIR: /models
+      CONFIDENCE_THRESHOLD: "0.60"
+      TF_CPP_MIN_LOG_LEVEL: "2"
+      TIMEZONE: Asia/Jerusalem
+      POSTGRES_DSN: postgresql://missions_user:pg123@postgres:5432/missions_db
+      MINIO_ENDPOINT: minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sound
+      MINIO_PREFIX: plants/
+      MINIO_SECURE: "false"
 
-  #     # ==== Alerts → Kafka ====
-  #     ENABLE_ALERTS: "true"
-  #     KAFKA_BOOTSTRAP: "kafka:9092"
-  #     ALERT_TOPIC: "alerts"
-  #     ALERT_TYPE: "plant_drought_detected"
-  #     KAFKA_CLIENT_ID: "plant-stress-producer"
-  #   command: ["python","-u","/app/predict_minio_daily.py"]
-  #   volumes:
-  #     - "./services/plant_stress/models:/models:ro"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     minio-hot:
-  #       condition: service_healthy
-  #     mc-bootstrap:
-  #       condition: service_started
-  #     kafka:
-  #       condition: service_healthy
-  #   networks: [ag_cloud]
+      # ==== Alerts → Kafka ====
+      ENABLE_ALERTS: "true"
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      ALERT_TOPIC: "alerts"
+      ALERT_TYPE: "plant_drought_detected"
+      KAFKA_CLIENT_ID: "plant-stress-producer"
+    command: ["python","-u","/app/predict_minio_daily.py"]
+    volumes:
+      - "./services/plant_stress/models:/models:ro"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    networks: [ag_cloud]
 
   # -------------------------
   # MQTT + Kafka + Connect + Init
@@ -264,21 +264,21 @@ services:
       - runner
     restart: unless-stopped
 
-  # sensors_metrics:
-  #   build:
-  #     context: ./GUI
-  #     dockerfile: src/vast/services/Dockerfile
-  #   container_name: sensors_metrics
-  #   environment:
-  #     - SQLITE_DB=/data/app.db
-  #     - GATEWAY_URL=http://gateway:8000
-  #   volumes:
-  #     - ./GUI/data:/data:ro
-  #   depends_on:
-  #     - gateway
-  #   networks:
-  #     - ag_cloud
-  #   restart: unless-stopped
+  sensors_metrics:
+    build:
+      context: ./GUI
+      dockerfile: src/vast/services/Dockerfile
+    container_name: sensors_metrics
+    environment:
+      - SQLITE_DB=/data/app.db
+      - GATEWAY_URL=http://gateway:8000
+    volumes:
+      - ./GUI/data:/data:ro
+    depends_on:
+      - gateway
+    networks:
+      - ag_cloud
+    restart: unless-stopped
 
   # --------------------------
   # Prometheus / Grafana
@@ -606,67 +606,67 @@ services:
   # ------------------------
   # Classifier - Sounds
   # ------------------------
-  # sounds_classifier:
-  #   build:
-  #     context: ./services/sounds_classifier
-  #     dockerfile: Dockerfile.classifier-svc
-  #   container_name: sounds_classifier
-  #   restart: unless-stopped
-  #   environment:
-  #     # Runtime mode
-  #     - DEVICE=cpu
-  #     - BACKBONE=cnn14
+  sounds_classifier:
+    build:
+      context: ./services/sounds_classifier
+      dockerfile: Dockerfile.classifier-svc
+    container_name: sounds_classifier
+    restart: unless-stopped
+    environment:
+      # Runtime mode
+      - DEVICE=cpu
+      - BACKBONE=cnn14
 
-  #     # Model artifacts (must exist inside the image)
-  #     - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
-  #     - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
-  #     - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
+      # Model artifacts (must exist inside the image)
+      - CHECKPOINT=/app/classification/models/panns_data/Cnn14_mAP=0.431.pth
+      - HEAD=/app/classification/models/head/head_cnn14_rf.joblib
+      - HEAD_META=/app/classification/models/head/head_cnn14_rf.joblib.meta.json
 
-  #     # DB 
-  #     - WRITE_DB=false
-  #     - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
-  #     - DB_SCHEMA=agcloud_audio
-  #     - DB_RUN_ID=api-default
+      # DB 
+      - WRITE_DB=false
+      - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - DB_SCHEMA=agcloud_audio
+      - DB_RUN_ID=api-default
 
-  #     # Kafka 
-  #     - KAFKA_BROKERS=kafka:9092
-  #     - ALERTS_TOPIC=alerts
-  #     - ENABLE_ALERTS=true
+      # Kafka 
+      - KAFKA_BROKERS=kafka:9092
+      - ALERTS_TOPIC=alerts
+      - ENABLE_ALERTS=true
 
-  #     # MinIO 
-  #     - MINIO_ENDPOINT=minio-hot:9000
-  #     - MINIO_ACCESS_KEY=minioadmin
-  #     - MINIO_SECRET_KEY=minioadmin123
-  #     - MINIO_SECURE=false
+      # MinIO 
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=false
 
-  #     # Request validation
-  #     - ALLOWED_BUCKETS=imagery
-  #     - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
-  #     - MAX_BYTES=104857600
+      # Request validation
+      - ALLOWED_BUCKETS=imagery
+      - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
+      - MAX_BYTES=104857600
 
-  #     # Tuning params 
-  #     - UNKNOWN_THRESHOLD=0.4
-  #     - WINDOW_SEC=2.0
-  #     - HOP_SEC=0.5
-  #     - PAD_LAST=true
-  #     - AGG=mean
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     kafka:
-  #       condition: service_healthy
-  #     mc-bootstrap:
-  #       condition: service_started
-  #   ports:
-  #     - "8088:8088"
-  #   networks:
-  #     - ag_cloud
-  #   healthcheck:
-  #     test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health').read()" ]
-  #     interval: 45s
-  #     timeout: 5s
-  #     retries: 10
-  #     start_period: 20s
+      # Tuning params 
+      - UNKNOWN_THRESHOLD=0.4
+      - WINDOW_SEC=2.0
+      - HOP_SEC=0.5
+      - PAD_LAST=true
+      - AGG=mean
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+    ports:
+      - "8088:8088"
+    networks:
+      - ag_cloud
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8088/health').read()" ]
+      interval: 45s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   # --------------------------
   # DB API Service
@@ -734,36 +734,36 @@ services:
     networks:
       - ag_cloud
 
-  # ripeness-api:
-  #   build:
-  #     context: ./services/ripeness-ml
-  #     dockerfile: deploy/Dockerfile
-  #   image: ripeness-api:latest
-  #   environment:
-  #     - PGHOST=postgres
-  #     - PGPORT=5432
-  #     - PGDATABASE=missions_db
-  #     - PGUSER=missions_user
-  #     - PGPASSWORD=pg123
-  #     - MINIO_ENDPOINT=minio-hot:9000
-  #     - MINIO_SECURE=false
-  #     - MINIO_ACCESS_KEY=minioadmin
-  #     - MINIO_SECRET_KEY=minioadmin123
-  #     - MODEL_NAME=best_conditional
-  #     - BATCH_LIMIT=500
-  #     - FRUITS=Apple,Banana,Orange
-  #   depends_on:
-  #     - postgres
-  #     - minio-hot
-  #   volumes:
-  #     - ./services/ripeness-ml/checkpoints:/app/checkpoints
-  #     - ./services/ripeness-ml/configs:/app/configs
-  #     - ./services/ripeness-ml/model:/app/model
-  #   container_name: ripeness-api
-  #   networks: [ ag_cloud ]
-  #   ports:
-  #     - "8091:8088"
-  #   restart: unless-stopped
+  ripeness-api:
+    build:
+      context: ./services/ripeness-ml
+      dockerfile: deploy/Dockerfile
+    image: ripeness-api:latest
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=missions_db
+      - PGUSER=missions_user
+      - PGPASSWORD=pg123
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_SECURE=false
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MODEL_NAME=best_conditional
+      - BATCH_LIMIT=500
+      - FRUITS=Apple,Banana,Orange
+    depends_on:
+      - postgres
+      - minio-hot
+    volumes:
+      - ./services/ripeness-ml/checkpoints:/app/checkpoints
+      - ./services/ripeness-ml/configs:/app/configs
+      - ./services/ripeness-ml/model:/app/model
+    container_name: ripeness-api
+    networks: [ ag_cloud ]
+    ports:
+      - "8091:8088"
+    restart: unless-stopped
  
   # --------------------------
   # Flink JobManager & TaskManager
