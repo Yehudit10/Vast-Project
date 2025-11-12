@@ -1,7 +1,0 @@
-__pycache__/
-*.onnx
-datasets/
-*.png
-.venv/
-venv/
-ENV/
