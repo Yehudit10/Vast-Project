@@ -7,7 +7,11 @@ INSERT INTO devices (device_id, model, owner, active) VALUES
   ('dev-c','rover-y','TeamB',true),
   ('dev-d','rover-y','TeamB',true),
   ('dev-e','sensor-z','TeamC',true),
-  ('dev-f','sensor-z','TeamC',true)
+  ('dev-f','sensor-z','TeamC',true),
+  ('mic-1','sound-a','TeamD',true),
+  ('mic-2','sound-a','TeamD',true),
+  ('mic-33','sound-a','TeamD',true),
+  ('mic-u-2','sound-ul','TeamD',true)
 ON CONFLICT DO NOTHING;
 
 
