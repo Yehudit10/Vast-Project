@@ -3,14 +3,13 @@
 BEGIN;
 
 -- 1) Schema
-DROP SCHEMA IF EXISTS agcloud_audio CASCADE;
-CREATE SCHEMA agcloud_audio;
+CREATE SCHEMA IF NOT EXISTS agcloud_audio;
 
 -- Use schema for subsequent CREATEs
 SET search_path TO agcloud_audio, public;
 
 -- 2) runs: per-run metadata
-CREATE TABLE runs (
+CREATE TABLE IF NOT EXISTS runs (
   run_id        TEXT PRIMARY KEY,
   started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   finished_at   TIMESTAMPTZ,
@@ -32,7 +31,7 @@ CREATE TABLE runs (
 );
 
 -- 3) file_aggregates: final per-file outputs; references public.files(file_id)
-CREATE TABLE file_aggregates (
+CREATE TABLE IF NOT EXISTS file_aggregates (
   run_id                 TEXT   NOT NULL,
   file_id                BIGINT NOT NULL,
 
