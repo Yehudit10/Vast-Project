@@ -1,5 +1,5 @@
 # app/router.py
-
+# from app.auth import require_uth
 from fastapi import APIRouter, Depends
 from app.auth import require_auth
 from app.tables.files.router import router as files_router
@@ -23,5 +23,3 @@ def build_router(contract_store) -> APIRouter:
     api.include_router(build_generic_router(contract_store))
 
     return api
-
-
