@@ -38,18 +38,6 @@ def create_or_upsert_file(payload: FilesCreate):
     repo.upsert_file(payload.model_dump(by_alias=True))
     return {"status": "ok"}
 
-
-# @router.get("/", summary="List all files")
-# def list_files(
-#     bucket: Optional[str] = None,
-#     device_id: Optional[str] = None,
-#     limit: int = Query(50, ge=1, le=500),
-# ):
-#     if bucket is not None:
-#         bucket = unquote(bucket)
-#     rows = repo.list_files(bucket, device_id, limit)
-#     return [_attach_url_if_possible(r) for r in rows]
-
 @router.get("/", summary="List all file aggregates with filters")
 def list_file_aggregates(
     run_id: Optional[str] = None,
@@ -86,7 +74,6 @@ def list_file_aggregates(
     }
     order_clause = sort_map.get(sort_by, "fa.processing_ms DESC")
 
-    # ✅ הסר bucket ו-object_key שלא קיימים בטבלה
     query = f"""
     SELECT 
         f.file_id,
@@ -99,9 +86,11 @@ def list_file_aggregates(
         fa.head_pred_prob,
         fa.processing_ms,
         fa.num_windows,
-        fa.agg_mode
+        fa.agg_mode,
+        d.device_id 
     FROM agcloud_audio.file_aggregates fa
     JOIN agcloud_audio.files f ON fa.file_id = f.file_id
+    LEFT JOIN devices d ON f.device_id = d.device_id
     {where_clause}
     ORDER BY {order_clause}
     LIMIT :limit;
