@@ -16,47 +16,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core fonts-noto-core fonts-noto-color-emoji\
     && rm -rf /var/lib/apt/lists/*
 
-COPY certs/ /usr/local/share/ca-certificates/
-RUN find /usr/local/share/ca-certificates -type f ! -name '*.crt' -delete && \
-    update-ca-certificates
-
-# Make Python/pip/requests use the system trust store explicitly
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
-    PIP_DEFAULT_TIMEOUT=120
-
-# COPY certs/*.crt /usr/local/share/ca-certificates/
-# RUN update-ca-certificates || true
-# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-#   REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-#   PIP_CERT=/etc/ssl/certs/ca-certificates.crt
-
 # (optional) minimal extra XCB deps for PyQt
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-xinerama0 libxcb-cursor0 libxcb-keysyms1 libxcb-render-util0 \
     libxcb-randr0 && rm -rf /var/lib/apt/lists/*
 
-# # ───────── optional CA certs ─────────
-# COPY certs /app/certs
-# RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
-#     echo "Configuring NetFree certificates..."; \
-#     cp ./certs/*.crt /usr/local/share/ca-certificates/; \
-#     update-ca-certificates; \
-#     fi
+# ───────── optional CA certs ─────────
+COPY certs /app/certs
+RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+    echo "Configuring NetFree certificates..."; \
+    cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+    update-ca-certificates; \
+    fi
 
-
-
-# RUN set -eux; \
-#     mkdir -p /opt; \
-#     wget --tries=3 --timeout=30 -O /tmp/novnc.tar.gz \
-#       https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz; \
-#     tar xzf /tmp/novnc.tar.gz -C /opt; \
-#     mv /opt/noVNC-1.4.0 /opt/noVNC; \
-#     rm -f /tmp/novnc.tar.gz; \
-#     git clone --depth 1 https://github.com/novnc/websockify /opt/noVNC/utils/websockify
-
-
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # ───────── noVNC for remote GUI ─────────
 RUN mkdir -p /opt && \
@@ -68,20 +43,20 @@ RUN mkdir -p /opt && \
 
 # ───────── Python deps ─────────
 COPY requirements.txt /app/requirements.txt
-# RUN pip install --no-cache-dir -r requirements.txt
-
-# Add a small retry loop to handle flaky networks (especially large wheels like PyQt6)
-RUN set -eux; \
-    for i in 1 2 3 4 5; do \
-        if pip install --no-cache-dir -r requirements.txt; then \
-            echo "pip install succeeded on attempt $i"; \
-            break; \
-        fi; \
-        echo "pip install failed on attempt $i; sleeping before retry..."; \
-        sleep $((i*5)); \
-    done
-
-
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir \
+        "PyQt6==6.8.0" \
+        "PyQt6-WebEngine==6.8.0" \
+        "argon2-cffi" \
+        "requests" \
+        "numpy" \
+        --extra-index-url https://pypi.org/simple \
+        --prefer-binary \
+        --break-system-packages \
+    && pip show PyQt6 PyQt6-WebEngine argon2-cffi
+RUN pip install plotly
+RUN pip install PyJWT
 # ───────── app setup ─────────
 RUN useradd -m -s /bin/bash appuser \
     && mkdir -p /app /tmp/.X11-unix \
