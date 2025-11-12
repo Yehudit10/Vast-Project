@@ -939,7 +939,35 @@ services:
     ports:
       - "8012:8004"
     restart: unless-stopped
+  soil-inference-http:
+    build:
+      context: ./services/inference_http
+      dockerfile: Dockerfile
+    environment:
 
+      - TEAM=soil_moisture
+      - WEIGHTS_PATH=/app/weights/soil_moisture_best.onnx
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=0
+      - PG_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=irrigation.control
+      - KAFKA_DLT=irrigation.control.dlq
+
+
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+      - ./services/inference_http/adapters:/app/adapters
+      - ./services/inference_http/soil_moisture:/app/soil_moisture
+    depends_on:
+      - minio-hot
+      - postgres
+    ports:
+      - "8013:8004"
+    networks: [ag_cloud]
+    restart: unless-stopped
 
   # --------------------------
   # Flink Jobs
@@ -994,6 +1022,28 @@ services:
       - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
     command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.camera --team camera --http-url http://camera-inference-http:8004/infer_json --group-id http-dispatcher-camera --dlq-topic dlq.inference.http; tail -f /dev/null" ]
     restart: always
+
+  flink-dispatcher-soil:
+    image: agcloud-flink-py:1.18
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      soil-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=image.new.ground
+      - TEAM=soil_moisture
+      - HTTP_URL=http://soil-inference-http:8004/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-soil
+      - PARALLELISM=1
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
+    command: [ "bash", "-lc", "set -e; echo 'Waiting...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/... --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic image.new.ground --team soil_moisture --http-url http://soil-inference-http:8004/infer_json --group-id http-dispatcher-soil --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+  
 
   flink-alerts-job:
     build:

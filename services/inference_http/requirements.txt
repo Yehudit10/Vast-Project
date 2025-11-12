@@ -11,3 +11,13 @@ ultralytics==8.2.34
 boto3
 pillow
 numpy==1.26.4
+pydantic
+onnxruntime==1.20.0
+kafka-python==2.0.2
+psycopg2-binary==2.9.10
+prometheus_client==0.21.0
+PyYAML==6.0.2
+python-dotenv==1.0.1
+requests==2.32.3
+python-multipart==0.0.6
+confluent_kafka==2.12.0

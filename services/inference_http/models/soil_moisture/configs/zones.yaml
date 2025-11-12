@@ -1,0 +1,12 @@
+zones:
+  ZONE_A:
+    dry_ratio_high: 0.35
+    dry_ratio_low: 0.25
+    min_patches: 2
+    duration_min: 10
+
+  ZONE_B:
+    dry_ratio_high: 0.40
+    dry_ratio_low: 0.30
+    min_patches: 2
+    duration_min: 12
