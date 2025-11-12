@@ -1,0 +1,55 @@
+# ==== OS / IDE ====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ==== Node ====
+node_modules/
+dist/
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.so
+*.dylib
+
+# ==== Virtual envs ====
+.venv/
+venv/
+ENV/
+env/
+
+# ==== Packaging / build ====
+build/
+*.egg-info/
+
+# ==== Environment / Secrets ====
+.env
+.env.*
+
+# ==== Data / Notebooks / Logs ====
+*.log
+*.ipynb
+.ipynb_checkpoints/
+
+# ==== Artifacts / Wheels / Models ====
+artifacts/
+.wheels/
+wheels/
+*.whl
+*.pt
+*.pth
+*.bin
+
+# ==== Coverage reports ====
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ==== gRPC generated (נוצרים בבילד דוקר) ====
+server/embed_pb2.py
+server/embed_pb2_grpc.py

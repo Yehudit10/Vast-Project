@@ -30,7 +30,7 @@ except Exception:  # pragma: no cover
 #        CONFIG
 # =========================
 # --- HTTP API ---
-DB_API_BASE = os.getenv("DB_API_BASE", "http://host.docker.internal:8001")
+DB_API_BASE = os.getenv("DB_API_BASE", "http://db_api_service:8001")
 DB_API_AUTH_MODE = os.getenv("DB_API_AUTH_MODE", "service")  # "service" | "bearer"
 DB_API_TOKEN_FILE = os.getenv("DB_API_TOKEN_FILE", "/app/secrets/db_api_token")
 DB_API_TOKEN = os.getenv("DB_API_TOKEN", "auto")

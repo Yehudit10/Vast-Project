@@ -1,0 +1,9 @@
+torch>=2.2.0
+torchvision==0.23.0
+numpy==2.1.1
+Pillow==10.4.0
+opencv-python==4.10.0.84
+scikit-learn==1.5.2
+tqdm==4.66.5
+PyYAML==6.0.2
+onnx==1.19.0
