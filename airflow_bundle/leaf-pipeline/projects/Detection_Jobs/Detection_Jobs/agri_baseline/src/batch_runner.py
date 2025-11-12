@@ -1,263 +1,3 @@
-# # agri_baseline/src/batch_runner.py
-# # Max line length: 100
-
-# from __future__ import annotations
-
-# import json
-# from dataclasses import asdict, is_dataclass
-# from datetime import datetime, timezone
-# from pathlib import Path
-# from typing import Tuple
-
-# from agri_baseline.src.pipeline.utils import (
-#     load_image,
-#     image_id_from_path,
-#     clamp_bbox,
-# )
-# from agri_baseline.src.pipeline.db import (
-#     get_engine,
-#     INSERT_DET,
-#     INSERT_COUNT,
-#     INSERT_QA,
-# )
-# from agri_baseline.src.detectors.disease_model import DiseaseDetector
-
-
-# class BatchRunner:
-#     """
-#     End-to-end runner:
-#     - Load image
-#     - Run disease detector
-#     - Normalize detections
-#     - Write anomalies / counts / QA to RelDB
-#     """
-
-#     def __init__(self, mission_id: int = 1, device_id: str = "device-1") -> None:
-#         self.mission_id = mission_id
-#         self.device_id = device_id  # TEXT FK per schema v2
-#         self.engine = get_engine()
-#         self.detector = DiseaseDetector()
-
-#     # ----------------------------
-#     # Public API
-#     # ----------------------------
-
-#     def run_folder(self, folder: Path | str) -> None:
-#         """
-#         Run pipeline on all images within a folder (non-recursive).
-#         Skips non-image files; prints minimal info.
-#         """
-#         folder = Path(folder)
-#         assert folder.exists(), f"Folder not found: {folder.resolve()}"
-
-#         image_paths = sorted(
-#             p for p in folder.iterdir() if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
-#         )
-
-#         total = 0
-#         total_dets = 0
-#         for img_path in image_paths:
-#             try:
-#                 n = self.process_image(img_path)
-#                 total += 1
-#                 total_dets += n
-#             except Exception as ex:
-#                 # Keep output tidy; prefer structured logging in production
-#                 print(f"[WARN] Failed on {img_path.name}: {ex}")
-
-#         # Record a small QA summary
-#         qa = {
-#             "images_processed": total,
-#             "detections_total": total_dets,
-#             "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-#         }
-#         with self.engine.begin() as conn:
-#             conn.execute(INSERT_QA, {"details": json.dumps(qa)})
-
-#     def process_image(self, img_path: Path | str) -> int:
-#         """
-#         Run pipeline on a single image, write detections and a simple per-image score.
-#         Returns number of detections written.
-#         """
-#         img_path = Path(img_path)
-#         img, W, H = load_image(img_path)
-
-#         image_id = image_id_from_path(img_path)
-#         dets = self.detector.run(img)
-
-#         print(f"{image_id}: found {len(dets)} disease spots")
-
-#         # Write detections as anomalies
-#         written = 0
-#         for d in dets:
-#             x, y, w, h = self._extract_bbox(d)
-#             x, y, w, h = clamp_bbox(int(x), int(y), int(w), int(h), W, H)
-#             cx = x + w / 2.0
-#             cy = y + h / 2.0
-
-#             area = float(getattr(d, "area", w * h))
-#             label = str(getattr(d, "label", "disease"))
-#             conf = float(getattr(d, "confidence", 1.0))
-
-#             details = {
-#                 "image_id": image_id,
-#                 "label": label,
-#                 "bbox": [x, y, w, h],
-#                 "area": area,
-#                 "confidence": conf,
-#             }
-#             if is_dataclass(d):
-#                 details["raw_detection"] = asdict(d)
-
-#             with self.engine.begin() as conn:
-#                 conn.execute(
-#                     INSERT_DET,
-#                     dict(
-#                         mission_id=self.mission_id,
-#                         device_id=self.device_id,  # TEXT FK
-#                         ts=datetime.now(timezone.utc),
-#                         anomaly_type_id=1,  # seeded below
-#                         severity=conf,
-#                         details=json.dumps(details),
-#                         wkt_geom=f"POINT({cx} {cy})",
-#                     ),
-#                 )
-#                 written += 1
-
-#         # Per-image score → tile_stats (tile_id TEXT, geom POLYGON)
-#         if dets:
-#             anomaly_score = float(len(dets))
-#             poly_wkt = self._make_square_polygon_wkt(W / 2.0, H / 2.0, size=1.0)
-#             with self.engine.begin() as conn:
-#                 conn.execute(
-#                     INSERT_COUNT,
-#                     dict(
-#                         mission_id=self.mission_id,
-#                         tile_id=image_id,  # TEXT per schema v2
-#                         anomaly_score=anomaly_score,
-#                         wkt_geom=poly_wkt,  # POLYGON
-#                     ),
-#                 )
-
-#         return written
-
-#     # ----------------------------
-#     # Internals
-#     # ----------------------------
-
-#     @staticmethod
-#     def _extract_bbox(d) -> Tuple[float, float, float, float]:
-#         """
-#         Normalize bbox to (x, y, w, h). Supports:
-#         - d.x, d.y, d.w, d.h
-#         - d.bbox == (x, y, w, h)
-#         - d.xmin, d.ymin, d.xmax, d.ymax
-#         - d.left, d.top, d.width, d.height
-#         """
-#         if all(hasattr(d, a) for a in ("x", "y", "w", "h")):
-#             return float(d.x), float(d.y), float(d.w), float(d.h)
-
-#         if hasattr(d, "bbox"):
-#             bx = list(d.bbox)
-#             if len(bx) != 4:
-#                 raise ValueError(f"Unexpected bbox length: {len(bx)} in {bx}")
-#             x, y, w, h = map(float, bx)
-#             return x, y, w, h
-
-#         if all(hasattr(d, a) for a in ("xmin", "ymin", "xmax", "ymax")):
-#             x1, y1, x2, y2 = float(d.xmin), float(d.ymin), float(d.xmax), float(d.ymax)
-#             return x1, y1, max(0.0, x2 - x1), max(0.0, y2 - y1)
-
-#         if all(hasattr(d, a) for a in ("left", "top", "width", "height")):
-#             return float(d.left), float(d.top), float(d.width), float(d.height)
-
-#         raise AttributeError(
-#             "Detection bbox fields missing. Supported: "
-#             "(x,y,w,h) or bbox or (xmin,ymin,xmax,ymax) or (left,top,width,height)."
-#         )
-
-#     @staticmethod
-#     def _make_square_polygon_wkt(cx: float, cy: float, size: float = 1.0) -> str:
-#         """
-#         Build a tiny square Polygon around (cx, cy) in WKT, closed ring.
-#         PostGIS expects Polygon for tile_stats.geom (SRID 4326).
-#         """
-#         x1, y1 = cx - size, cy - size
-#         x2, y2 = cx + size, cy + size
-#         return f"POLYGON(({x1} {y1}, {x2} {y1}, {x2} {y2}, {x1} {y2}, {x1} {y1}))"
-
-
-# # ------------- CLI helper -------------
-
-# # def main() -> None:
-# #     """
-# #     Local runner:
-# #     python -m agri_baseline.src.batch_runner --input <path-to-image-or-folder>
-# #     """
-# #     import argparse
-
-# #     parser = argparse.ArgumentParser(description="Run disease detection pipeline.")
-# #     parser.add_argument("--log-level", default="INFO", help="logging level (ignored by runner)")
-
-# #     parser.add_argument("--input", type=str, required=True, help="Image file or folder")
-# #     parser.add_argument("--mission", type=int, default=1, help="Numeric mission ID")
-# #     parser.add_argument("--device", type=str, default="device-1", help="Text device ID")
-# #     args = parser.parse_args()
-
-# #     runner = BatchRunner(mission_id=args.mission, device_id=args.device)
-# #     in_path = Path(args.input)
-# #     if in_path.is_dir():
-# #         runner.run_folder(in_path)
-# #     else:
-# #         runner.process_image(in_path)
-
-
-# # if __name__ == "__main__":
-# #     main()
-# def main() -> None:
-#     """
-#     Local runner:
-#     python -m agri_baseline.src.batch_runner --input <path-to-image-or-folder>
-#     """
-#     import argparse
-
-#     parser = argparse.ArgumentParser(description="Run disease detection pipeline.")
-#     parser.add_argument("--log-level", type=str, default="INFO",
-#                         help="logging level (ignored by runner)")
-
-#     parser.add_argument("--input", type=str, required=True,
-#                         help="Image file or folder")
-#     # קולט גם מחרוזת וגם מספר, וממיר ל-int תקני
-#     parser.add_argument("--mission", type=str, default="baseline",
-#                         help=f"Mission name/id ({', '.join(MISSION_ALIASES)} or numeric id)")
-#     parser.add_argument("--device", type=str, default="cpu",
-#                         choices=["cpu", "cuda"],
-#                         help="device to use")
-
-#     args = parser.parse_args()
-
-#     mission_id = parse_mission(args.mission)
-
-#     in_path = Path(args.input)
-#     if not in_path.exists():
-#         raise FileNotFoundError(f"input does not exist: {in_path}")
-#     if in_path.is_dir():
-#         # אופציונלי: הגנה על תיקייה ריקה
-#         has_files = any(in_path.rglob("*"))
-#         if not has_files:
-#             raise RuntimeError(f"input folder is empty: {in_path}")
-
-#     runner = BatchRunner(mission_id=mission_id, device_id=args.device)
-#     if in_path.is_dir():
-#         runner.run_folder(in_path)
-#     else:
-#         runner.process_image(in_path)
-
-# if __name__ == "__main__":
-#     main()
-# agri_baseline/src/batch_runner.py
-# Max line length: 100
-
 from __future__ import annotations
 
 from sqlalchemy import text
@@ -268,6 +8,7 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Tuple
+from zoneinfo import ZoneInfo 
 
 from agri_baseline.src.pipeline.utils import (
     load_image,
@@ -364,6 +105,7 @@ class BatchRunner:
         self.fallback_device_id = device_id  # used only if filename parsing fails
         self.engine = get_engine()
         self.detector = DiseaseDetector()
+        self.origin_map = self._load_origin_map(os.getenv("ORIGIN_MANIFEST"))
 
         # anomaly_types entry for LEAF_DISEASE (used only for anomalies table)
         self.leaf_anomaly_type_id = self._ensure_anomaly_type(
@@ -373,6 +115,27 @@ class BatchRunner:
     # ----------------------------
     # Public API
     # ----------------------------
+    @staticmethod
+    def _load_origin_map(path: str | None) -> dict[str, str]:
+        """
+        קורא קובץ טאב: <filename>\t<inner_dir>.
+        מחזיר {} אם אין קובץ/כשל.
+        """
+        mapping: dict[str, str] = {}
+        if not path or not os.path.exists(path):
+            return mapping
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.rstrip("\n")
+                    if not line or "\t" not in line:
+                        continue
+                    fname, inner = line.split("\t", 1)
+                    if fname and inner:
+                        mapping[fname] = inner
+        except Exception:
+            pass
+        return mapping
 
     @staticmethod
     def _parse_device_and_ts_from_name(img_path: Path) -> tuple[str, datetime]:
@@ -425,6 +188,9 @@ class BatchRunner:
         and anomalies (only if sick). Returns number of detections processed.
         """
         img_path = Path(img_path)
+        
+        source_path = str(img_path.resolve())
+
         # img_path = Path(img_path)
 
 # Parse from filename (with fallback for your current crop file names)
@@ -438,8 +204,41 @@ class BatchRunner:
             except Exception:
                 det_ts = datetime.now(timezone.utc)
 
-        # Parse from filename
+    
         device_id, det_ts = self._parse_device_and_ts_from_name(img_path)
+
+   
+        local_tz  = os.getenv("LOCAL_TZ", "Asia/Jerusalem")
+        ts_local  = det_ts.astimezone(ZoneInfo(local_tz))
+        date_path = ts_local.strftime("%Y/%m/%d")  # YYYY/MM/DD
+
+    
+        rid_env = (os.getenv("MINIO_RID") or os.getenv("RID") or "").strip("/")
+        date_path = None
+        run_id = None
+        if rid_env:
+            parts = rid_env.split("/")
+            if len(parts) == 4 and all(parts):
+                y, m, d, hhmm = parts
+                date_path = f"{y}/{m}/{d}"
+                run_id = hhmm
+
+       
+        if not date_path or not run_id:
+            local_tz  = os.getenv("LOCAL_TZ", "Asia/Jerusalem")
+            ts_local  = det_ts.astimezone(ZoneInfo(local_tz))
+            date_path = ts_local.strftime("%Y/%m/%d")  # YYYY/MM/DD
+            run_id    = os.getenv("RUN_ID") or os.getenv("MINIO_RUN_ID")
+            if not run_id:
+                mp = (os.getenv("MINIO_PREFIX") or "").strip("/")
+                last = mp.split("/")[-1] if mp else ""
+                if last and len(last) == 4 and last.isdigit():
+                    run_id = last
+            if not run_id:
+                run_id = ts_local.strftime("%H%M")
+
+        bucket      = os.getenv("MINIO_BUCKET", "imagery")
+        prefix_root = os.getenv("MINIO_PREFIX_ROOT", "leaves")
 
         # Ensure FKs exist
         self._ensure_device(device_id)
@@ -463,6 +262,21 @@ class BatchRunner:
             label = str(getattr(d, "label", "disease"))
             conf = float(getattr(d, "confidence", 1.0))
 
+            # key בפורמט: imagery/leaves/YYYY/MM/DD/RUNID/crop/leaf{index}/<filename>
+            # leaf_folder = f"leaf{written + 1}"
+            # minio_key   = f"{bucket}/{prefix_root}/{date_path}/{run_id}/crop/{leaf_folder}/{img_path.name}"
+            # minio_url   = self._minio_url_from_key(minio_key)
+            # קבלת שם התיקייה הפנימית מהמניפסט (הקובץ נשאר בשם המקורי!)
+            inner_dir = self.origin_map.get(img_path.name)
+
+            if inner_dir:
+                minio_key = f"{bucket}/{prefix_root}/{date_path}/{run_id}/crop/{inner_dir}/{img_path.name}"
+            else:
+                # fallback נדיר אם אין במניפסט (עדיין עובד, פשוט בלי התיקייה):
+                minio_key = f"{bucket}/{prefix_root}/{date_path}/{run_id}/crop/{img_path.name}"
+
+            minio_url = self._minio_url_from_key(minio_key)
+
             # Build details JSON (used only in anomalies)
             details = {
                 "image_id": image_id,
@@ -472,8 +286,9 @@ class BatchRunner:
                 "confidence": conf,
                 "device_id": device_id,
                 "ts": det_ts.isoformat(),
+                "source_path": source_path, 
+                "minio_key": minio_key,      
             }
-            minio_url = self._minio_url(img_path)
             if minio_url:
                 details["minio_url"] = minio_url
             details.setdefault("crop_type", None)
@@ -629,7 +444,7 @@ class BatchRunner:
 
         if all(hasattr(d, a) for a in ("xmin", "ymin", "xmax", "ymax")):
             x1, y1, x2, y2 = float(d.xmin), float(d.ymin), float(d.xmax), float(d.ymax)
-            return x1, y1, max(0.0, x2 - x1), max(0.0, y2 - y1)
+            return x1, y1, max(0.0, x2 - y1), max(0.0, y2 - y1)
 
         if all(hasattr(d, a) for a in ("left", "top", "width", "height")):
             return float(d.left), float(d.top), float(d.width), float(d.height)
@@ -638,6 +453,33 @@ class BatchRunner:
             "Detection bbox fields missing. Supported: "
             "(x,y,w,h) or bbox or (xmin,ymin,xmax,ymax) or (left,top,width,height)."
         )
+
+    @staticmethod
+    def _minio_url_from_key(key: str) -> str | None:
+        """
+        בונה URL מלא. אם ה-key כבר מתחיל בשם הבאקט (למשל 'imagery/...'),
+        לא נוסיף את הבאקט שוב.
+        """
+        endpoint = os.getenv("MINIO_ENDPOINT")
+        bucket   = os.getenv("MINIO_BUCKET")
+        if not endpoint or not bucket:
+            return None
+        endpoint = endpoint.rstrip("/")
+
+        if key.startswith(f"{bucket}/"):
+            return f"{endpoint}/{key}"
+        return f"{endpoint}/{bucket}/{key}"
+
+    @staticmethod
+    def _minio_key_from_source_path(source_path: str) -> str:
+        """
+        ממיר את נתיב המקור המקומי ל-key (עם נרמול ל'/' בלבד),
+        ומשלב MINIO_PREFIX אם הוגדר.
+        """
+        prefix = os.getenv("MINIO_PREFIX", "").strip("/")
+        posix = source_path.replace("\\", "/")
+        posix = posix.lstrip("/")
+        return f"{prefix}/{posix}" if prefix else posix
 
     @staticmethod
     def _minio_url(img_path: Path) -> str | None:
