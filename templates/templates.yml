@@ -13,6 +13,12 @@ templates:
     category: agriculture
     summary: "🍓 High fruit ripeness detected by ${device_id} (${confidence} ≥ ${threshold})"
     recommendation: "Harvest or inspect the plantation area. Ripe/overripe fruits ratio: ${description}"
+
+  fence_hole:
+    category: security
+    summary: "🚧 Fence hole detected by ${device_id} in ${area} (conf ${confidence})"
+    recommendation: "Dispatch a patrol to ${area} and review recent footage."
+
   
   plant_drought_detected:
     category: agriculture
