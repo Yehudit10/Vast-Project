@@ -11,7 +11,7 @@ services:
   sound-publisher:
     build: .
     container_name: sound-publisher
-    env_file: .env.sound          
+    env_file: .env.sound
     volumes:
       - ./data/sound/sounds:/data/sound/sounds:ro    
       - ./data/sound/metadata:/data/sound/metadata:ro     
@@ -22,8 +22,8 @@ services:
     container_name: ultra-sound-publisher
     env_file: .env.ultra
     volumes:
-      - ./data/ultra/sounds:/data/ultra/sounds:ro
-      - ./data/ultra/metadata:/data/metadata:ro
+      - ./data/ultra-sound/sounds:/data/ultra-sound/sounds:ro
+      - ./data/ultra-sound/metadata:/data/ultra-sound/metadata:ro
     command: ["python", "-u", "/app/data_publisher.py"]
     
 networks:

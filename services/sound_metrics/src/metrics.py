@@ -6,13 +6,11 @@ import numpy as np, soundfile as sf
 from prometheus_client import Gauge, start_http_server
 from minio import Minio
 from io import BytesIO
-
 try:
     from pydub import AudioSegment
     HAVE_PYDUB = True
 except Exception:
     HAVE_PYDUB = False
-
 # === Environment ===
 ADDR           = os.getenv("ADDR", "0.0.0.0")
 PORT           = int(os.getenv("PORT", "8005"))
@@ -36,10 +34,9 @@ def now_time():
 g_avg_rms = Gauge("sound_avg_volume", "5m avg RMS", ["mic_id"])
 g_std_rms = Gauge("sound_std_volume", "5m std of RMS", ["mic_id"])
 g_uptime  = Gauge("sound_mic_uptime_ratio", "5m uptime ratio", ["mic_id"])
-
-# === Filename pattern: <mic>_YYYY-MM-DD_HH-MM.ext ===
+# === Filename pattern: <mic>-<id>_YYYYMMDDThhmmssZ.ext  e.g., mic-4_20251105T120500Z.wav ===
 FNAME_RE = re.compile(
-    r"^(?P<mic>[^_]+)_(?P<date>\d{4}-\d{2}-\d{2})_(?P<h>\d{2})-(?P<m>\d{2})$",
+    r"^(?P<mic>[^_]+)_(?P<ts>\d{8}T\d{6}Z)$",
     re.IGNORECASE
 )
 
@@ -49,7 +46,8 @@ def parse_name(fname: str):
     if not m:
         return None, None
     mic = m.group("mic")
-    ts = datetime.strptime(f"{m.group('date')}_{m.group('h')}-{m.group('m')}", "%Y-%m-%d_%H-%M")
+    ts_str = m.group("ts")
+    ts = datetime.strptime(ts_str, "%Y%m%dT%H%M%SZ")
     return mic, ts
 
 def window_start_for(ts: datetime) -> datetime:
@@ -122,8 +120,7 @@ def apply_delta(slot, delta, sign):
 
 def main():
     start_http_server(PORT, addr=ADDR)
-    print(f"✅ MinIO Metrics available at: http://{ADDR}:{PORT}/metrics")
-
+    print(f":white_check_mark: MinIO Metrics available at: http://{ADDR}:{PORT}/metrics")
     # MinIO client
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS, MINIO_SECRET, secure=False)
 
