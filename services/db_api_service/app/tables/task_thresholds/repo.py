@@ -4,44 +4,6 @@ from sqlalchemy import text
 from app.db import session_scope
 
 
-# repo.py (המשך לקוד שלך)
-from typing import Optional
-from sqlalchemy import text
-from app.db import session_scope
-
-def list_all() -> list[dict]:
-    q = text("""
-        SELECT
-            task::text   AS task,
-            label,
-            threshold,
-            updated_by,
-            updated_at
-        FROM task_thresholds
-        ORDER BY task, label;
-    """)
-    with session_scope() as s:
-        rows = s.execute(q).mappings().all()
-        return [dict(r) for r in rows]
-
-def get_one(task: str, label: Optional[str] = "") -> Optional[dict]:
-    # If you maintain a unique (task, label) pair – keep label; otherwise label can be ignored
-    q = text("""
-        SELECT
-            task::text   AS task,
-            label,
-            threshold,
-            updated_by,
-            updated_at
-        FROM task_thresholds
-        WHERE task = CAST(:task AS task_type_enum)
-          AND label = :label
-        LIMIT 1;
-    """)
-    with session_scope() as s:
-        row = s.execute(q, {"task": task, "label": label or ""}).mappings().first()
-        return dict(row) if row else None
-
 
 def upsert_one(task: str, label: str, threshold: float, updated_by: str | None) -> None:
     q = text("""
