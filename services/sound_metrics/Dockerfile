@@ -7,20 +7,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# COPY certs/ /app/certs/
-RUN if [ -d /app/certs ] && ls /app/certs/*.crt >/dev/null 2>&1; then \
-      cp /app/certs/*.crt /usr/local/share/ca-certificates/ && update-ca-certificates; \
+# Bring in app files (including optional ./certs)
+COPY . .
+
+# Install any *.crt in ./certs (if present), regardless of file names
+RUN if [ -d /app/certs ] && [ -n "$(find /app/certs -type f -name '*.crt' -print -quit)" ]; then \
+      find /app/certs -type f -name '*.crt' -exec cp {} /usr/local/share/ca-certificates/ \; && \
+      update-ca-certificates; \
     else \
       echo "No extra CA certs found. Skipping CA update."; \
     fi
 
-# Python deps
-COPY requirements.txt .
+# Ensure pip/requests use the system CA bundle (includes optional NetFree certs)
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Persist pip setting as fallback
+RUN printf "[global]\ncert = /etc/ssl/certs/ca-certificates.crt\n" > /etc/pip.conf
+
+# Python deps (now benefit from the updated CA store if certs exist)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App code
-COPY src/ ./src/
-
+# App code already copied above
 ENV PYTHONUNBUFFERED=1 \
     ADDR=0.0.0.0 \
     PORT=8005 \
