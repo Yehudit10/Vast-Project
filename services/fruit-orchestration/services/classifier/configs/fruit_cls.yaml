@@ -1,0 +1,46 @@
+seed: 42
+device: cpu                 # 'cpu' or 'cuda' if available
+num_workers: 4
+
+# Data
+image_size: 224
+batch_size: 64
+val_batch_size: 128
+train_split: 0.9            # if building split from MinIO set
+
+# Model
+backbone: mobilenet_v3_small   # options: mobilenet_v3_small, efficientnet_b0, clip_mini
+pretrained: true
+freeze_backbone: false
+num_epochs: 15
+learning_rate: 0.001
+weight_decay: 0.0001
+label_smoothing: 0.1
+
+# Augmentations (baseline: torchvision)
+augment:
+  brightness: 0.3
+  contrast: 0.3
+  saturation: 0.2
+  hue: 0.05
+  random_resized_crop_scale: [0.7, 1.0]
+  random_erasing_p: 0.25
+  horizontal_flip_p: 0.5
+  color_jitter_p: 0.8
+
+# MinIO / dataset
+s3:
+  endpoint: ${S3_ENDPOINT}
+  access_key: ${S3_ACCESS_KEY}
+  secret_key: ${S3_SECRET_KEY}
+  secure: ${S3_SECURE}
+  bucket: ${S3_BUCKET}
+  prefix: ${S3_PREFIX}
+  artifacts_bucket: ${ARTIFACTS_BUCKET}
+  artifacts_prefix: ${ARTIFACTS_PREFIX}
+  data_cache_dir: ${DATA_CACHE_DIR}
+
+# Few-shot add-class (optional, classification via nearest-centroid in embedding space)
+few_shot:
+  enabled: false
+  shots_per_class: 5

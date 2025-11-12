@@ -7,28 +7,13 @@ INSERT INTO devices (device_id, model, owner, active) VALUES
   ('dev-c','rover-y','TeamB',true),
   ('dev-d','rover-y','TeamB',true),
   ('dev-e','sensor-z','TeamC',true),
-  ('dev-f','sensor-z','TeamC',true)
+  ('dev-f','sensor-z','TeamC',true),
+  ('mic-1','sound-a','TeamD',true),
+  ('mic-2','sound-a','TeamD',true),
+  ('mic-33','sound-a','TeamD',true),
+  ('mic-u-2','sound-ul','TeamD',true)
 ON CONFLICT DO NOTHING;
--- Insert synthetic sensors
-INSERT INTO sensors (
-  sensor_name,
-  sensor_type,
-  owner_name,
-  location_lat,
-  location_lon,
-  install_date,
-  status,
-  description,
-  last_maintenance
-)
-VALUES
-  ('SoilMoistureSensor_A1', 'moisture', 'TeamA', 32.051, 34.871, NOW() - INTERVAL '120 days', 'active', 'Soil probe at north field section A1', NOW() - INTERVAL '20 days'),
-  ('TempSensor_B2', 'temperature', 'TeamA', 32.057, 34.885, NOW() - INTERVAL '95 days', 'active', 'Temperature monitor - greenhouse B2', NOW() - INTERVAL '15 days'),
-  ('HumiditySensor_C1', 'humidity', 'TeamB', 31.982, 34.945, NOW() - INTERVAL '200 days', 'maintenance', 'Humidity node C1 (low battery)', NOW() - INTERVAL '3 days'),
-  ('NDVI_Camera_01', 'NDVI', 'TeamB', 32.015, 34.980, NOW() - INTERVAL '60 days', 'active', 'Multispectral NDVI drone-mounted camera', NOW() - INTERVAL '10 days'),
-  ('WeatherStation_Main', 'weather', 'TeamC', 32.000, 34.760, NOW() - INTERVAL '365 days', 'active', 'Main weather station at south field', NOW() - INTERVAL '30 days'),
-  ('SoilProbe_Edge', 'moisture', 'TeamC', 32.010, 34.910, NOW() - INTERVAL '40 days', 'inactive', 'Edge field soil probe - disconnected', NOW() - INTERVAL '60 days')
-ON CONFLICT (sensor_name) DO NOTHING;
+
 
 -- Insert some regions
 INSERT INTO regions (name, geom)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # ---------- Imports ----------
 import os, io, time, hashlib, threading, queue, signal, json, uuid, errno, pathlib, mimetypes
 from datetime import datetime, timezone
@@ -58,6 +57,7 @@ MQTT_TOPIC = os.getenv("MQTT_TOPIC", "MQTT/imagery/#")
 # ---------- Media Prefixes ----------
 CAMERA_PREFIX = os.getenv("CAMERA_PREFIX", "camera")
 MICROPHONE_PREFIX = os.getenv("MICROPHONE_PREFIX", "microphone")
+ULTRA_DIR_PREFIX = os.getenv("ULTRA_DIR_PREFIX", "plants") 
 
 # ---------- S3 ----------
 s3 = boto3.client(
@@ -117,6 +117,7 @@ def normalize_content_type(ctype: str, filename: str) -> str:
 
 def parse_topic(topic: str) -> dict:
     parts = [p for p in topic.split("/") if p]
+    parts_lower = [p.lower() for p in parts]
     now = now_ms()
     result = {
         "camera": DEFAULT_PREFIX,  
@@ -129,11 +130,17 @@ def parse_topic(topic: str) -> dict:
     # --- detect namespace and offsets ---
     ns = None
     idx = -1
-    for cand in ("imagery", "sound"):
-        if cand in parts:
-            ns, idx = cand, parts.index(cand)
-            break
-
+    # for cand in ("imagery", "sounds"):
+    #     if cand in parts:
+    #         ns, idx = cand, parts.index(cand)
+    #         break
+    if "imagery" in parts_lower:
+        ns, idx = "imagery", parts_lower.index("imagery")
+    elif any(p.startswith("sounds_ultra") for p in parts_lower): 
+        ns, idx = "sounds_ultra", next(i for i, p in enumerate(parts_lower) if p.startswith("sounds_ultra"))
+    elif "sounds" in parts_lower:
+        ns, idx = "sounds", parts_lower.index("sounds")
+        
     if ns == "imagery":
         # format: MQTT/imagery/<device>/<ts>/<ctype>/<filename>
         if len(parts) > idx + 1 and parts[idx + 1]:
@@ -150,7 +157,7 @@ def parse_topic(topic: str) -> dict:
         if len(parts) > idx + 4 and parts[idx + 4]:
             result["filename"] = parts[idx + 4]
 
-    elif ns == "sound":
+    elif ns in ("sounds", "sounds_ultra"):
         if len(parts) > idx + 1 and parts[idx + 1]:
             try:
                 ts = int(parts[idx + 1])
@@ -170,21 +177,21 @@ def parse_topic(topic: str) -> dict:
         result["media_type"] = "image"
     elif ctype.startswith("video/"):
         result["media_type"] = "image"
-    elif ctype.startswith("audio/") or "sound" in ctype or "wav" in ctype or "mp3" in ctype:
-        result["media_type"] = "sound"
+    elif ctype.startswith("audio/") or "sounds" in ctype or "wav" in ctype or "mp3" in ctype:
+        result["media_type"] = "sounds"
     else:
         ext = result["filename"].lower().rsplit(".", 1)[-1] if "." in result["filename"] else ""
         if ext in ("jpg","jpeg","png","gif","bmp","tiff","webp"):
             result["media_type"] = "image"
         elif ext in ("wav","mp3","ogg","flac","aac","m4a"):
-            result["media_type"] = "sound"
+            result["media_type"] = "sounds"
         else:
             result["media_type"] = "image"
 
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
     device_id = result["camera"]
 
-    if result["media_type"] == "sound":
+    if result["media_type"] == "sounds":
         if device_id.startswith(f"{CAMERA_PREFIX}-"):
             device_name = device_id.replace(f"{CAMERA_PREFIX}-", f"{MICROPHONE_PREFIX}-", 1)
         elif device_id.startswith(f"{MICROPHONE_PREFIX}-"):
@@ -199,7 +206,10 @@ def parse_topic(topic: str) -> dict:
         else:
             device_name = f"{CAMERA_PREFIX}-{device_id}"
 
-    key = f"{result['media_type']}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    # key = f"{result['media_type']}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    is_ultra = ns == "sounds_ultra" 
+    topdir = ULTRA_DIR_PREFIX if is_ultra else result["media_type"]  
+    key = f"{topdir}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
 
     result["key"] = key
     result["device_id"] = device_name
