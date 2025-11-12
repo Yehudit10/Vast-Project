@@ -1,3 +1,7 @@
+# from app.router import api
+
+# app.include_router(api)
+
 from fastapi import FastAPI
 from app.auth import router as auth_router
 from app.db import engine
@@ -27,8 +31,3 @@ def ready():
 
 app.include_router(auth_router)
 app.include_router(build_router(contract_store))
-
-
-
-
-

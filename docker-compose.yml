@@ -2,12 +2,13 @@
 # Docker Compose - AG Cloud
 # ==========================
 
-version: "3.9"
+# version: "3.9"
 # --------------------------
 # Networks
 # --------------------------
 networks:
   ag_cloud:
+    name: ag_cloud
     driver: bridge
 
 # --------------------------
@@ -105,31 +106,57 @@ services:
       - ag_cloud
     restart: unless-stopped
 
+
   # -------------------------
-  # Plant Stress Detector
+  # Plant Stress Daily Batch
   # -------------------------
 
-  plant_stress:
+  plant_stress_daily:
     build: ./services/plant_stress
+    env_file:
+      - ./services/plant_stress/.env
+    restart: "no"
     environment:
-      - INPUT_DIR=/data/inbox
-      - MODEL_DIR=/models
-      - POSTGRES_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
-      - PERIOD_DAYS=0
-      - CONFIDENCE_THRESHOLD=0.6
-      # - TF_ENABLE_ONEDNN_OPTS=0  # optional
+      MODEL_DIR: /models
+      CONFIDENCE_THRESHOLD: "0.60"
+      TF_CPP_MIN_LOG_LEVEL: "2"
+      TIMEZONE: Asia/Jerusalem
+      POSTGRES_DSN: postgresql://missions_user:pg123@postgres:5432/missions_db
+      MINIO_ENDPOINT: minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: sound
+      MINIO_PREFIX: plants/
+      MINIO_SECURE: "false"
+      
+      DEFAULT_AREA: unknown
+      DEFAULT_LAT: 0.0
+      DEFAULT_LON: 0.0
+      DEFAULT_IMAGE_URL: https://example.com/placeholder.jpg
+      DEFAULT_VOD: https://example.com/placeholder.mp4
+      DEFAULT_HLS: https://example.com/placeholder.m3u8
+      # ==== Alerts → Kafka ====
+      ENABLE_ALERTS: "true"
+      KAFKA_BOOTSTRAP: "kafka:9092"
+      ALERT_TOPIC: "alerts"
+      ALERT_TYPE: "plant_drought_detected"
+      KAFKA_CLIENT_ID: "plant-stress-producer"
+    command: ["python","-u","/app/predict_minio_daily.py"]
     volumes:
       - "./services/plant_stress/models:/models:ro"
-      - "./services/plant_stress/samples:/data/inbox:ro"
-
     depends_on:
-      - postgres
-    command: [ "python", "-u", "/app/app.py" ]
-    networks:
-      - ag_cloud
+      postgres:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+      mc-bootstrap:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    networks: [ag_cloud]
 
   # -------------------------
-  # MQTT + Kafka + Connect + Init
+  # MQTT + Kafka + MQTT-router
   # -------------------------
   kafka:
     build:
@@ -181,55 +208,32 @@ services:
       timeout: 5s
       retries: 12
 
-  connect:
-    build:
-      context: ./mqtt_and_kafka
-      dockerfile: connect.Dockerfile
-    image: local/connect-with-mqtt:1.0.0
-    container_name: connect
-    depends_on:
-      kafka:
-        condition: service_healthy
-      mosquitto:
-        condition: service_healthy
-    ports:
-      - "8083:8083"
-    environment:
-      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
-      - CONNECT_GROUP_ID=agcloud-connect
-      - CONNECT_CONFIG_STORAGE_TOPIC=_connect_configs
-      - CONNECT_OFFSET_STORAGE_TOPIC=_connect_offsets
-      - CONNECT_STATUS_STORAGE_TOPIC=_connect_status
-      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
-      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
-      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
-      - CONNECT_REST_ADVERTISED_HOST_NAME=localhost
-      - CONNECT_PLUGIN_PATH=/usr/share/java,/usr/share/confluent-hub-components
-    networks:
-      - ag_cloud
-    healthcheck:
-      test: [ "CMD", "curl", "-sf", "http://localhost:8083/connectors" ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+  mqtt-router:
+      build:
+        context: ./mqtt_and_kafka/mqtt-router
+      image: local/mqtt-router:1.0.0
+      depends_on:
+        kafka:
+          condition: service_healthy
+        mosquitto:
+          condition: service_healthy
+      environment:
+        - MQTT_HOST=mosquitto
+        - MQTT_PORT=1883
+        - MQTT_TOPIC_FILTER=mqtt/#
 
-  init-connector:
-    image: curlimages/curl:8.7.1
-    depends_on:
-      connect:
-        condition: service_healthy
-    volumes:
-      - ./mqtt_and_kafka/connectors:/connectors
-    networks:
-      - ag_cloud
-    entrypoint: >
-      sh -c "
-        echo '==> Creating MQTT connector...';
-        curl -X POST -H 'Content-Type: application/json' --data @/connectors/mqtt-source.json http://connect:8083/connectors;
-        echo '==> Done.';
-      "
+        - KAFKA_BOOTSTRAP=kafka:9092
+        - CREATE_TOPICS=false
+        - DEFAULT_PARTITIONS=1
+        - DEFAULT_REPLICATION=1
+      networks:
+        - ag_cloud
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "python", "-c", "import socket; socket.create_connection(('mosquitto',1883),3); socket.create_connection(('kafka',9092),3)"]
+        interval: 15s
+        timeout: 5s
+        retries: 5
 
   # --------------------------
   # GUI / Runner / Gateway
@@ -341,6 +345,10 @@ services:
       - DISPLAY=host.docker.internal:0.0
       - GATEWAY_URL=http://sensors_metrics:8000
       - NOTIFICATION_API_URL=http://notification_api:5000
+
+      - API_BASE_URL=http://db_api_service:8001
+      - AUTH_BOOTSTRAP_URL=http://db_api_service:8001/auth/_dev_bootstrap
+      - ALERTS_WS_URL=ws://alerts-gateway:8000/ws/alerts
     ports:
       - "5900:5900"
       - "8080:8080"
@@ -414,6 +422,11 @@ services:
       MINIO_NOTIFY_KAFKA_ENABLE_sounds: "on"
       MINIO_NOTIFY_KAFKA_BROKERS_sounds: "kafka:9092"
       MINIO_NOTIFY_KAFKA_TOPIC_sounds: "sound.new.sounds"
+
+      # ===== SECURITY NOTIFIER =====
+      MINIO_NOTIFY_KAFKA_ENABLE_security: "on"
+      MINIO_NOTIFY_KAFKA_BROKERS_security: "kafka:9092"
+      MINIO_NOTIFY_KAFKA_TOPIC_security: "image.new.security"
     ports:
       - "9001:9000" # HOT S3
       - "9002:9001" # HOT Console
@@ -522,7 +535,8 @@ services:
       S3_BUCKET: sound
       MQTT_BROKER: large-mosquitto
       MQTT_PORT: 1885
-      MQTT_TOPIC: MQTT/sound/#
+      MQTT_TOPIC: MQTT/sounds/#
+      MQTT_PUB_TOPIC: sound/sounds/ingested
       DEFAULT_PREFIX: MIC-01
       CAMERA_PREFIX: camera
       MICROPHONE_PREFIX: microphone
@@ -548,6 +562,45 @@ services:
       - ag_cloud
     restart: unless-stopped
 
+  mqtt_ingest_sounds_ultra:
+      build:
+        context: ./storage_with_mqtt/mqtt_images/mqtt_ingest
+      container_name: mqtt_ingest_sounds_ultra
+      environment:
+        MINIO_ENDPOINT: http://minio-hot:9000
+        MINIO_ACCESS_KEY: minioadmin
+        MINIO_SECRET_KEY: minioadmin123
+        S3_BUCKET: sound
+        MQTT_BROKER: large-mosquitto
+        MQTT_PORT: 1885
+        MQTT_TOPIC: MQTT/sounds_ultra/#
+        MQTT_PUB_TOPIC: sound/sounds_ultra/ingested
+        DEFAULT_PREFIX: MIC-02
+        CAMERA_PREFIX: microphone
+        MICROPHONE_PREFIX: microphone
+        DUMMY_DB: 0
+        DB_API_BASE: http://db_api_service:8001
+        DB_API_TOKEN: auto
+        OUTBOX_DIR: /app/outbox
+        DB_API_AUTH_MODE: service
+        DB_API_SERVICE_NAME: mqtt_ingest_sounds_ultra
+        INGEST_WORKERS: 8
+        ULTRA_DIR_PREFIX: plants
+      volumes:
+        - ./storage_with_mqtt/mqtt_images/outbox:/app/outbox
+      depends_on:
+        large-mosquitto:
+          condition: service_started
+        minio-hot:
+          condition: service_healthy
+        mc-bootstrap:
+          condition: service_started
+        db_api_service:
+          condition: service_started
+      networks:
+        - ag_cloud
+      restart: unless-stopped
+
   mqtt_publisher:
     build:
       context: ./storage_with_mqtt/mqtt_images/mqtt_publisher
@@ -569,6 +622,36 @@ services:
       - mqtt_ingest
     networks:
       - ag_cloud
+  
+  mqtt_gateway:
+    build:
+      context: ./services/mqtt_gateway
+      dockerfile: Dockerfile
+    environment:
+      MINIO_ENDPOINT: http://minio-hot:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: imagery
+      KAFKA_BOOTSTRAP: kafka:9092
+      KAFKA_TOPIC: rover.images.meta.v1
+      MQTT_HOST: large-mosquitto
+      MQTT_PORT: 1885
+      MQTT_TOPIC: MQTT/imagery/#
+      MQTT_TOPIC_TEL: MQTT/telemetry/#
+      TELEMETRY_TTL_SEC: 10
+      MQTT_CLIENT_ID: mqtt-gateway
+      METRICS_PORT: 9110
+    depends_on:
+      large-mosquitto:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
 
   # ------------------------
   # Classifier - Sounds
@@ -607,7 +690,7 @@ services:
       - MINIO_SECURE=false
 
       # Request validation
-      - ALLOWED_BUCKETS=imagery
+      - ALLOWED_BUCKETS=sound
       - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
       - MAX_BYTES=104857600
 
@@ -639,8 +722,6 @@ services:
   # DB API Service
   # --------------------------
 
-
-
   contracts-gen:
     build:
       context: ./services/db_api_service
@@ -666,16 +747,18 @@ services:
     env_file:
       - ./services/db_api_service/.env
     environment:
-      DB_DSN: postgresql+psycopg://missions_user:pg123@host.docker.internal:5432/missions_db
+      DB_DSN: postgresql+psycopg://missions_user:pg123@postgres:5432/missions_db
       ENV: dev
       JWT_SECRET: change-me-please-very-secret
       JWT_ALGO: HS256
       ACCESS_TTL_MIN: 15
       REFRESH_TTL_DAYS: 14
       DEV_SA_NAME: my-ingest-service
+      ADDR: 0.0.0.0
     ports:
       - "8001:8001"
     volumes:
+      - ./services/db_api_service/app:/app/app
       - contracts:/app/app/contracts
     depends_on:
       contracts-gen:
@@ -697,7 +780,40 @@ services:
       - "5000:5000"
     depends_on:
       - postgres
+    networks:
+      - ag_cloud
 
+  ripeness-api:
+    build:
+      context: ./services/ripeness-ml
+      dockerfile: deploy/Dockerfile
+    image: ripeness-api:latest
+    environment:
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGDATABASE=missions_db
+      - PGUSER=missions_user
+      - PGPASSWORD=pg123
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_SECURE=false
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MODEL_NAME=best_conditional
+      - BATCH_LIMIT=500
+      - FRUITS=Apple,Banana,Orange
+    depends_on:
+      - postgres
+      - minio-hot
+    volumes:
+      - ./services/ripeness-ml/checkpoints:/app/checkpoints
+      - ./services/ripeness-ml/configs:/app/configs
+      - ./services/ripeness-ml/model:/app/model
+    container_name: ripeness-api
+    networks: [ ag_cloud ]
+    ports:
+      - "8091:8088"
+    restart: unless-stopped
+ 
   # --------------------------
   # Flink JobManager & TaskManager
   # --------------------------
@@ -726,7 +842,7 @@ services:
         fs.s3a.connection.ssl.enabled: false
         python.client.executable: /usr/bin/python3
         python.executable: /usr/bin/python3
-      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+      - HTTP_INFER_URL=http://fruit-inference-http:8004/infer_json
     volumes:
       - ./streaming/flink/jobs:/opt/flink/jobs:ro
       - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
@@ -767,7 +883,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=sensor_zone_stats,sensor_anomalies,aerial_images_keys,aerial_image_object_detections,aerial_image_anomaly_detections
+      - TOPICS=sensor_zone_stats,sensor_anomalies,image_new_security_connections,alerts,image_new_aerial_connections,aerial_images_metadata,aerial_image_object_detections,aerial_image_anomaly_detections,aerial_images_complete_metadata,aerial_image_segmentation,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db
@@ -805,7 +921,7 @@ services:
         fs.s3a.connection.ssl.enabled: false
         python.client.executable: /usr/bin/python3
         python.executable: /usr/bin/python3
-      - HTTP_INFER_URL=http://fruit-inference-http:8000/infer_json
+      - HTTP_INFER_URL=http://fruit-inference-http:8004/infer_json
     volumes:
       - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
       - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
@@ -814,6 +930,48 @@ services:
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
     restart: unless-stopped
+
+  # --------------------------
+  # Fence Hole Detector (FastAPI + ONNX)
+  # --------------------------
+  fence-hole-detector:
+    build:
+      context: ./services/fence_hole_detector
+      dockerfile: Dockerfile
+    container_name: fence-hole-detector
+    env_file:
+      - ./services/fence_hole_detector/.env
+    environment:
+      # Override anything needed for in-Docker networking
+      MINIO_ENDPOINT: minio-hot:9000
+      MINIO_SECURE: "false"
+      # Use internal base URL so other containers can fetch the image
+      MINIO_PUBLIC_BASE_URL: http://minio-hot:9000/imagery
+
+      # Kafka inside docker network
+      ALERT_ENABLED: "1"
+      KAFKA_BOOTSTRAP: kafka:9092
+      ALERTS_TOPIC: alerts
+      ALERT_TYPE: fence_hole
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio-hot:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    ports:
+      - "8088:8088"   # expose API to host (optional)
+    volumes:
+    - ./services/fence_hole_detector/weights:/app/services/fence_hole_detector/weights:ro
+    command:
+      [
+        "uvicorn",
+        "services.fence_hole_detector.app:app",
+        "--host", "0.0.0.0",
+        "--port", "8088",
+        "--log-level", "info"
+      ]
 
   # --------------------------
   # Inference HTTP Service
@@ -834,7 +992,55 @@ services:
     container_name: fruit-inference-http
     networks: [ ag_cloud ]
     ports:
-      - "8011:8000"
+      - "8011:8004"
+    restart: unless-stopped
+
+  camera-inference-http:
+    build:
+      context: ./services/inference_http
+      dockerfile: Dockerfile
+    environment:
+      - TEAM=camera
+      - WEIGHTS_PATH=/app/weights/yolov8-fruits.pt
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=0
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+    container_name: camera-inference-http
+    networks: [ag_cloud]
+    ports:
+      - "8012:8004"
+    restart: unless-stopped
+  soil-inference-http:
+    build:
+      context: ./services/inference_http
+      dockerfile: Dockerfile
+    environment:
+
+      - TEAM=soil_moisture
+      - WEIGHTS_PATH=/app/weights/soil_moisture_best.onnx
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=0
+      - PG_DSN=postgresql://missions_user:pg123@postgres:5432/missions_db
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=irrigation.control
+      - KAFKA_DLT=irrigation.control.dlq
+
+
+    volumes:
+      - ./services/inference_http/weights:/app/weights:ro
+      - ./services/inference_http/adapters:/app/adapters
+      - ./services/inference_http/soil_moisture:/app/soil_moisture
+    depends_on:
+      - minio-hot
+      - postgres
+    ports:
+      - "8013:8004"
+    networks: [ag_cloud]
     restart: unless-stopped
 
   # --------------------------
@@ -852,7 +1058,7 @@ services:
       - KAFKA_BOOTSTRAP=kafka:9092
       - INPUT_TOPIC=imagery.new.fruit
       - TEAM=fruit
-      - HTTP_URL=http://fruit-inference-http:8000/infer_json
+      - HTTP_URL=http://fruit-inference-http:8004/infer_json
       - DLQ_TOPIC=dlq.inference.http
       - GROUP_ID=http-dispatcher-fruit
       - PARALLELISM=2
@@ -865,7 +1071,53 @@ services:
       - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
-    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8000/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8004/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+    restart: always
+  
+  flink-dispatcher-camera:
+    image: agcloud-flink-py:1.18
+    container_name: flink-dispatcher-camera
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      camera-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=imagery.new.camera
+      - TEAM=camera
+      - HTTP_URL=http://camera-inference-http:8004/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-camera
+      - PARALLELISM=2
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
+    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.camera --team camera --http-url http://camera-inference-http:8004/infer_json --group-id http-dispatcher-camera --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+    restart: always
+
+  flink-dispatcher-soil:
+    image: agcloud-flink-py:1.18
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      soil-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=image.new.ground
+      - TEAM=soil_moisture
+      - HTTP_URL=http://soil-inference-http:8004/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-soil
+      - PARALLELISM=1
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
+    command: [ "bash", "-lc", "set -e; echo 'Waiting...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/... --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic image.new.ground --team soil_moisture --http-url http://soil-inference-http:8004/infer_json --group-id http-dispatcher-soil --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+  
 
   flink-alerts-job:
     build:
@@ -928,6 +1180,128 @@ services:
     container_name: alerts_gateway
     command: [ "uvicorn", "gateway:app", "--host", "0.0.0.0", "--port", "8000" ]
     ports:
-      - "8010:8000" # host:container
+      - "8010:8000" 
+    networks:
+      - ag_cloud
+      
+  image-linker-jobmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-jobmanager
+    command: jobmanager
+    ports:
+      - "8084:8081"   
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    networks:
+      - ag_cloud
+
+  image-linker-taskmanager:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-taskmanager
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=image-linker-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - CONFIG_PATH=/opt/app/config/topics.yaml
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    networks:
+      - ag_cloud
+
+  image-linker-submitter:
+    build:
+      context: ./services/image-linker
+      dockerfile: Dockerfile.flink
+    container_name: image-linker-submit
+    depends_on:
+      image-linker-jobmanager:
+        condition: service_started
+    command: >
+      bash -lc "sleep 10 &&
+                flink run -m image-linker-jobmanager:8081 -py /opt/app/job_linker.py &&
+                echo 'Image-Linker job submitted successfully' &&
+                sleep 1"
+    networks:
+      - ag_cloud
+
+  flink-sounds-http-jobmanager:
+    build:
+      context: ./services/sounds_flink
+      dockerfile: Dockerfile
+    container_name: flink-sounds-http-jobmanager
+    command: jobmanager
+    ports:
+      - "8083:8081" 
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-sounds-http-jobmanager
+      KAFKA_BROKERS: kafka:9092
+      SOURCE_TOPIC: sound_new_sounds_connections
+      SINK_TOPIC: ""
+      GROUP_ID: flink-classifier-sounds
+      CLASSIFIER_HTTP_URL: http://sounds_classifier:8088/classify
+      DEFAULT_PARALLELISM: 2
+      KAFKA_START: earliest
+      PYTHON: /opt/venv/bin/python
+      FLINK_PYTHON: /opt/venv/bin/python
+    networks:
+      - ag_cloud
+
+  flink-sounds-http-taskmanager:
+    build:
+      context: ./services/sounds_flink
+      dockerfile: Dockerfile
+    container_name: flink-sounds-http-taskmanager
+    command: taskmanager
+    depends_on:
+      flink-sounds-http-jobmanager:
+        condition: service_started
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-sounds-http-jobmanager
+      PYTHON: /opt/venv/bin/python
+      FLINK_PYTHON: /opt/venv/bin/python
+      FLINK_PROPERTIES: |-
+        jobmanager.rpc.address: flink-sounds-http-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    networks:
+      - ag_cloud
+
+  flink-sounds-http-submit:
+    build:
+      context: ./services/sounds_flink
+      dockerfile: Dockerfile
+    container_name: flink-sounds-http-submit
+    depends_on:
+      flink-sounds-http-jobmanager:
+        condition: service_started
+      flink-sounds-http-taskmanager:
+        condition: service_started
+    command:
+      - /opt/flink/bin/flink
+      - run
+      - -d
+      - -m
+      - flink-sounds-http-jobmanager:8081
+      - -Dpython.client.executable=/opt/venv/bin/python
+      - -Dpython.executable=/opt/venv/bin/python
+      - -py
+      - /opt/app/flink_job.py
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-sounds-http-jobmanager
+      KAFKA_BROKERS: kafka:9092
+      SOURCE_TOPIC: sound_new_sounds_connections
+      SINK_TOPIC: ""
+      GROUP_ID: flink-classifier-sounds
+      CLASSIFIER_HTTP_URL: http://sounds_classifier:8088/classify
+      DEFAULT_PARALLELISM: 2
+      KAFKA_START: earliest
+      PYTHON: /opt/venv/bin/python
+      FLINK_PYTHON: /opt/venv/bin/python
     networks:
       - ag_cloud

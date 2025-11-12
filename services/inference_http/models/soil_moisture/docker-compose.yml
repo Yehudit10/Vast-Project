@@ -1,0 +1,30 @@
+networks:
+  worktree-main_ag_cloud:
+    external: true
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: soil_api
+    environment:
+      PG_DSN: postgresql://missions_user:pg123@host.docker.internal:5432/missions_db
+      KAFKA_BROKERS: kafka:9092 # host.docker.internal:29092
+      KAFKA_TOPIC: irrigation.control
+      KAFKA_DLT: irrigation.control.dlq
+      ZONES_FILE: /app/configs/zones.yaml
+      DECISION_WINDOW_SEC: 3
+      PATCH_SIZE: 256
+      PATCH_STRIDE: 256
+      SCHEDULE_UPDATE: 1
+    volumes:
+      - ./configs:/app/configs
+      - ./artifacts:/app/artifacts
+    ports:
+      - "8000:8000"
+  
+    networks:
+      - worktree-main_ag_cloud
+
+

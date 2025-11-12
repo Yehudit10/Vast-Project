@@ -38,6 +38,7 @@ COPY build_tables/02_event_logs_partition.sql /docker-entrypoint-initdb.d/02_eve
 COPY initdb/03_partitions.sql                 /docker-entrypoint-initdb.d/03_partitions.sql
 COPY build_tables/loader.sql                  /docker-entrypoint-initdb.d/04_loader.sql
 COPY initdb/04_cron.sql                       /docker-entrypoint-initdb.d/05_cron.sql
+COPY build_tables/05_agcloud_audio_init.sql   /docker-entrypoint-initdb.d/06_agcloud_audio_init.sql
 
 # ==== 7) Replication grants ====
 RUN echo "ALTER ROLE missions_user WITH REPLICATION;" > /docker-entrypoint-initdb.d/00_grant_replication.sql

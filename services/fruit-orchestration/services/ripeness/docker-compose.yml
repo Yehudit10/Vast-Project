@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  ripeness-api:
+    build:
+      context: .             
+      dockerfile: Dockerfile
+    image: ripeness-api:latest
+    container_name: ripeness-api
+
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: missions_db
+      PGUSER: missions_user
+      PGPASSWORD: pg123
+
+      MINIO_ENDPOINT: minio-hot:9000
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+
+      MODEL_NAME: best_conditional
+      BATCH_LIMIT: "500"
+      FRUITS: "Apple,Banana,Orange"
+
+
+    volumes:
+      - ./checkpoints:/app/checkpoints
+      - ./configs:/app/configs
+      # - ./model:/app/model
+
+    networks:
+      - agcloud_net   
+      - ag_cloud  
+
+    ports:
+      - "8091:8088"
+    restart: unless-stopped
+
+networks:
+  agcloud_net:
+    external: true
+    name: agcloud_ag_cloud
+
+  ag_cloud:       
+    external: true
+    name: ag_cloud

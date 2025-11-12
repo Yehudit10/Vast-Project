@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <title>AgCloud – Sensor Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="leaflet/leaflet.css" />
+  <style>
+    :root {
+      --bg-grad-top:#e9f1ee;
+      --bg-grad-bottom:#f9fafb;
+      --panel:#ffffffE6;
+      --ink:#0f172a;
+      --muted:#475569;
+      --ring:#94a3b8;
+      --chip:#0f172a0d;
+      --normal:#22c55e;
+      --soil:#0ea5e9;
+      --temp:#f97316;
+      --hum:#8b5cf6;
+    }
+    [data-theme="dark"] {
+      --bg-grad-top:#0b1220;
+      --bg-grad-bottom:#0f172a;
+      --panel:#0b1220cc;
+      --ink:#e2e8f0;
+      --muted:#cbd5e1;
+      --ring:#334155;
+      --chip:#e2e8f01a;
+    }
+    html, body {
+      margin:0; padding:0; width:100%; height:100%;
+      font-family:"Segoe UI",system-ui,Arial;
+      background:linear-gradient(180deg,var(--bg-grad-top) 0%,var(--bg-grad-bottom) 100%);
+      overflow:hidden; color:var(--ink);
+    }
+    #app {
+      position:absolute; inset:0;
+      display:grid; grid-template-rows:auto 1fr;
+      gap:10px; padding:12px;
+    }
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--panel); border:1px solid var(--ring);
+      border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.08);
+      padding:8px 12px; backdrop-filter:blur(10px);
+    }
+    .title {display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;}
+    .title .dot {width:8px;height:8px;border-radius:999px;background:var(--soil);box-shadow:0 0 12px var(--soil);}
+    .hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .chip{
+      display:flex;align-items:center;gap:6px;
+      border:1px solid var(--ring); background:var(--chip);
+      border-radius:999px; padding:4px 12px;
+      font-size:12px; line-height:1;
+    }
+    .dot{width:10px;height:10px;border:1px solid #00000030;border-radius:999px}
+    .dot.normal{background:var(--normal)}
+    .dot.soil{background:var(--soil)}
+    .dot.temp{background:var(--temp)}
+    .dot.hum{background:var(--hum)}
+    .mapbox {
+      position:relative; overflow:hidden;
+      border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.12);
+      border:1px solid var(--ring);
+    }
+    #map {position:absolute; inset:0;}
+    .leaflet-container{background:#e7f0ec;}
+
+    @keyframes pulseChange {
+      0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,0,0,0.2); }
+      50%  { transform: scale(1.35); box-shadow: 0 0 8px rgba(0,0,0,0.3); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,0,0,0.0); }
+    }
+    .pulse-change {
+      animation: pulseChange 0.5s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div class="title"><span class="dot"></span> Sensor Dashboard</div>
+      <div class="hud">
+        <div class="chip"><span class="dot normal"></span><span>Normal</span></div>
+        <div class="chip"><span class="dot soil"></span><span>Soil Moisture</span></div>
+        <div class="chip"><span class="dot temp"></span><span>Temperature</span></div>
+        <div class="chip"><span class="dot hum"></span><span>Humidity</span></div>
+      </div>
+    </div>
+
+    <div class="mapbox">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script src="leaflet/leaflet.js"></script>
+  <script src="leaflet/leaflet-heat.js"></script>
+
+  <!-- ✅ ADDED: QWebChannel script and bridge setup -->
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <script>
+    new QWebChannel(qt.webChannelTransport, function(channel) {
+        window.pyObj = channel.objects.pyObj;
+    });
+  </script>
+  <!-- ✅ END -->
+
+  <script>
+    const map = L.map('map',{preferCanvas:true}).setView([32.0,34.85],12);
+    map.createPane("zonesPane");
+    map.createPane("heatPane");
+    map.createPane("sensorsPane");
+    map.getPane("zonesPane").style.zIndex=400;
+    map.getPane("heatPane").style.zIndex=450;
+    map.getPane("sensorsPane").style.zIndex=500;
+
+    const image=L.imageOverlay('fields.png',map.getBounds(),{pane:"zonesPane"}).addTo(map);
+    map.on('moveend zoomend resize',()=>image.setBounds(map.getBounds()));
+
+    fetch("zones.geojson")
+      .then(r=>r.json())
+      .then(data=>{
+        L.geoJSON(data,{pane:"zonesPane",style:{color:"#94a3b8",weight:2,fillOpacity:.08}}).addTo(map);
+      }).catch(()=>console.warn("zones.geojson not found"));
+
+    const sensorsLayer=L.layerGroup([], {pane:"sensorsPane"}).addTo(map);
+    const heat=L.heatLayer([], {radius:25,blur:18,pane:"heatPane"}).addTo(map);
+    const sensorMarkers={};
+
+    function sensorColor(sensor, cond, value) {
+      if (cond === "normal") return "#22c55e";
+      let baseColor;
+      switch (sensor) {
+        case "Soil_Moisture": baseColor = [14,165,233]; break;
+        case "Ambient_Temperature": baseColor = [249,115,22]; break;
+        case "Humidity": baseColor = [139,92,246]; break;
+        default: baseColor = [148,163,184];
+      }
+      let n = parseFloat(value);
+      if (isNaN(n)) n = 50;
+      n = Math.max(0, Math.min(100, n));
+      const t = n / 100;
+      const mix = (a,b,p)=>Math.round(a*(1-p)+b*p);
+      const [r,g,b] = baseColor.map(c => mix(255, c, t));
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function renderSensors(sensors){
+      if (!Array.isArray(sensors) || sensors.length === 0) return;
+
+      const latestById={};
+      sensors.forEach(d=>{
+        const id=d.id||d.sensor_id||d.sensor;
+        const ts=new Date(d.ts||d.inserted_at||0).getTime();
+        if(!latestById[id]||ts>(new Date(latestById[id].ts||latestById[id].inserted_at||0)).getTime())
+          latestById[id]=d;
+      });
+      const latestSensors=Object.values(latestById);
+
+      const pts=[];
+      latestSensors.forEach(d=>{
+        const lat=parseFloat(d.lat),lon=parseFloat(d.lon);
+        if(isNaN(lat)||isNaN(lon))return;
+        const cond=(d.result&&d.result.condition)||"normal";
+        const sensor=d.sensor||"";
+        const color=sensorColor(sensor,cond,d.value);
+        const markerId=`${sensor}_${lat}_${lon}`;
+        if(sensorMarkers[markerId]){
+          const marker=sensorMarkers[markerId];
+          const before=marker.options.color;
+          marker.setStyle({color,fillOpacity:.9});
+          marker.setPopupContent(popupHTML(d,cond));
+          marker.options.data=d;
+          if(before!==color){
+            const el=marker._path;
+            if(el){
+              el.classList.remove('pulse-change');
+              void el.offsetWidth;
+              el.classList.add('pulse-change');
+            }
+          }
+        }else{
+          const marker=L.circleMarker([lat,lon],{pane:"sensorsPane",radius:8,color,fillOpacity:.9,weight:2})
+            .bindPopup(popupHTML(d,cond));
+          marker.options.data=d;
+         // ✅ נפתח בלחיצה, נסגר רק כשלוחצים על מקום אחר במפה
+marker.on('click', () => {
+  marker.setStyle({ weight: 4 });
+  marker.openPopup();
+});
+
+// כשנלחצים מחוץ לסמן, נרגיע את העיצוב
+map.on('click', () => {
+  Object.values(sensorMarkers).forEach(m => m.setStyle({ weight: 2 }));
+});
+
+          marker.addTo(sensorsLayer);
+          sensorMarkers[markerId]=marker;
+        }
+        pts.push([lat,lon,1]);
+      });
+
+      heat.setLatLngs(pts);
+      if (sensorsLayer.bringToFront) sensorsLayer.bringToFront();  <!-- ✅ fixed check -->
+      map.invalidateSize();
+    }
+
+    function popupHTML(d,cond){
+      const sid = d.id || d.sensor_id || d.sensor;
+      return `
+        <b>${d.sensor}</b><br>
+        <span style="color:var(--muted)">Value:</span> ${d.value}<br>
+        <span style="color:var(--muted)">Zone:</span> ${d.zone||'-'}<br>
+        <span style="color:var(--muted)">Condition:</span> ${cond}<br>
+        <span style="color:#64748b">${d.inserted_at||d.ts}</span><br>
+       <button onclick="openSensorDetail('${d.sensor_name || d.sensor}')" style="
+          margin-top:6px;
+          background:#2563eb;color:white;border:none;
+          border-radius:6px;padding:4px 8px;font-size:12px;
+          cursor:pointer;">📈 View Details</button>
+      `;
+    }
+
+    function openSensorDetail(sensorId){
+      if (window.pyObj && window.pyObj.openSensorDetail){
+        window.pyObj.openSensorDetail(sensorId);
+      } else {
+        console.log("Clicked sensor", sensorId);
+      }
+    }
+
+    console.log("✅ Sensor map ready – waiting for PyQt data injection");
+    window.renderSensors=renderSensors;
+  </script>
+</body>
+</html>
+

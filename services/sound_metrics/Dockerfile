@@ -1,36 +1,39 @@
 FROM python:3.11-slim
 
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg ca-certificates curl && \
-    rm -rf /var/lib/apt/lists/*
+    ffmpeg ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# --- Copy and trust all *.crt files (if any) ---
-COPY certs/ /tmp/certs/
-RUN if [ -d /tmp/certs ] && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
-      cp /tmp/certs/*.crt /usr/local/share/ca-certificates/ && \
-      chmod 644 /usr/local/share/ca-certificates/*.crt && \
+# Bring in app files (including optional ./certs)
+COPY . .
+
+# Install any *.crt in ./certs (if present), regardless of file names
+RUN if [ -d /app/certs ] && [ -n "$(find /app/certs -type f -name '*.crt' -print -quit)" ]; then \
+      find /app/certs -type f -name '*.crt' -exec cp {} /usr/local/share/ca-certificates/ \; && \
       update-ca-certificates; \
     else \
       echo "No extra CA certs found. Skipping CA update."; \
     fi
 
+# Ensure pip/requests use the system CA bundle (includes optional NetFree certs)
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Persist pip setting as fallback
 RUN printf "[global]\ncert = /etc/ssl/certs/ca-certificates.crt\n" > /etc/pip.conf
 
-COPY requirements.txt .
-RUN python -m pip install --upgrade pip setuptools wheel certifi && \
-    pip install --no-cache-dir -r requirements.txt
+# Python deps (now benefit from the updated CA store if certs exist)
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
-
+# App code already copied above
 ENV PYTHONUNBUFFERED=1 \
     ADDR=0.0.0.0 \
-    PORT=8001 \
+    PORT=8005 \
     WINDOW_MIN=5 \
     FRAME_SEC=0.1 \
     THRESHOLD=0.01 \
@@ -38,8 +41,8 @@ ENV PYTHONUNBUFFERED=1 \
     MINIO_ENDPOINT=minio:9000 \
     MINIO_ACCESS_KEY=minioadmin \
     MINIO_SECRET_KEY=minioadmin123 \
-    MINIO_BUCKET=audio \
-    MINIO_PREFIX=samples/
+    MINIO_BUCKET=sound \
+    MINIO_PREFIX=sounds/
 
 EXPOSE 8001
 

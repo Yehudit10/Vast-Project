@@ -35,9 +35,6 @@ TOPICS=(
   sensor-telemetry
   sensor-anomalies
   dev-robot-telemetry-anomalies
-  incidents.events
-  incidents.update
-  incidents.create
 
   sensor_anomalies
   sensor_zone_stats
@@ -47,9 +44,15 @@ TOPICS=(
   irrigation.control.dlq
   sound.new
   image.new
-  dev-aerial-images-keys
+  aerial_images_metadata
+  dev-security-images-keys
   alerts
 
+  aerial_image_object_detections
+  aerial_image_anomaly_detections
+  aerial_image_segmentation
+  aerial_images_complete_metadata
+  
   # --- imagery (MinIO -> Kafka) ---
   image.new.aerial
   image_new_aerial_connections
@@ -57,10 +60,21 @@ TOPICS=(
   image.new.leaves
   image.new.ground
   image.new.field
+  image.new.security
+  image_new_security_connections
   
   # --- sound(sound) (MinIO -> Kafka) ---
   sound.new.plants
   sound.new.sounds
+  sounds_ultra_metadata
+  sounds_metadata
+  sound_new_plants_connections
+  sound_new_sounds_connections
+
+  inference.dispatched.sounds
+  dlq.inference.http
+ 
+  aerial_images_keys
 )
 
 # Idempotent creation with retention.ms

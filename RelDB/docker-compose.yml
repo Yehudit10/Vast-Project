@@ -34,6 +34,39 @@ services:
       - airnet
     restart: unless-stopped
 
+  rover_ingest:
+    build:
+      context: ..    
+      dockerfile: services/rover_ingest/Dockerfile
+    command: ["python","-m","services.rover_ingest.app"]
+    environment:
+      MINIO_ENDPOINT: "host.docker.internal:9000"   
+      MINIO_BUCKET: "rover-images"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_SECRET_KEY: "minioadmin"
+      PG_DSN: "dbname=missions_db user=missions_user host=db port=5432 password=pg123"
+
+    depends_on:
+       db:
+        condition: service_healthy
+        
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    ports:
+      - "9109:9109"    # Prometheus metrics
+    restart: unless-stopped
+    networks:
+      - airnet
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9109/metrics').read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+   
+
   postgres_exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
     environment:
