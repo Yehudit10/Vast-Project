@@ -44,9 +44,9 @@ ENV PYTHONUNBUFFERED=1 \
     MINIO_BUCKET=sound \
     MINIO_PREFIX=sounds/
 
-EXPOSE 8001
+EXPOSE 8005
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
-  CMD curl -fsS http://localhost:8001/metrics >/dev/null || exit 1
+  CMD curl -fsS http://localhost:8005/metrics >/dev/null || exit 1
 
 CMD ["python", "-u", "src/metrics.py"]
