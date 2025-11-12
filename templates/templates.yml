@@ -22,5 +22,60 @@ templates:
   
   plant_drought_detected:
     category: agriculture
-    summary: "🌿 Plant drought detected by ${device_id} in ${area} (severity ${severity}, confidence ${confidence})"
+    summary: "🌿 Plant drought detected by ${device_id} (severity ${severity}, confidence ${confidence})"
     recommendation: "Check irrigation in ${area}. Status: ${watering_status}. Audio file: ${file}"
+
+  suspicious_sound-predatory_animals:
+    category: security
+    summary: "⚠️ Predatory animal sound detected by ${device_id} (confidence ${confidence})"
+    recommendation: "Stay alert and avoid the area until confirmed safe."
+
+  suspicious_sound-non_predatory_animals:
+    category: environment
+    summary: "🐾 Animal sounds detected by ${device_id}"
+    recommendation: "No immediate action required. Monitor if sounds persist."
+
+  suspicious_sound-birds:
+    category: environment
+    summary: "🐦 Bird activity detected by ${device_id}"
+    recommendation: "Normal environmental sounds. No action needed."
+
+  suspicious_sound-fire:
+    category: emergency
+    summary: "🔥 Possible fire sounds detected by ${device_id} (confidence ${confidence})"
+    recommendation: "Inspect the area for signs of fire and alert authorities if confirmed."
+
+  suspicious_sound-footsteps:
+    category: security
+    summary: "👣 Footsteps detected by ${device_id} at ${timestamp}"
+    recommendation: "Check surveillance feed or nearby activity."
+
+  suspicious_sound-insects:
+    category: environment
+    summary: "🐝 Insect sounds detected by ${device_id}"
+    recommendation: "Low concern. Suitable for ecological monitoring."
+
+  suspicious_sound-screaming:
+    category: emergency
+    summary: "🚨 Screaming detected by ${device_id}"
+    recommendation: "Verify immediately. Contact security or emergency services if needed."
+
+  suspicious_sound-shotgun:
+    category: security
+    summary: "🔫 Possible gunshot detected by ${device_id}"
+    recommendation: "Treat as high-priority event. Notify authorities immediately."
+
+  suspicious_sound-stormy_weather:
+    category: environmental
+    summary: "🌩️ Storm sounds detected by ${device_id}"
+    recommendation: "Monitor weather alerts and secure outdoor equipment."
+
+  suspicious_sound-streaming_water:
+    category: environmental
+    summary: "💧 Flowing water detected by ${device_id}"
+    recommendation: "Check for flooding or irrigation system leaks."
+
+  suspicious_sound-vehicle:
+    category: movement
+    summary: "🚗 Vehicle detected by ${device_id} at ${timestamp}"
+    recommendation: "Verify authorized vehicle access in ${area}."
