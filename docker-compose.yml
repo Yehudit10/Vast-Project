@@ -95,7 +95,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
       - MINIO_BUCKET=sound
-      - MINIO_PREFIX=sounds/
+      - MINIO_PREFIX=sounds/, plants/
 
     command: [ "python", "-u", "src/metrics.py" ]
     ports:
