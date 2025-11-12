@@ -26,6 +26,14 @@ services:
       - ./data/ultra-sound/metadata:/data/ultra-sound/metadata:ro
     command: ["python", "-u", "/app/data_publisher.py"]
     
+  fruit-publisher:
+      build: .
+      container_name: fruit-publisher
+      env_file: .env.fruit
+      volumes:
+        - ./data/fruit/images:/data/fruit/images:ro
+        - ./data/fruit/metadata:/data/metadata:ro
+      command: ["python", "-u", "/app/data_publisher.py"] 
 networks:
   default:
     external: true

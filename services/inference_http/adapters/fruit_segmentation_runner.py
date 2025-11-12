@@ -1,4 +1,6 @@
 import os, io, tempfile, hashlib, cv2, numpy as np, boto3, torch
+import re
+from datetime import datetime
 
 def allow_unrestricted_torch_load():
     _original_load = torch.load
@@ -77,16 +79,34 @@ class FruitSegmentationRunner:
                     crop = img[y1:y2, x1:x2]
                     if crop.size == 0:
                         continue
-                    out_name = f"{os.path.splitext(os.path.basename(key))[0]}_fruit_{i+1}.jpg"
-                    out_key = f"segments/{out_name}"
+                    
+                    base_name = os.path.splitext(os.path.basename(key))[0]
+                    match = re.match(r"([a-zA-Z0-9-]+)_(\d{8}T\d{6}Z)", base_name)
+                    if match:
+                        device_id, timestamp_str = match.groups()
+                        timestamp = datetime.strptime(timestamp_str, "%Y%m%dT%H%M%SZ")
+                        date_part = timestamp.strftime("%Y-%m-%d")
+                        time_part = timestamp_str  
+                    else:
+                        device_id = "unknown_device"
+                        date_part = "unknown_date"
+                        time_part = "unknown_time"
+                    out_name = f"{base_name}.jpg"
+                    out_key = f"fruit/fruits/{device_id}/{date_part}/{time_part}/{out_name}"
                     out_path = os.path.join(tmpdir, out_name)
                     cv2.imwrite(out_path, crop)
+                    
                     self.s3.upload_file(out_path, bucket_in, out_key)
                     count += 1
     
-        return {
-            "label": "fruit",
-            "count": count,
-            "latency_ms_model": latency_ms,
-            "bucket_out": bucket_in
-        }
+                    return {
+                    "ok": True,
+                    "team": "camera",
+                    "bucket": bucket_in,
+                    "key": out_key,
+                    "label": "fruit",
+                    "device_id": device_id,
+                    "timestamp": timestamp_str,
+                    "latency_ms_model": latency_ms,
+                    "bucket_out": bucket_in
+                    }
