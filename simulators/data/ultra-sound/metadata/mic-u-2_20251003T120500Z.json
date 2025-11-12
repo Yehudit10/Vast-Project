@@ -1,0 +1,14 @@
+{
+  "file_name": "mic-u-2_20251003T120500Z.wav",
+  "device_id": "mic-u-2",
+  "capture_time": "2025-10-03T12:05:00Z",
+  "duration_sec": 0.002,
+  "done": false,
+  "sample_rate_hz": 500000,
+  "channels": 1,
+  "content_type": "audio/wav",
+  "gis_origin": {
+    "latitude": 32.89561,
+    "longitude": 30.9681
+  }
+}

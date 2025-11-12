@@ -9,7 +9,7 @@ services:
     container_name: flink_writer_db
     environment:
       - KAFKA_BROKERS=kafka:9092
-      - TOPICS=files,image_new_aerial_connections,alerts
+      - TOPICS=files,image_new_aerial_connections,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata,alerts
       - DB_API_BASE=http://db_api_service:8001
       - DB_API_AUTH_MODE=service
       - DB_API_SERVICE_NAME=flink-writer-db

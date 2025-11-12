@@ -16,7 +16,7 @@ DB_API_SERVICE_NAME = os.getenv("DB_API_SERVICE_NAME", "flink-writer-db")
 DUMMY_DB = int(os.getenv("DUMMY_DB", "0")) == 1
 
 KAFKA_BROKERS = os.getenv("KAFKA_BROKERS", "kafka:9092")
-TOPICS = [t.strip() for t in os.getenv("TOPICS", "sensor_anomalies,alerts,image_new_aerial_connections").split(",") if t.strip()]
+TOPICS = [t.strip() for t in os.getenv("TOPICS", "sensor_anomalies,alerts,image_new_aerial_connections,sound_new_sounds_connections,sound_new_plants_connections,sounds_metadata,sounds_ultra_metadata").split(",") if t.strip()]
 
 # ---------- Token Bootstrap ----------
 def _safe_join_url(base: str, path: str) -> str:

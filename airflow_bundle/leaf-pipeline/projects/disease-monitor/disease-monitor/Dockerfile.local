@@ -1,0 +1,32 @@
+FROM docker.io/library/python@sha256:e0c4fae70d550834a40f6c3e0326e02cfe239c2351d922e1fb1577a3c6ebde02
+
+WORKDIR /app
+
+# 1) כלים בסיסיים ותעודות + requests (דרך APT) בלי לפנות ל-PyPI עבור החבילה הזו
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl python3-requests \
+ && rm -rf /var/lib/apt/lists/*
+
+# הגדרות SSL סטנדרטיות (משתמשים בתעודות מערכת)
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
+# 2) התקנת תלויות פייתון של הפרויקט
+COPY requirements.txt /app/requirements.txt
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org --no-cache-dir -r requirements.txt
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org --no-cache-dir requests
+
+# 3) התקנת החבילה עצמה
+COPY pyproject.toml README.md /app/
+COPY src /app/src
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org --no-cache-dir .
+
+# 4) קונפיגים
+COPY configs /app/configs
+
+ENV PYTHONUNBUFFERED=1
+ENTRYPOINT ["python", "-m", "disease_monitor.cli"]

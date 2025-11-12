@@ -1,17 +1,16 @@
-
 from __future__ import annotations
 import os
 from dataclasses import dataclass
 from typing import Optional, Any, Dict, List
 
-from PyQt6.QtCore import Qt, QTimer, QSize
-from PyQt6.QtGui import QPixmap, QKeyEvent
+from PyQt6.QtCore import Qt, QTimer, QSize, QRectF
+from PyQt6.QtGui import QPixmap, QKeyEvent, QPainter, QColor, QPen, QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QProgressBar, QMessageBox, QSizePolicy, QFrame
 )
 
-# The client does not access MinIO directly; everything goes through DashboardApi
+# GUI never touches MinIO directly – it uses DashboardApi only.
 from vast.dashboard_api import DashboardApi
 
 GROUND_BUCKET = os.getenv("GROUND_BUCKET", "ground")
@@ -25,13 +24,14 @@ class PhiSnapshot:
     phi: Optional[float]           # 0..100 or None
     density: Optional[float]
     coverage: Optional[float]
-    severity_avg: Optional[float]
+    severity_avg: Optional[float]  # usually 0..1 (clamped)
     trend: Optional[float]
     week_start: Optional[str]
-    source: str = ""               # textual hint of data source
+    source: str = ""               # textual hint of data source (NOT shown in UI)
 
 
 def _phi_band_color(v: float) -> str:
+    # 80..100 = green, 50..79 = amber, else red
     if v >= 80:
         return "#16a34a"  # green-600
     if v >= 50:
@@ -48,16 +48,109 @@ def _safe_float(x) -> Optional[float]:
         return None
 
 
+# ----------------------------
+# Visual PHI circle (pie)
+# ----------------------------
+class PhiCircleWidget(QWidget):
+    """
+    Draws a pie:
+      - red slice = severity in [0..1]
+      - green slice = 1 - severity (healthy remainder)
+    Always draws red on top so it's never hidden.
+    Also draws the severity percentage text centered on the pie.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._severity = 0.0  # 0..1
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setToolTip("Red slice = severity (0..1). Green = healthy remainder.")
+
+    def sizeHint(self):
+        return QSize(120, 120)
+
+    def minimumSizeHint(self):
+        return QSize(100, 100)
+
+    def setSeverity(self, value: float) -> None:
+        try:
+            v = float(value)
+        except Exception:
+            v = 0.0
+        self._severity = max(0.0, min(1.0, v))
+        self.update()   # ensure repaint
+
+    def paintEvent(self, event) -> None:
+        try:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setPen(Qt.PenStyle.NoPen)
+
+            pad = 10
+            size = min(self.width(), self.height()) - 2 * pad
+            if size <= 0:
+                return
+            cx = (self.width() - size) / 2
+            cy = (self.height() - size) / 2
+            rect = QRectF(cx, cy, size, size)
+
+            start = 90 * 16  # 12 o'clock (Qt: 0° is 3 o'clock)
+            full = -360 * 16
+
+            s = self._severity
+            # Degenerate cases
+            if s <= 1e-6:
+                painter.setBrush(QColor("#16a34a"))
+                painter.drawEllipse(rect)
+            elif s >= 1 - 1e-6:
+                painter.setBrush(QColor("#dc2626"))
+                painter.drawEllipse(rect)
+            else:
+                span_red = int(round(full * s))          # negative (clockwise)
+                span_green = full - span_red             # the remainder
+
+                # Draw green remainder first
+                painter.setBrush(QColor("#16a34a"))
+                painter.drawPie(rect, start + span_red, span_green)
+
+                # Draw red slice on top (so it's always visible)
+                painter.setBrush(QColor("#dc2626"))
+                painter.drawPie(rect, start, span_red)
+
+            # Outline
+            pen = QPen(QColor("#334155"))
+            pen.setWidth(2)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawEllipse(rect)
+
+            # Percentage text (centered)
+            percent_text = f"{int(round(s * 100))}%"
+            font = QFont()
+            font.setBold(True)
+            font.setPointSize(int(size * 0.22))  # responsive sizing
+            painter.setFont(font)
+
+            # Soft shadow for readability
+            painter.setPen(QColor(0, 0, 0, 160))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, percent_text)
+            # Foreground text
+            painter.setPen(QColor("#ffffff"))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, percent_text)
+
+        except Exception as e:
+            print(f"[PhiCircleWidget] paintEvent error: {e}")
+
+
+# ----------------------------
+# GroundView
+# ----------------------------
 class GroundView(QWidget):
     """
     Gallery mode:
-      - Loads all object keys from MinIO bucket=GROUND_BUCKET, prefix=GROUND_PREFIX.
+      - Loads all object keys from MinIO via DashboardApi.
       - Keeps current index; supports Prev/Next buttons and keyboard arrows.
-      - On image change, loads bytes via DashboardApi and refreshes PHI for that key.
-
-    Design goals:
-      - No direct MinIO client on the GUI.
-      - Be resilient to missing API methods; fail gracefully.
+      - On image change, fetches bytes and refreshes PHI for that key.
     """
 
     def __init__(self, api: DashboardApi, parent=None):
@@ -77,6 +170,7 @@ class GroundView(QWidget):
         title.setStyleSheet("font-size:20px;font-weight:800;color:#0f172a;")
         root.addWidget(title)
 
+        # Toolbar
         toolbar = QHBoxLayout()
         self.btn_refresh_list = QPushButton("Reload list")
         self.btn_refresh_list.clicked.connect(self.reload_keys)
@@ -128,26 +222,42 @@ class GroundView(QWidget):
         phi_layout.setContentsMargins(12, 12, 12, 12)
         phi_layout.setSpacing(8)
 
+        # Row with headline + (trimmed) details
         row = QHBoxLayout()
         self.phi_label = QLabel("PHI: –")
         self.phi_label.setStyleSheet("font-size:16px;font-weight:700;color:#0f172a;")
         row.addWidget(self.phi_label)
         row.addStretch(1)
-        self.phi_details = QLabel("")
+        self.phi_details = QLabel("")  # will show severity/coverage/trend (without src)
         self.phi_details.setStyleSheet("color:#475569;font-size:12px;")
         row.addWidget(self.phi_details)
         phi_layout.addLayout(row)
 
+        # PHI progress (axis-like) + pie at its side
         self.phi_bar = QProgressBar()
         self.phi_bar.setRange(0, 100)
         self.phi_bar.setValue(0)
         self.phi_bar.setFormat("%v")
         self._style_phi_bar(None)
-        phi_layout.addWidget(self.phi_bar)
+
+        phi_row2 = QHBoxLayout()
+        phi_row2.setContentsMargins(0, 0, 0, 0)
+        phi_row2.setSpacing(10)
+        phi_row2.addWidget(self.phi_bar, stretch=1)
+
+        self.phi_circle = PhiCircleWidget()
+        self.phi_circle.setFixedSize(120, 120)
+        phi_row2.addWidget(self.phi_circle)
+
+        phi_layout.addLayout(phi_row2)
+
+        legend = QLabel("אדום = Severity | ירוק = Healthy")
+        legend.setStyleSheet("color:#64748b;font-size:11px;")
+        phi_layout.addWidget(legend)
 
         root.addWidget(phi_frame, stretch=1)
 
-        # Auto-refresh PHI every 2 min (optional)
+        # Auto-refresh PHI every 2 min
         self.timer = QTimer(self)
         self.timer.setInterval(120_000)
         self.timer.timeout.connect(self.refresh_phi_current)
@@ -156,7 +266,7 @@ class GroundView(QWidget):
         # Initial load
         QTimer.singleShot(200, self.reload_keys)
 
-        # So that arrow keys work even without inner focus
+        # So arrow keys work even without inner focus
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     # ----------------------------
@@ -170,6 +280,7 @@ class GroundView(QWidget):
         )
 
     def _warn(self, msg: str) -> None:
+        # Non-blocking warning box
         try:
             def _show():
                 try:
@@ -187,6 +298,7 @@ class GroundView(QWidget):
             print(f"[GroundView] WARN: {msg}")
 
     def _try_api(self, names: List[str], *args, **kwargs) -> Any:
+        # Try a list of API method names until one succeeds.
         for name in names:
             fn = getattr(self.api, name, None)
             if callable(fn):
@@ -228,6 +340,7 @@ class GroundView(QWidget):
             self._keys = keys
             self._idx = 0 if self._keys else -1
             self._update_counter()
+            self._update_nav_buttons()
             if self._idx >= 0:
                 self.load_current_image()
             else:
@@ -242,6 +355,11 @@ class GroundView(QWidget):
         total = len(self._keys)
         pos = (self._idx + 1) if self._idx >= 0 else 0
         self.counter_label.setText(f"({pos} / {total})")
+
+    def _update_nav_buttons(self) -> None:
+        has = bool(self._keys)
+        for b in (self.btn_prev, self.btn_next, self.btn_show_phi):
+            b.setEnabled(has)
 
     def prev_image(self) -> None:
         if not self._keys:
@@ -279,6 +397,7 @@ class GroundView(QWidget):
         target_size: QSize = self.image_label.size()
         if target_size.width() <= 4 or target_size.height() <= 4:
             self.image_label.setPixmap(pix)
+            self.image_label.setText("")
             return
         scaled = pix.scaled(
             target_size.width(),
@@ -308,6 +427,8 @@ class GroundView(QWidget):
             getter = getattr(self.api, "get_image_bytes_from_minio", None)
             if not callable(getter):
                 self._warn("DashboardApi.get_image_bytes_from_minio is missing.")
+                self._set_image(None)
+                self._render_phi_none()
                 return
 
             data = None
@@ -334,11 +455,13 @@ class GroundView(QWidget):
 
             self._set_image(pix)
             self.img_meta.setText(f"{GROUND_BUCKET}/{key}")
+
             # After image displayed, refresh PHI
             self._refresh_phi_for_key(key)
 
         except Exception as e:
             self._warn(f"load_current_image error: {e}")
+            self._render_phi_none()
 
     # ----------------------------
     # PHI flow
@@ -359,30 +482,27 @@ class GroundView(QWidget):
         self.phi_details.setText("No PHI available.")
         self.phi_bar.setValue(0)
         self._style_phi_bar(None)
+        self.phi_circle.setSeverity(0.0)
 
     def _refresh_phi_for_key(self, key: str) -> None:
-        """Try best-effort PHI for the specific image key."""
+        """Best-effort PHI for the specific image key. Fully guarded."""
         try:
-            # Preferred API: PHI for an explicit image key
+            # 1) Exact by key
             d = self._try_api(["get_phi_for_image"], key)
             if isinstance(d, dict) and (d.get("phi") is not None or d.get("severity_avg") is not None):
-                snap = self._map_phi_dict(d, "phi_by_key")
-                return self._render_phi(snap)
+                return self._render_phi(self._map_phi_dict(d, "phi_by_key"))
 
-            # Fallbacks (like your previous logic)
-            # 1) PHI for current image (if API tracks it)
+            # 2) Current image
             d = self._try_api(["get_phi_for_current_image"])
             if isinstance(d, dict) and (d.get("phi") is not None or d.get("severity_avg") is not None):
-                snap = self._map_phi_dict(d, "phi_current")
-                return self._render_phi(snap)
+                return self._render_phi(self._map_phi_dict(d, "phi_current"))
 
-            # 2) weekly/global PHI
+            # 3) Weekly/global
             d = self._try_api(["get_weekly_phi"])
             if isinstance(d, dict) and (d.get("phi") is not None or d.get("severity_avg") is not None):
-                snap = self._map_phi_dict(d, "weekly")
-                return self._render_phi(snap)
+                return self._render_phi(self._map_phi_dict(d, "weekly"))
 
-            # 3) derive from latest rows (very rough)
+            # 4) Derive roughly from latest rows as last resort
             rows = self._try_api(["get_latest_rows", "get_latest_detections", "get_latest_ground_rows"], limit=1) or []
             if rows and isinstance(rows, list) and isinstance(rows[0], dict):
                 sev = None
@@ -395,6 +515,7 @@ class GroundView(QWidget):
                     cov = _safe_float(rows[0].get(k))
                     if cov is not None:
                         break
+
                 phi_val = None
                 if sev is not None:
                     s = sev if sev <= 1.0 else min(sev, 10.0) / 10.0
@@ -402,6 +523,7 @@ class GroundView(QWidget):
                 elif cov is not None:
                     c = max(0.0, min(1.0, cov))
                     phi_val = 100.0 * c
+
                 if phi_val is not None:
                     snap = PhiSnapshot(
                         phi=phi_val, density=None, coverage=cov, severity_avg=sev,
@@ -409,8 +531,9 @@ class GroundView(QWidget):
                     )
                     return self._render_phi(snap)
 
+            # Nothing available
             self._render_phi_none()
-
+            self._warn("No PHI available for this image.")
         except Exception as e:
             self._warn(f"_refresh_phi_for_key error: {e}")
             self._render_phi_none()
@@ -419,9 +542,12 @@ class GroundView(QWidget):
         if snap is None or snap.phi is None:
             self._render_phi_none()
             return
+
+        # Progress bar + label
         val = max(0, min(100, int(round(snap.phi))))
         self.phi_label.setText(f"PHI: {val}")
         parts = []
+        # keep useful metrics, but DO NOT show 'src=' anymore
         if snap.density is not None:
             parts.append(f"density={snap.density:.2f}")
         if snap.coverage is not None:
@@ -432,15 +558,32 @@ class GroundView(QWidget):
             parts.append(f"trend={snap.trend:+.2f}")
         if snap.week_start:
             parts.append(f"week={snap.week_start}")
-        if snap.source:
-            parts.append(f"src={snap.source}")
-        self.phi_details.setText(" | ".join(parts))
+        self.phi_details.setText(" | ".join(parts))  # no src here
         self.phi_bar.setValue(val)
         self._style_phi_bar(val)
 
+        # Circle severity (normalized to 0..1)
+        sev = snap.severity_avg
+        try:
+            sev = float(sev) if sev is not None else 0.0
+        except Exception:
+            sev = 0.0
+        sev_norm = sev if sev <= 1.0 else min(sev, 10.0) / 10.0
+        self.phi_circle.setSeverity(max(0.0, min(1.0, sev_norm)))
+
     def refresh_phi_current(self) -> None:
-        """Public slot for the 'Show PHI' button; uses current image key."""
-        if 0 <= self._idx < len(self._keys):
-            self._refresh_phi_for_key(self._keys[self._idx])
-        else:
+        """Called by the 'Show PHI' button; uses current image key safely."""
+        try:
+            if 0 <= self._idx < len(self._keys):
+                key = self._keys[self._idx]
+                if not isinstance(key, str) or not key.strip():
+                    self._render_phi_none()
+                    self._warn("No valid image key selected.")
+                    return
+                self._refresh_phi_for_key(key)
+            else:
+                self._render_phi_none()
+                self._warn("No image selected yet. Click 'Reload list' or 'Next'.")
+        except Exception as e:
             self._render_phi_none()
+            self._warn(f"Show PHI failed: {e}")

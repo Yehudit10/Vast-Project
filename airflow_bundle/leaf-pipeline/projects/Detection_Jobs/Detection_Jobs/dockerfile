@@ -1,0 +1,183 @@
+# # # ==============================
+# # # Based on PyTorch with CUDA
+# # # ==============================
+# # # FROM pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
+# # ARG BASE_IMAGE=pytorch/pytorch:2.2.0-cpu
+# # FROM ${BASE_IMAGE}
+
+# # # # --- NETFREE CERT INSTALL ---
+# # # ADD https://netfree.link/dl/unix-ca.sh /home/netfree-unix-ca.sh
+# # # RUN bash /home/netfree-unix-ca.sh \
+# # #     && update-ca-certificates
+# # # ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+# # # ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# # # ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+# # # --- NETFREE CERT INSTALL (optional) ---
+# # ARG INSTALL_NETFREE_CA=0
+# # # אל תעשי ADD מהאינטרנט (זה מה שנפל)
+# # # במקום זה, רק אם תרצי – נוריד בזמן הבנייה עם curl (כש-INSTALL_NETFREE_CA=1)
+# # RUN if [ "$INSTALL_NETFREE_CA" = "1" ]; then \
+# #       apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
+# #       curl -fsSL --retry 5 https://netfree.link/dl/unix-ca.sh -o /home/netfree-unix-ca.sh && \
+# #       bash /home/netfree-unix-ca.sh && update-ca-certificates && \
+# #       rm -rf /var/lib/apt/lists/* ; \
+# #     else echo "Skipping NetFree CA install"; fi
+
+# # # Force pip to trust PyPI
+# # RUN pip config set global.trusted-host "pypi.org files.pythonhosted.org pypi.python.org"
+# # RUN pip config set global.cert /etc/ssl/certs/ca-certificates.crt
+# # # --- END NETFREE CERT INSTALL ---
+
+# # # ==============================
+# # # Install system packages
+# # # ==============================
+# # RUN apt-get update && apt-get install -y --no-install-recommends \
+# #     libgl1-mesa-glx \
+# #     libglib2.0-0 \
+# #     libsm6 \
+# #     libxext6 \
+# #     libxrender1 \
+# #     libgtk2.0-0 \
+# #     libcanberra-gtk-module \
+# #     libcanberra-gtk3-module \
+# #     && rm -rf /var/lib/apt/lists/*
+
+# # # ==============================
+# # # Working directory
+# # # ==============================
+# # ==== Portable CPU base (works everywhere) ====
+# FROM python:3.10-slim
+
+# ENV PIP_NO_CACHE_DIR=1 \
+#     PYTHONDONTWRITEBYTECODE=1 \
+#     PYTHONUNBUFFERED=1
+
+# # System deps מינימליים ל-CV/IO
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     git ffmpeg libsm6 libxext6 libgl1 ca-certificates \
+#  && rm -rf /var/lib/apt/lists/*
+# # הוספת תעודת NetFree ל־trust store של המערכת
+# COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+# RUN update-ca-certificates
+
+# # לוודא שכלי רשת/פייתון משתמשים ב־CA המעודכן
+# ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
+# # Torch/torchvision/torchaudio גרסאות CPU יציבות מה-PyTorch index
+# ARG TORCH_VERSION=2.2.1
+# ARG TORCHVISION_VERSION=0.17.1
+# ARG TORCHAUDIO_VERSION=2.2.1
+# RUN python -m pip install --upgrade pip && \
+#     python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+#       torch==${TORCH_VERSION} \
+#       torchvision==${TORCHVISION_VERSION} \
+#       torchaudio==${TORCHAUDIO_VERSION}
+
+# # (מבטל תלות ב-NetFree בזמן build; אין ADD/curl מהאינטרנט בשלב הזה)
+# # ==== END portable header ====
+
+# # ==============================
+# # Working directory
+# # ==============================
+# # WORKDIR /app
+
+# WORKDIR /app
+
+# # Update pip
+# RUN pip install --upgrade pip
+
+# # ==============================
+# # Install dependencies
+# # ==============================
+# COPY agri_baseline/requirements.txt /app/requirements.txt
+# RUN pip install --no-cache-dir --upgrade "numpy==1.26.4"
+# RUN pip install --no-cache-dir --force-reinstall "opencv-python-headless==4.9.0.80"
+
+# RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# # ==============================
+# # Copy source code
+# # ==============================
+# COPY agri_baseline /app/agri_baseline
+# COPY models /app/models
+# # Copy tests folder
+# COPY tests /app/tests
+
+# # Set PYTHONPATH
+# ENV PYTHONPATH=/app:$PYTHONPATH
+
+# # ==============================
+# # Entry point
+# # ==============================
+# CMD ["python", "agri_baseline/src/batch_runner.py"]
+# syntax=docker/dockerfile:1.6
+
+FROM mcr.microsoft.com/devcontainers/python:1-3.11-bullseye
+
+ENV PIP_NO_CACHE_DIR=0 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# 1) חבילות מערכת בסיסיות
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ffmpeg libsm6 libxext6 libgl1 ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2) הוספת תעודת NetFree שהכנת (הקובץ יושב לצד ה-dockerfile)
+# COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+# RUN update-ca-certificates
+
+# 3) לוודא שכלי רשת/פייתון משתמשים ב-CA של המערכת
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
+# 4) התקנת Torch CPU מהאינדקס של PyTorch עם cache
+ARG TORCH_VERSION=2.2.1
+ARG TORCHVISION_VERSION=0.17.1
+ARG TORCHAUDIO_VERSION=2.2.1
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install --upgrade pip && \
+    python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+      torch==${TORCH_VERSION} \
+      torchvision==${TORCHVISION_VERSION} \
+      torchaudio==${TORCHAUDIO_VERSION}
+
+# 5) ספריות פייתון נוספות (עם cache + בלי --no-cache-dir)
+# WORKDIR /app
+# COPY Detection_Jobs/agri_baseline/requirements.txt /app/requirements.txt
+
+# RUN --mount=type=cache,target=/root/.cache/pip \
+#     pip install --upgrade pip && \
+#     pip install "numpy==1.26.4" && \
+#     pip install --force-reinstall "opencv-python-headless==4.9.0.80" && \
+#     pip install --retries 10 --timeout 120 -r /app/requirements.txt
+# 5) ספריות פייתון נוספות (עם cache + סינון GPU)
+WORKDIR /app
+COPY agri_baseline/requirements.txt /app/requirements.txt
+
+# מסננים תלויות GPU כדי שלא ימשכו CUDA
+RUN awk '!/^(torch|torchvision|torchaudio)[[:space:]=<>!~]*$/ \
+         && !/^pytorch-cuda/ \
+         && !/^xformers/ \
+         && !/^cupy-cuda/ \
+         && !/^nvidia[-_]/' /app/requirements.txt > /app/requirements.cpu.txt
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    PIP_INDEX_URL=https://download.pytorch.org/whl/cpu \
+    PIP_EXTRA_INDEX_URL=https://pypi.org/simple \
+    pip install --retries 10 --timeout 120 -r /app/requirements.cpu.txt
+
+# 6) קוד המקור
+COPY agri_baseline /app/agri_baseline
+COPY models /app/models
+COPY tests /app/tests
+
+# 7) PYTHONPATH – בלי ההפניה למשתנה שאינו קיים בבילד
+ENV PYTHONPATH=/app
+
+# 8) Entry
+CMD ["python", "agri_baseline/src/batch_runner.py"]

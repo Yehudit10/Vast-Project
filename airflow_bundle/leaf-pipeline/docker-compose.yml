@@ -1,0 +1,73 @@
+
+version: "3.8"
+
+x-airflow-common: &airflow-common
+  image: leaf-airflow:2.9.3-fixed
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment:
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    AIRFLOW__CORE__EXECUTOR: "SequentialExecutor"
+    AIRFLOW_HOME: /opt/airflow
+    LEAF_MINIO_ENDPOINT: "http://minio-hot:9000"
+  volumes:
+    - ./airflow:/opt/airflow
+    - ./projects/leaf-counting:/opt/leaf-pipeline/projects/leaf-counting
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
+  restart: unless-stopped
+
+services:
+  # --- Build-only images for DockerOperator tasks (exit 0 right away) ---
+  build_detection_jobs:
+    profiles: ["images"]
+    image: detection-jobs:cpu-lts        
+    build:
+      context: ./projects/Detection_Jobs/Detection_Jobs  
+      dockerfile: dockerfile
+    command: ["sh", "-c", "echo built detection-jobs && true"]
+    restart: "no"
+    networks: [agcloud_ag_cloud]
+
+  build_disease_monitor:
+    profiles: ["images"]
+    image: disease-monitor:cpu-lts       
+    build:
+        context: ./projects/disease-monitor/disease-monitor
+        dockerfile: Dockerfile
+    entrypoint: ["/bin/sh", "-c"]  
+    command: ["sh", "-c", "echo built disease-monitor && true"]
+    restart: "no"
+    networks: [agcloud_ag_cloud]
+
+  # --- Airflow runtime ---
+  scheduler:
+    <<: *airflow-common
+    command: ["airflow", "scheduler"]
+    user: "0:0"  
+    depends_on:
+      build_detection_jobs:
+        condition: service_completed_successfully
+      build_disease_monitor:
+        condition: service_completed_successfully
+    networks: [agcloud_ag_cloud]
+
+  webserver:
+    <<: *airflow-common
+    command: ["airflow", "webserver"]
+    user: "0:0"
+    ports:
+      - "8081:8080"
+    depends_on:
+      scheduler:
+        condition: service_started
+      build_detection_jobs:
+        condition: service_completed_successfully
+      build_disease_monitor:
+        condition: service_completed_successfully
+    networks: [agcloud_ag_cloud]
+
+networks:
+  agcloud_ag_cloud:
+    external: true
