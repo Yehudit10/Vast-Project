@@ -912,7 +912,7 @@ services:
     ports:
       - "8088:8088"   # expose API to host (optional)
     volumes:
-    - ./runs_fence/y8n_cpu_v1/weights:/app/services/fence_hole_detector/weights:ro
+    - ./services/fence_hole_detector/weights:/app/services/fence_hole_detector/weights:ro
     command:
       [
         "uvicorn",
