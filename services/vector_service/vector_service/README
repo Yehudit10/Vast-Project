@@ -1,0 +1,184 @@
+=========================================
+README – Sensor Embeddings Search System
+=========================================
+
+📘 Overview
+-----------
+This project implements an AI-powered similarity search system 
+based on **sensor embeddings** stored in PostgreSQL with the `pgvector` extension.
+
+It allows:
+- Creating embeddings for sensors from the `sensors` table.
+- Storing embeddings in the `embeddings` table.
+- Searching for similar sensors based on vector similarity.
+- Running advanced, filtered similarity queries (by date, type, status).
+
+------------------------------------------
+📦 Database Schema
+------------------------------------------
+
+CREATE TABLE sensors (
+  id SERIAL PRIMARY KEY,
+  sensor TEXT UNIQUE NOT NULL,
+  sensor_type TEXT NOT NULL,
+  owner_name TEXT,
+  lat DOUBLE PRECISION,
+  lon DOUBLE PRECISION,
+  install_date TIMESTAMP DEFAULT NOW(),
+  status TEXT DEFAULT 'active',
+  description TEXT,
+  last_maintenance TIMESTAMP
+);
+
+CREATE TABLE embeddings (
+  id BIGSERIAL PRIMARY KEY,
+  sensor_id INT REFERENCES sensors(id) ON DELETE CASCADE,
+  vec vector(5)
+);
+
+------------------------------------------
+🚀 How to Run
+------------------------------------------
+
+1️⃣ Start Docker containers:
+    docker compose up postgres vector_service
+
+2️⃣ Check that the API is live:
+    http://localhost:8005/docs
+
+3️⃣ Generate embeddings from sensors:
+    Invoke-RestMethod -Method Post -Uri "http://localhost:8005/generate_embeddings_from_sensors"
+
+4️⃣ Verify data:
+    docker exec -it postgres psql -U missions_user -d missions_db
+    SELECT COUNT(*) FROM embeddings;
+
+------------------------------------------
+🔍 Main API Endpoints with Examples
+------------------------------------------
+
+------------------------------------------
+1️⃣ Generate Embeddings
+------------------------------------------
+Creates embeddings for all sensors in the database.
+
+PowerShell:
+Invoke-RestMethod -Method Post -Uri "http://localhost:8005/generate_embeddings_from_sensors"
+
+------------------------------------------
+2️⃣ Search by Vector
+------------------------------------------
+Finds embeddings most similar to the provided vector.
+
+PowerShell:
+Invoke-RestMethod -Method Post -Uri "http://localhost:8005/search" `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '[31.7,34.8,9,5,1]' | ConvertTo-Json -Depth 5
+
+------------------------------------------
+3️⃣ Find Similar Sensors by Sensor ID
+------------------------------------------
+Returns sensors most similar to a specific sensor.
+
+PowerShell:
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors/2" | ConvertTo-Json -Depth 5
+
+------------------------------------------
+4️⃣ Advanced Similarity Search
+------------------------------------------
+Flexible endpoint supporting multiple filters.
+
+🔹 Base query (no filters)
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors_advanced?sensor_id=28" `
+  | ConvertTo-Json -Depth 5
+
+🔹 Same day only
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors_advanced?sensor_id=28&same_day=true" `
+  | ConvertTo-Json -Depth 5
+
+🔹 Same day + same type
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors_advanced?sensor_id=28&same_day=true&same_type=true" `
+  | ConvertTo-Json -Depth 5
+
+🔹 Same day + same type + same status
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors_advanced?sensor_id=28&same_day=true&same_type=true&same_status=true" `
+  | ConvertTo-Json -Depth 5
+
+🔹sensors installed on Wednesday
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors_advanced?sensor_id=28&date_filter=wednesday" `
+  | ConvertTo-Json -Depth 5
+
+🔹sensors installed on last Wednesday
+Invoke-RestMethod -Uri "http://localhost:8005/similar_sensors_advanced?sensor_id=28&date_filter=last_wednesday&same_type=true" `
+  | ConvertTo-Json -Depth 5
+------------------------------------------
+📊 SQL Examples
+------------------------------------------
+
+-- Show all sensors:
+SELECT id, sensor_name, install_date FROM sensors;
+
+-- Insert two sensors with the same installation day:
+INSERT INTO sensors (sensor_name, sensor_type, owner_name, lat, lon, install_date, status)
+VALUES
+('TestSensor_A', 'temperature', 'Dana', 31.771, 34.790, '2025-10-26 09:00:00', 'active'),
+('TestSensor_B', 'temperature', 'Dana', 31.772, 34.792, '2025-10-26 11:00:00', 'active');
+
+-- Generate embeddings for the new sensors:
+Invoke-RestMethod -Method Post -Uri "http://localhost:8005/generate_embeddings_from_sensors"
+
+-- Verify embeddings:
+SELECT e.sensor_id, s.sensor_name, s.sensor_type, e.vec::text
+FROM embeddings e
+JOIN sensors s ON e.sensor_id = s.id;
+
+------------------------------------------
+🧠 Example JSON Output
+------------------------------------------
+
+{
+  "base_sensor": {
+    "sensor_id": 28,
+    "sensor_name": "SoilTemp02",
+    "sensor_type": "temperature",
+    "install_date": "2025-10-25T09:00:00Z",
+    "status": "active"
+  },
+  "criteria": {
+    "same_day": true,
+    "same_type": true,
+    "same_status": true
+  },
+  "similar_sensors": [
+    {
+      "sensor_id": 31,
+      "distance": 1.83,
+      "sensor_name": "SoilTemp05",
+      "sensor_type": "temperature",
+      "install_date": "2025-10-25T11:00:00Z",
+      "status": "active"
+    },
+    {
+      "sensor_id": 33,
+      "distance": 3.44,
+      "sensor_name": "SoilTemp07",
+      "sensor_type": "temperature",
+      "install_date": "2025-10-25T08:00:00Z",
+      "status": "active"
+    }
+  ]
+}
+
+------------------------------------------
+📌 Summary
+------------------------------------------
+✔ End-to-end embedding pipeline for sensors  
+✔ PostgreSQL vector search using `pgvector`  
+✔ Smart similarity filtering by:
+   • Same day  
+   • Same type  
+   • Same status  
+✔ All queries available through one generic endpoint:
+   `/similar_sensors_advanced`
+
+=========================================
