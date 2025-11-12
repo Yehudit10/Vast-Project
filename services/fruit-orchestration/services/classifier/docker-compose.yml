@@ -8,8 +8,6 @@ services:
         TORCH_INDEX_URL: "https://download.pytorch.org/whl/cpu"
     container_name: fruit-batch
     env_file: .env
-    # volumes:
-    #   - .:/app
     restart: "no"
     command: ["python", "-m", "inference.infer_minio_batch", "--limit", "100"]
 

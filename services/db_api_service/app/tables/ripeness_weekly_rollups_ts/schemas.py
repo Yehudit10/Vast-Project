@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, conint, confloat, ConfigDict  # ← הוסף ConfigDict
+from pydantic import BaseModel, Field, conint, confloat, ConfigDict  # ← add ConfigDict
 
 class RipenessWeeklyRollupBase(BaseModel):
     ts: Optional[datetime] = Field(None, description="Insertion timestamp")
@@ -21,5 +21,5 @@ class RipenessWeeklyRollupCreate(RipenessWeeklyRollupBase):
 
 class RipenessWeeklyRollupRead(RipenessWeeklyRollupBase):
     id: int = Field(..., description="Primary key ID")
-    # במקום class Config / orm_mode
+    # instead of class Config / orm_mode
     model_config = ConfigDict(from_attributes=True)

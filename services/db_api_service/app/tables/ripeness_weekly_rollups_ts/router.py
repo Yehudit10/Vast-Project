@@ -7,7 +7,7 @@ router = APIRouter(prefix="/ripeness_weekly_rollups_ts", tags=["ripeness_weekly_
 @router.get("", response_model=List[schemas.RipenessWeeklyRollupRead])
 def list_rollups(
     from_ts: Optional[str] = Query(None, description="Filter from timestamp (ISO8601)"),
-    to_ts: Optional[str]   = Query(None, description="Filter to timestamp (ISO8601)"),
+    to_ts: Optional[str] = Query(None, description="Filter to timestamp (ISO8601)"),
 ):
     try:
         rows = repo.list_rollups(from_ts=from_ts, to_ts=to_ts)
@@ -16,7 +16,7 @@ def list_rollups(
         print(f"[ERROR][router] list_rollups failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/{id}", response_model=schemas.RipenessWeeklyRollupRead)  # ← פה התיקון
+@router.get("/{id}", response_model=schemas.RipenessWeeklyRollupRead)
 def get_rollup(id: int):
     row = repo.get_rollup(id)
     if not row:

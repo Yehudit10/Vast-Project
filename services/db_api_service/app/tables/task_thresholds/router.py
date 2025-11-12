@@ -8,7 +8,7 @@ router = APIRouter(prefix="/task_thresholds", tags=["task_thresholds"])
 @router.get("", response_model=List[dict])  
 def list_thresholds():
     try:
-        return repo.list_all()  # מחזיר [{task, label, threshold, updated_by, ...}, ...]
+        return repo.list_all()  # returns [{task, label, threshold, updated_by, ...}, ...]
     except Exception as e:
         print("[ERROR] list_thresholds failed:", e, flush=True)
         raise HTTPException(status_code=500, detail=str(e))

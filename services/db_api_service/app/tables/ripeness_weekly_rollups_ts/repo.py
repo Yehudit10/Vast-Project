@@ -4,7 +4,6 @@ from app.db import session_scope
 from datetime import datetime, timezone
 
 def parse_ts(s: str) -> datetime:
-    # תומך ב-"Z" (UTC) וב־offsets. אם מגיעה מחרוזת בלי טיים-זון – נכפה UTC.
     if s.endswith("Z"):
         return datetime.fromisoformat(s.replace("Z", "+00:00"))
     dt = datetime.fromisoformat(s)
