@@ -12,7 +12,6 @@ networks:
     driver: bridge
   flink-net:
     driver: bridge
-  
 
 # --------------------------
 # Volumes
@@ -116,10 +115,8 @@ services:
 
   plant_stress_daily:
     build: ./services/plant_stress
-    env_file:
-      - ./services/plant_stress/.env
-    restart: "no"
     environment:
+      TZ: "Asia/Jerusalem"          
       MODEL_DIR: /models
       CONFIDENCE_THRESHOLD: "0.60"
       TF_CPP_MIN_LOG_LEVEL: "2"
@@ -131,20 +128,17 @@ services:
       MINIO_BUCKET: sound
       MINIO_PREFIX: plants/
       MINIO_SECURE: "false"
-      
       DEFAULT_AREA: unknown
       DEFAULT_LAT: 0.0
       DEFAULT_LON: 0.0
       DEFAULT_IMAGE_URL: https://example.com/placeholder.jpg
       DEFAULT_VOD: https://example.com/placeholder.mp4
       DEFAULT_HLS: https://example.com/placeholder.m3u8
-      # ==== Alerts → Kafka ====
       ENABLE_ALERTS: "true"
       KAFKA_BOOTSTRAP: "kafka:9092"
       ALERT_TOPIC: "alerts"
       ALERT_TYPE: "plant_drought_detected"
       KAFKA_CLIENT_ID: "plant-stress-producer"
-    command: ["python","-u","/app/predict_minio_daily.py"]
     volumes:
       - "./services/plant_stress/models:/models:ro"
     depends_on:
@@ -157,6 +151,7 @@ services:
       kafka:
         condition: service_healthy
     networks: [ag_cloud]
+    restart: unless-stopped
 
   # -------------------------
   # MQTT + Kafka + MQTT-router
@@ -680,6 +675,8 @@ services:
       - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
       - DB_SCHEMA=agcloud_audio
       - DB_RUN_ID=api-default
+      - FILES_SCHEMA=public
+      - FILES_TABLE=sound_new_sounds_connections
 
       # Kafka 
       - KAFKA_BROKERS=kafka:9092
@@ -1597,3 +1594,4 @@ services:
     networks:
       - flink-net
       - ag_cloud
+

@@ -134,3 +134,153 @@ pg_database_size:
     - size_bytes:
         usage: GAUGE
         description: "Database size in bytes"
+<<<<<<< HEAD
+=======
+
+# ============================================
+# LEAF DISEASES METRICS
+# ============================================
+
+# Total leaf reports
+leaf_reports_total:
+  query: "SELECT COUNT(*)::float as total FROM public.leaf_reports"
+  master: true
+  metrics:
+    - total:
+        usage: "GAUGE"
+        description: "Total number of leaf disease reports"
+
+# Reports by disease type
+leaf_reports_by_disease:
+  query: |
+    SELECT 
+      COALESCE(ldt.name, 'Unknown') as disease_name,
+      lr.leaf_disease_type_id::text as disease_id,
+      COUNT(*)::float as count 
+    FROM public.leaf_reports lr
+    LEFT JOIN public.leaf_disease_types ldt ON lr.leaf_disease_type_id = ldt.id
+    WHERE lr.sick = true
+    GROUP BY lr.leaf_disease_type_id, ldt.name
+  master: true
+  metrics:
+    - disease_name:
+        usage: "LABEL"
+        description: "Disease name"
+    - disease_id:
+        usage: "LABEL"
+        description: "Disease type ID"
+    - count:
+        usage: "GAUGE"
+        description: "Number of reports per disease"
+
+# Reports by device
+leaf_reports_by_device:
+  query: |
+    SELECT 
+      device_id::text as device_id,
+      COUNT(*)::float as total_reports,
+      SUM(CASE WHEN sick THEN 1 ELSE 0 END)::float as sick_reports
+    FROM public.leaf_reports
+    GROUP BY device_id
+  master: true
+  metrics:
+    - device_id:
+        usage: "LABEL"
+        description: "Device ID"
+    - total_reports:
+        usage: "GAUGE"
+        description: "Total reports per device"
+    - sick_reports:
+        usage: "GAUGE"
+        description: "Sick reports per device"
+
+# Daily disease progression (time series)
+leaf_disease_daily_progression:
+  query: |
+    SELECT 
+      COALESCE(ldt.name, 'Unknown') as disease_name,
+      lr.leaf_disease_type_id::text as disease_id,
+      TO_CHAR(DATE_TRUNC('day', lr.ts), 'YYYY-MM-DD') as report_date,
+      EXTRACT(EPOCH FROM DATE_TRUNC('day', lr.ts))::float as date_timestamp,
+      COUNT(*)::float as sick_count
+    FROM public.leaf_reports lr
+    LEFT JOIN public.leaf_disease_types ldt ON lr.leaf_disease_type_id = ldt.id
+    WHERE lr.sick = true
+      AND lr.ts > NOW() - INTERVAL '90 days'
+    GROUP BY lr.leaf_disease_type_id, ldt.name, DATE_TRUNC('day', lr.ts)
+    ORDER BY date_timestamp DESC
+  master: true
+  metrics:
+    - disease_name:
+        usage: "LABEL"
+        description: "Disease name"
+    - disease_id:
+        usage: "LABEL"
+        description: "Disease type ID"
+    - report_date:
+        usage: "LABEL"
+        description: "Report date (YYYY-MM-DD)"
+    - date_timestamp:
+        usage: "GAUGE"
+        description: "Date timestamp for X axis"
+    - sick_count:
+        usage: "GAUGE"
+        description: "Number of sick reports per day"
+
+# Hourly disease detection (last 7 days)
+leaf_disease_hourly_detection:
+  query: |
+    SELECT 
+      COALESCE(ldt.name, 'Unknown') as disease_name,
+      lr.leaf_disease_type_id::text as disease_id,
+      EXTRACT(EPOCH FROM DATE_TRUNC('hour', lr.ts))::float as hour_timestamp,
+      COUNT(*)::float as count
+    FROM public.leaf_reports lr
+    LEFT JOIN public.leaf_disease_types ldt ON lr.leaf_disease_type_id = ldt.id
+    WHERE lr.sick = true
+      AND lr.ts > NOW() - INTERVAL '7 days'
+    GROUP BY lr.leaf_disease_type_id, ldt.name, DATE_TRUNC('hour', lr.ts)
+    ORDER BY hour_timestamp DESC
+  master: true
+  metrics:
+    - disease_name:
+        usage: "LABEL"
+        description: "Disease name"
+    - disease_id:
+        usage: "LABEL"
+        description: "Disease type ID"
+    - hour_timestamp:
+        usage: "GAUGE"
+        description: "Hour timestamp"
+    - count:
+        usage: "GAUGE"
+        description: "Detections per hour"
+
+# Disease severity by device (percentage)
+leaf_disease_severity_by_device:
+  query: |
+    SELECT 
+      COALESCE(ldt.name, 'Unknown') as disease_name,
+      lr.leaf_disease_type_id::text as disease_id,
+      lr.device_id::text as device_id,
+      (SUM(CASE WHEN lr.sick THEN 1 ELSE 0 END)::float / COUNT(*)::float * 100) as sick_percentage
+    FROM public.leaf_reports lr
+    LEFT JOIN public.leaf_disease_types ldt ON lr.leaf_disease_type_id = ldt.id
+    WHERE lr.ts > NOW() - INTERVAL '30 days'
+    GROUP BY lr.leaf_disease_type_id, ldt.name, lr.device_id
+    HAVING COUNT(*) > 5
+  master: true
+  metrics:
+    - disease_name:
+        usage: "LABEL"
+        description: "Disease name"
+    - disease_id:
+        usage: "LABEL"
+        description: "Disease type ID"
+    - device_id:
+        usage: "LABEL"
+        description: "Device ID"
+    - sick_percentage:
+        usage: "GAUGE"
+        description: "Percentage of sick reports (0-100)"
+>>>>>>> origin/main
