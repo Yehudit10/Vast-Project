@@ -1,9 +1,9 @@
-# local_metrics_minio.py
+# services/sound_metrics/src/metrics.py
 import os, re, time, math
 from pathlib import Path
 from datetime import datetime, timedelta
 import numpy as np, soundfile as sf
-from prometheus_client import Gauge, start_http_server
+from prometheus_client import Gauge, Counter, start_http_server
 from minio import Minio
 from io import BytesIO
 
@@ -25,6 +25,9 @@ MINIO_ACCESS   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET   = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
 MINIO_BUCKET   = os.getenv("MINIO_BUCKET", "sound")
 MINIO_PREFIX   = os.getenv("MINIO_PREFIX", "sounds/")
+MINIO_PREFIXES = [p.strip() for p in os.getenv("MINIO_PREFIXES", "").split(",") if p.strip()]
+if not MINIO_PREFIXES:
+    MINIO_PREFIXES = [MINIO_PREFIX]
 
 ALLOWED_EXTS = {".wav", ".flac", ".ogg", ".aiff", ".aif", ".au", ".mp3", ".m4a", ".aac", ".opus"}
 FFMPEG_EXTS   = {".mp3", ".m4a", ".aac"}
@@ -32,31 +35,48 @@ FFMPEG_EXTS   = {".mp3", ".m4a", ".aac"}
 def now_time():
     return datetime.utcnow() if USE_UTC else datetime.now()
 
-# === Prometheus metrics ===
+# === Prometheus metrics (REAL metrics only) ===
 g_avg_rms = Gauge("sound_avg_volume", "5m avg RMS", ["mic_id"])
 g_std_rms = Gauge("sound_std_volume", "5m std of RMS", ["mic_id"])
 g_uptime  = Gauge("sound_mic_uptime_ratio", "5m uptime ratio", ["mic_id"])
+g_volume_db = Gauge("sound_volume_db", "5m average volume (as dB from RMS)", ["mic_id"])
+g_mic_uptime_seconds = Gauge("mic_uptime_seconds", "Uptime seconds (in current window)", ["mic_id"])
 
-# === Filename pattern: <mic>_YYYY-MM-DD_HH-MM.ext ===
-FNAME_RE = re.compile(
-    r"^(?P<mic>[^_]+)_(?P<date>\d{4}-\d{2}-\d{2})_(?P<h>\d{2})-(?P<m>\d{2})$",
-    re.IGNORECASE
-)
+# Debug / visibility counters
+files_scanned_total = Counter("agcloud_files_scanned_total", "Total objects seen in MinIO", ["prefix"])
+files_parsed_total  = Counter("agcloud_files_parsed_total", "Total audio files parsed", ["prefix", "mic_id"])
+files_skipped_total = Counter("agcloud_files_skipped_total", "Skipped objects", ["prefix", "reason"])
+
+# Filename pattern: <mic>_<YYYYMMDDThhmmssZ>.ext  e.g., MIC-01_20251109T232907Z.wav
+# FNAME_RE = re.compile(r"^(?P<mic>[^_]+)_(?P<ts>\d{8}T\d{6}Z)$", re.IGNORECASE)
+
+# Filename patterns (flexible):
+# 1) <mic>_<YYYYMMDDThhmmssZ>
+# 2) <mic>-<YYYYMMDDThhmmssZ>
+# 3) <mic>_<YYYYMMDDThhmmss>    (no Z)
+PATTERNS = [
+    re.compile(r"^(?P<mic>[^_]+)_(?P<ts>\d{8}T\d{6}Z)$", re.IGNORECASE),
+    re.compile(r"^(?P<mic>[^-]+)-(?P<ts>\d{8}T\d{6}Z)$", re.IGNORECASE),
+    re.compile(r"^(?P<mic>[^_]+)_(?P<ts>\d{8}T\d{6})$",  re.IGNORECASE),
+]
 
 def parse_name(fname: str):
-    p = Path(fname)
-    m = FNAME_RE.match(p.stem)
-    if not m:
-        return None, None
-    mic = m.group("mic")
-    ts = datetime.strptime(f"{m.group('date')}_{m.group('h')}-{m.group('m')}", "%Y-%m-%d_%H-%M")
-    return mic, ts
+    p = Path(fname).stem
+    for rx in PATTERNS:
+        m = rx.match(p)
+        if m:
+            mic = m.group("mic")
+            ts_str = m.group("ts")
+            # allow both with/without 'Z'
+            fmt = "%Y%m%dT%H%M%SZ" if ts_str.endswith("Z") else "%Y%m%dT%H%M%S"
+            ts = datetime.strptime(ts_str, fmt)
+            return mic, ts
+    return None, None
 
 def window_start_for(ts: datetime) -> datetime:
     bucket_min = (ts.minute // WINDOW_MIN) * WINDOW_MIN
     return ts.replace(minute=bucket_min, second=0, microsecond=0)
 
-# === Audio processing ===
 def load_audio_bytes(data: bytes, ext: str):
     if ext in FFMPEG_EXTS:
         if not HAVE_PYDUB:
@@ -94,6 +114,13 @@ def process_audio_bytes(data: bytes, ext: str):
         total += 1
     return rms_all, std_all, active, total
 
+def apply_delta(slot, delta, sign):
+    slot["sum"]           += sign * delta["sum"]
+    slot["sum_sq"]        += sign * delta["sum_sq"]
+    slot["n"]             += sign * delta["n"]
+    slot["active_frames"] += sign * delta["active_frames"]
+    slot["total_frames"]  += sign * delta["total_frames"]
+
 def flush_finished_windows(now: datetime, agg):
     finished = []
     for (mic, wstart), s in list(agg.items()):
@@ -101,123 +128,125 @@ def flush_finished_windows(now: datetime, agg):
             n = s["n"]
             if n:
                 mean = s["sum"] / n
-                var = (s["sum_sq"] / n) - mean**2
-                std = math.sqrt(max(var, 0))
-                uptime = s["active_frames"] / s["total_frames"] if s["total_frames"] else 0.0
+                var  = (s["sum_sq"] / n) - mean**2
+                std  = math.sqrt(max(var, 0.0))
+                uptime_ratio = s["active_frames"] / s["total_frames"] if s["total_frames"] else 0.0
+
+                # Set REAL metrics
                 g_avg_rms.labels(mic).set(mean)
                 g_std_rms.labels(mic).set(std)
-                g_uptime.labels(mic).set(uptime)
-                print(f"[FLUSH] mic={mic} window={wstart:%Y-%m-%d %H:%M} RMS={mean:.5f} STD={std:.5f} uptime={uptime:.3f}")
+                g_uptime.labels(mic).set(uptime_ratio)
+
+                # Derived REAL metrics for dashboard
+                db = 20.0 * math.log10(max(mean, 1e-12))
+                g_volume_db.labels(mic).set(db)
+                uptime_seconds = s["active_frames"] * FRAME_SEC
+                g_mic_uptime_seconds.labels(mic).set(uptime_seconds)
+
+                print(f"[FLUSH] mic={mic} window={wstart:%Y-%m-%d %H:%M} "
+                      f"RMS={mean:.5f} STD={std:.5f} uptime_ratio={uptime_ratio:.3f} "
+                      f"db={db:.2f} uptime_sec={uptime_seconds:.2f}")
+
             finished.append((mic, wstart))
     for key in finished:
         del agg[key]
 
-def apply_delta(slot, delta, sign):
-    """Apply (sign=+1 add, sign=-1 subtract) a contribution delta to an agg slot."""
-    slot["sum"]           += sign * delta["sum"]
-    slot["sum_sq"]        += sign * delta["sum_sq"]
-    slot["n"]             += sign * delta["n"]
-    slot["active_frames"] += sign * delta["active_frames"]
-    slot["total_frames"]  += sign * delta["total_frames"]
-
 def main():
     start_http_server(PORT, addr=ADDR)
-    print(f"✅ MinIO Metrics available at: http://{ADDR}:{PORT}/metrics")
-
-    # MinIO client
+    print(f"✔ MinIO sound metrics at: http://{ADDR}:{PORT}/metrics")
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS, MINIO_SECRET, secure=False)
 
-    # seen: fname -> etag (to detect updates/overwrites)
-    seen = {}
-    # agg: (mic, wstart) -> accumulators
-    agg = {}
-    # contrib: fname -> {"wstart": datetime, "delta": {...}}
-    # keeps last contribution of each file, so we can subtract it before re-adding
-    contrib = {}
+    seen = {}       # fname -> etag
+    agg = {}        # (mic, wstart) -> accumulators
+    contrib = {}    # fname -> {"wstart": dt, "delta": {...}}
 
     while True:
         now = now_time()
-        try:
-            objects = client.list_objects(MINIO_BUCKET, prefix=MINIO_PREFIX, recursive=True)
-        except Exception as e:
-            print(f"[WARN] Failed to list objects from MinIO: {e}")
-            time.sleep(10)
-            continue
+        # try:
+        #     objects = client.list_objects(MINIO_BUCKET, prefix=MINIO_PREFIX, recursive=True)
+        # except Exception as e:
+        #     print(f"[WARN] list_objects failed: {e}")
+        #     time.sleep(10)
+        #     continue
 
-        for obj in objects:
-            fname_full = obj.object_name  # includes prefix/path
-            fname = Path(fname_full).name
-            ext = Path(fname).suffix.lower()
-            if ext not in ALLOWED_EXTS:
-                continue
-
-            etag = getattr(obj, "etag", None)
-
-            # If we already processed this exact version (same etag), skip
-            if fname in seen and seen[fname] == etag:
-                continue
-
-            mic, ts = parse_name(fname)
-            if not mic:
-                # skip files that don't match naming scheme
-                continue
-
+        # Iterate all configured prefixes
+        for prefix in MINIO_PREFIXES:
             try:
-                resp = client.get_object(MINIO_BUCKET, fname_full)
-                data = resp.read()
+                objects = client.list_objects(MINIO_BUCKET, prefix=prefix, recursive=True)
             except Exception as e:
-                print(f"[ERROR] get_object {fname}: {e}")
-                # ensure the connection is closed even on error
-                try:
-                    resp.close(); resp.release_conn()
-                except Exception:
-                    pass
-                continue
-            finally:
-                try:
-                    resp.close(); resp.release_conn()
-                except Exception:
-                    pass
-
-            try:
-                rms, _std, active, total = process_audio_bytes(data, ext)
-            except Exception as e:
-                print(f"[ERROR] process_audio {fname}: {e}")
+                print(f"[WARN] list_objects failed for prefix={prefix}: {e}")
+                time.sleep(5)
                 continue
 
-            # Prepare new contribution for this file
-            new_wstart = window_start_for(ts)
-            new_delta = {
-                "sum": float(rms),
-                "sum_sq": float(rms * rms),
-                "n": 1,
-                "active_frames": int(active),
-                "total_frames": int(total),
-            }
+            for obj in objects:
+                fname_full = obj.object_name
+                fname = Path(fname_full).name
+                ext = Path(fname).suffix.lower()
+                files_scanned_total.labels(prefix=prefix).inc()
+                if ext not in ALLOWED_EXTS:
+                    files_skipped_total.labels(prefix=prefix, reason="ext").inc()
+                    continue
 
-            # If this file contributed before, remove its previous contribution first
-            if fname in contrib:
-                prev = contrib[fname]
-                prev_wstart = prev["wstart"]
-                prev_delta  = prev["delta"]
-                prev_key = (mic, prev_wstart)
-                # Only subtract if the previous window slot still exists
-                if prev_key in agg:
-                    apply_delta(agg[prev_key], prev_delta, sign=-1)
+                etag = getattr(obj, "etag", None)
+                if fname in seen and seen[fname] == etag:
+                    continue
 
-            # Now add the new contribution to the appropriate window slot
-            key = (mic, new_wstart)
-            slot = agg.setdefault(key, {"sum": 0.0, "sum_sq": 0.0, "n": 0, "active_frames": 0, "total_frames": 0})
-            apply_delta(slot, new_delta, sign=+1)
+                mic, ts = parse_name(fname)
+                if not mic:
+                    files_skipped_total.labels(prefix=prefix, reason="name").inc()
+                    # Helpful log once in a while
+                    print(f"[SKIP:name] {fname_full} (pattern mismatch)")
+                    continue
 
-            # Remember the last seen etag and contribution
-            seen[fname] = etag
-            contrib[fname] = {"wstart": new_wstart, "delta": new_delta}
+                resp = None
+                try:
+                    resp = client.get_object(MINIO_BUCKET, fname_full)
+                    data = resp.read()
+                except Exception as e:
+                    print(f"[ERROR] get_object {fname}: {e}")
+                    if resp:
+                        try: resp.close(); resp.release_conn()
+                        except Exception: pass
+                    continue
+                finally:
+                    if resp:
+                        try: resp.close(); resp.release_conn()
+                        except Exception: pass
 
-            print(f"[OK] {fname} → mic={mic} RMS={rms:.4f} active={active}/{total} window={new_wstart:%Y-%m-%d %H:%M}")
+                try:
+                    rms, _std, active, total = process_audio_bytes(data, ext)
+                except Exception as e:
+                    print(f"[ERROR] process_audio {fname}: {e}")
+                    continue
+
+                new_wstart = window_start_for(ts)
+                new_delta = {
+                    "sum": float(rms),
+                    "sum_sq": float(rms * rms),
+                    "n": 1,
+                    "active_frames": int(active),
+                    "total_frames": int(total),
+                }
+                files_parsed_total.labels(prefix=prefix, mic_id=mic).inc()
+                
+                if fname in contrib:
+                    prev = contrib[fname]
+                    prev_key = (mic, prev["wstart"])
+                    if prev_key in agg:
+                        apply_delta(agg[prev_key], prev["delta"], sign=-1)
+
+                key = (mic, new_wstart)
+                slot = agg.setdefault(key, {"sum": 0.0, "sum_sq": 0.0, "n": 0,
+                                            "active_frames": 0, "total_frames": 0})
+                apply_delta(slot, new_delta, sign=+1)
+
+                seen[fname] = etag
+                contrib[fname] = {"wstart": new_wstart, "delta": new_delta}
+                print(f"[OK] {fname} → mic={mic} RMS={rms:.4f} active={active}/{total} "
+                    f"window={new_wstart:%Y-%m-%d %H:%M}")
 
         flush_finished_windows(now, agg)
-        time.sleep(15)  # reduce load on MinIO
+        time.sleep(15)
 
 if __name__ == "__main__":
     main()

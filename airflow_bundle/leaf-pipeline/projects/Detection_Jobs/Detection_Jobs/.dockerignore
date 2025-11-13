@@ -1,0 +1,33 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.env
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Node / Frontend
+node_modules/
+dist/
+
+# Test / Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local databases
+*.db
+agri.db
+
+# Data outputs
+data/
+data_balanced/
+data_baseline/
+*.csv

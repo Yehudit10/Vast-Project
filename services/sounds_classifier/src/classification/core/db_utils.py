@@ -4,10 +4,12 @@ from psycopg2 import sql
 from typing import Optional
 
 FILES_SCHEMA = os.getenv("FILES_SCHEMA", "public")
-FILES_TABLE  = os.getenv("FILES_TABLE", "files")
+FILES_TABLE  = os.getenv("FILES_TABLE", "sound_new_sounds_connections")
 
 def _files_table_ql() -> sql.SQL:
     return sql.SQL("{}.{}").format(sql.Identifier(FILES_SCHEMA), sql.Identifier(FILES_TABLE))
+
+_KEY_COL = sql.Identifier("key")
 
 def open_db():
     host = os.getenv("DB_HOST", "postgres")
@@ -27,13 +29,14 @@ def ensure_file(conn, *, bucket: str, object_key: str,
                 size_bytes: Optional[int] = None,
                 sample_rate: Optional[int] = None,
                 duration_s: Optional[float] = None) -> int:
-    """Idempotent ensure in public.files by (bucket, object_key)."""
+    """Idempotent ensure in public.sound_new_sounds_connections by (bucket, object_key)."""
+    combined_key = f"{bucket}/{object_key}".lstrip("/")
     try:
         with conn.cursor() as cur:
             cur.execute(
-                sql.SQL("SELECT file_id FROM {} WHERE bucket = %s AND object_key = %s")
-                   .format(_files_table_ql()),
-                (bucket, object_key),
+                sql.SQL("SELECT id FROM {} WHERE {} = %s")
+                   .format(_files_table_ql(),_KEY_COL),
+                (combined_key,),
             )
             row = cur.fetchone()
             if row:
@@ -41,11 +44,11 @@ def ensure_file(conn, *, bucket: str, object_key: str,
 
             cur.execute(
                 sql.SQL("""
-                    INSERT INTO {} (bucket, object_key, size_bytes, sample_rate, duration_s)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING file_id
-                """).format(_files_table_ql()),
-                (bucket, object_key, size_bytes, sample_rate, duration_s),
+                    INSERT INTO {} ({}, size_bytes, sample_rate, duration_s)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                """).format(_files_table_ql(), _KEY_COL),
+                (combined_key, size_bytes, sample_rate, duration_s),
             )
             new_id = cur.fetchone()[0]
 
@@ -100,19 +103,20 @@ def resolve_file_id(conn, *, file_id: Optional[int] = None,
     with conn.cursor() as cur:
         if file_id is not None:
             cur.execute(
-                sql.SQL("SELECT file_id FROM {} WHERE file_id = %s").format(_files_table_ql()),
+                sql.SQL("SELECT id FROM {} WHERE id = %s").format(_files_table_ql()),
                 (file_id,),
             )
             row = cur.fetchone()
             if row:
                 return int(row[0])
-            raise ValueError(f"file_id {file_id} not found in {FILES_SCHEMA}.{FILES_TABLE}")
+            raise ValueError(f"id {file_id} not found in {FILES_SCHEMA}.{FILES_TABLE}")
 
         if bucket is not None and object_key is not None:
+            combined_key = f"{bucket}/{object_key}".lstrip("/")
             cur.execute(
-                sql.SQL("SELECT file_id FROM {} WHERE bucket = %s AND object_key = %s")
-                   .format(_files_table_ql()),
-                (bucket, object_key),
+                sql.SQL("SELECT id FROM {} WHERE {} = %s")
+                   .format(_files_table_ql(), _KEY_COL),
+                (combined_key,),
             )
             row = cur.fetchone()
             if row:

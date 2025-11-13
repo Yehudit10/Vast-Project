@@ -1,0 +1,47 @@
+# ----------------------------
+# Core scientific stack
+# ----------------------------
+numpy==1.26.4
+pandas==2.0.3
+scipy==1.12.0
+
+# ----------------------------
+# Image processing
+# ----------------------------
+opencv-python-headless==4.9.0.80
+Pillow==10.4.0
+albumentations==1.4.3
+
+# ----------------------------
+# Database & configuration
+# ----------------------------
+SQLAlchemy==1.4.52
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+minio==7.2.9   # MinIO SDK for connecting to object storage
+
+# ----------------------------
+# Testing
+# ----------------------------
+pytest
+
+# ----------------------------
+# Typing helpers
+# ----------------------------
+typing-extensions>=4.9.0  
+# Deep learning frameworks
+torch==2.2.0
+torchvision==0.17.0
+torchaudio==2.2.0
+
+
+# ----------------------------
+# Training & monitoring tools
+# ----------------------------
+tensorboard>=2.16
+
+# ----------------------------
+# Visualization & ML utilities
+# ----------------------------
+matplotlib>=3.7
+scikit-learn>=1.3

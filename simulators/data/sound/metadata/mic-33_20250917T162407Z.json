@@ -7,5 +7,8 @@
   "sample_rate_hz": 44100,
   "channels": 2,
   "content_type": "audio/wav",
-  "checksum_md5": "5968a19d35da57296afb799feefea668"
+  "gis_origin": {
+    "latitude": 31.89561,
+    "longitude": 34.8459
+  }
 }
