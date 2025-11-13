@@ -134,8 +134,6 @@ pg_database_size:
     - size_bytes:
         usage: GAUGE
         description: "Database size in bytes"
-<<<<<<< HEAD
-=======
 
 # ============================================
 # LEAF DISEASES METRICS
@@ -283,4 +281,3 @@ leaf_disease_severity_by_device:
     - sick_percentage:
         usage: "GAUGE"
         description: "Percentage of sick reports (0-100)"
->>>>>>> origin/main
