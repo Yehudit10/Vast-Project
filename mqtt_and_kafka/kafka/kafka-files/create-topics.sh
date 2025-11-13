@@ -73,7 +73,9 @@ TOPICS=(
 
   inference.dispatched.sounds
   dlq.inference.http
- 
+  event_logs_sensors
+  sensors
+  sensors_anomalies_modal
   aerial_images_keys
 )
 

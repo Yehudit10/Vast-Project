@@ -30,4 +30,7 @@ def ready():
     return {"ready": True}
 
 app.include_router(auth_router)
+
 app.include_router(build_router(contract_store))
+
+

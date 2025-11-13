@@ -81,14 +81,6 @@ def upsert_file_aggregate(conn: PGConnection, row: Dict[str, Any]) -> None:
 
     try:
         with conn.cursor() as cur:
-            # Ensure file_id exists in the files table
-            cur.execute(
-                "SELECT id FROM files WHERE id = %s",
-                (data["file_id"],)
-            )
-            if not cur.fetchone():
-                raise ValueError(f"file_id {data['file_id']} does not exist in files table")
-
             cur.execute(
                 """
                 INSERT INTO file_aggregates

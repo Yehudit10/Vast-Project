@@ -1,0 +1,24 @@
+# ---------- Base image ----------
+FROM python:3.11-slim
+
+# ---------- Work directory ----------
+WORKDIR /app
+COPY netfree-ca.crt /usr/local/share/ca-certificates/netfree-ca.crt
+
+
+RUN chmod 644 /usr/local/share/ca-certificates/netfree-ca.crt && update-ca-certificates
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+# ---------- Copy simulation scripts ----------
+COPY ./run_sim.py ./fill_system_with_fake_data.py ./Crop_recommendationV2.csv  ./place.csv ./
+
+# ---------- Install dependencies ----------
+RUN pip install --no-cache-dir paho-mqtt pandas
+
+# ---------- Default command ----------
+CMD ["python", "run_sim.py"]
