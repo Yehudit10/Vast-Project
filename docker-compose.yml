@@ -673,8 +673,6 @@ services:
       - DB_URL=postgresql://missions_user:pg123@postgres:5432/missions_db
       - DB_SCHEMA=agcloud_audio
       - DB_RUN_ID=api-default
-      - FILES_SCHEMA=public
-      - FILES_TABLE=sound_new_sounds_connections
 
       # Kafka 
       - KAFKA_BROKERS=kafka:9092
