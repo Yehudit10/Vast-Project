@@ -54,6 +54,7 @@ projects/leaf-counting/out_detect/
 projects/leaf-counting/out_crops/
 projects/leaf-counting/out_pwb/
 projects/leaf-counting/runs_local/
+projects/leaf-counting/weights/
 projects/leaf-counting/.venv/
 projects/leaf-counting/staging/
 
@@ -79,7 +80,7 @@ projects/Detection_Jobs/.git.backup-*.tar.gz
 airflow/dags/leaf-counting/runs_local/
 airflow/dags/leaf-counting/demo_images/
 airflow/dags/leaf-counting/out_*/
-!projects/Detection_Jobs/**/models/
+projects/Detection_Jobs/**/models/
 projects/disease-monitor/disease-monitor/alerts.db
 projects/**/.git.backup-*.tar.gz
 .gitignore.bak*
