@@ -1,0 +1,85 @@
+
+
+
+
+version: "3.9"
+
+services:
+  sensor_anomaly_pro:
+    build:
+      context: ./sensorAnomalyPro
+      dockerfile: Dockerfile
+    container_name: sensor-anomaly-pro
+    volumes:
+      - ./sensorAnomalyPro/data:/app/data
+      - ./sensorAnomalyPro/reports:/app/reports
+    environment:
+      - DATA_PATH=/app/data/plant_health_data.csv
+    command: >
+      python analyze_sensors.py
+    networks:
+      - ag_cloud
+
+  jobmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-jobmanager
+    command: >
+      bash -c "
+      /docker-entrypoint.sh jobmanager &
+      echo '⏳ Waiting for Flink JobManager startup...' &&
+      sleep 10 &&
+      echo '🕓 Waiting for reports to be generated...' &&
+      while [ ! -d /opt/app/sensorAnomalyPro/reports ] || [ -z \"$(ls -A /opt/app/sensorAnomalyPro/reports 2>/dev/null)\" ]; do
+        echo '   ↳ reports directory empty, waiting...';
+        sleep 5;
+      done &&
+      echo '✅ Reports ready, submitting Flink job...' &&
+      flink run -m localhost:8081 -py /opt/app/sensorAnomalyPro/app.py &&
+      tail -f /dev/null"
+    depends_on:
+      - sensor_anomaly_pro
+    ports:
+      - "8081:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=dev-robot-telemetry-raw
+      - OUT_TOPIC=sensor_anomalies
+      - ZONE_TOPIC=sensor_zone_stats
+    volumes:
+      - ./sensorAnomalyPro/reports:/opt/app/sensorAnomalyPro/reports:rw
+    restart: unless-stopped
+    networks:
+      - flink-net
+      - ag_cloud
+
+  taskmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-taskmanager
+    command: taskmanager -D taskmanager.numberOfTaskSlots=4
+    depends_on:
+      - jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=dev-robot-telemetry-raw
+      - OUT_TOPIC=sensor_anomalies
+      - ZONE_TOPIC=sensor_zone_stats
+      - taskmanager.numberOfTaskSlots=4
+    volumes:
+      - ./sensorAnomalyPro/reports:/opt/app/sensorAnomalyPro/reports:rw
+    restart: unless-stopped
+    networks:
+      - flink-net
+      - ag_cloud
+
+networks:
+  flink-net:
+    driver: bridge
+  ag_cloud:
+    external: true
+    name: agcloud_ag_cloud

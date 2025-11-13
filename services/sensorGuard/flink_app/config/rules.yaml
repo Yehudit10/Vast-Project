@@ -1,0 +1,25 @@
+defaults:
+  expected_interval_seconds: 60       
+  keepalive_miss_factor: 2
+  prolonged_silence_seconds: 120
+  silence_sweep_interval_seconds: 120 
+   
+ranges:
+  temperature: { min: 21, max: 29 }
+  Ambient_Temperature: { min: 21, max: 29 }
+  humidity: { min: 0, max: 100 }
+  Humidity: { min: 0, max: 100 }
+  soil_moist: { min: 0, max: 100 }
+  Soil_Moisture: { min: 0, max: 100 }
+  unknown_sensor: { min: 21, max: 29 }  # Default range - using temperature range for testing
+
+stuck:
+  epsilon: 0.1               
+  min_run_length: 3          
+  min_duration_seconds: 600
+
+features:
+  corrupted: true
+  out_of_range: true
+  stuck_sensor: true
+  silence: true 

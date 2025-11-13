@@ -9,7 +9,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-
 # Pytest / coverage
 .pytest_cache/
 .coverage
