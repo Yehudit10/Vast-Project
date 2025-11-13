@@ -1461,3 +1461,119 @@ services:
     volumes:
       - ./services/sensorGuard/secrets:/opt/app/secrets
     restart: unless-stopped
+
+  # --------------------------
+  # Flink Air Processing
+  # --------------------------
+
+  air-taskmanager:
+    build:
+      context: ./services/air
+      dockerfile: Dockerfile.flink
+    container_name: air-taskmanager
+    command: taskmanager -D taskmanager.numberOfTaskSlots=4
+    depends_on:
+      air-jobmanager:
+        condition: service_started
+      infer-api:
+        condition: service_healthy
+      anomaly-api:
+        condition: service_healthy
+      segmentation-api:
+        condition: service_healthy
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=air-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=image.new.aerial 
+      - OUT_TOPIC_OBJECT=aerial_image_object_detections
+      - OUT_TOPIC_ANOMALY=aerial_image_anomaly_detections
+      - OUT_TOPIC_SEGMENTATION=aerial_image_segmentation
+      - taskmanager.numberOfTaskSlots=4
+      - KAFKA_GROUP_ID=flink-air-device-pipeline
+      - SEGMENTATION_URL=http://segmentation-api:8500/infer
+      - INFER_URL=http://infer-api:8000/infer
+      - ANOMALY_URL=http://anomaly-api:8010/predict
+      - INFER_CONF=0.25
+      - INFER_IOU=0.45
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+    networks:
+      - flink-net
+      - ag_cloud
+    restart: unless-stopped
+
+  infer-api:
+    build:
+      context: ./services/air/object_detection_api
+      dockerfile: Dockerfile.infer
+    container_name: infer-api
+    environment:
+      - WEIGHTS_PATH=/app/object_detection_api.pt
+    volumes:
+      - ./services/air/object_detection_api/model/object_detection_api.pt:/app/object_detection_api.pt:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+    networks:
+      - flink-net
+      - ag_cloud
+
+  anomaly-api:
+    build:
+      context: ./services/air/anomaly_detection_api  
+      dockerfile: Dockerfile.anomaly
+    container_name: anomaly-api
+    environment:
+      - MODEL_PATH=/app/models/anomaly_detection_api.pt
+    volumes:
+      - ./services/air/anomaly_detection_api/models:/app/models:ro
+    ports:
+      - "8020:8010"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8010/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+    networks:
+      - flink-net
+      - ag_cloud
+
+  segmentation-api:
+    build:
+      context: ./services/air/segmentation_api     
+      dockerfile: dockerfile.segmentation
+    container_name: segmentation-api
+    environment:
+      - MODEL_PATH=/app/model/segmentation_api.pth
+    ports:
+      - "8500:8500"
+    volumes:
+      - ./services/air/segmentation_api/model:/app/model:ro      
+      - ./services/air/segmentation_api/certs:/usr/local/share/ca-certificates/netfree:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8500/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - flink-net
+      - ag_cloud
+
+  air-submit:
+    build:
+      context: ./services/air
+      dockerfile: Dockerfile.flink
+    depends_on:
+      air-jobmanager:
+        condition: service_started
+    command: >
+      bash -c "
+      sleep 10 &&
+      flink run -m air-jobmanager:8081 -py /opt/app/job.py
+      "
+    networks:
+      - flink-net
+      - ag_cloud
