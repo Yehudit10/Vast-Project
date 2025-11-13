@@ -11,3 +11,4 @@ PALETTE = {
     (255, 215, 0): (7, "Agriculture"),       
     (178, 34, 34): (8, "Building"),          
 }
+

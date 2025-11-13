@@ -7,6 +7,7 @@ from oem_palette import NUM_CLASSES, PALETTE
 from scipy import ndimage
 import json
 import logging
+import os
 
 logger = logging.getLogger("segformer_api")
 logger.setLevel(logging.INFO)  
@@ -34,6 +35,9 @@ logger.info(f"✅ Using device: {device}")
 # =========================================================
 # 🧠 Model Loading
 # =========================================================
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"❌ Model not found at: {MODEL_PATH}")
+
 config = SegformerConfig(
     backbone="mit_b3",
     num_labels=NUM_CLASSES,
@@ -280,10 +284,11 @@ async def infer_image(file: UploadFile = File(...), threshold: float = 0.3):
             tmp_path = tmp.name
 
         img = cv2.cvtColor(cv2.imread(tmp_path), cv2.COLOR_BGR2RGB)
+        os.remove(tmp_path) 
         probs = predict_probs(img)
         mask = np.argmax(probs, axis=0)
         probs = np.transpose(probs, (1, 2, 0))
-        mask = apply_confidence_threshold(probs, mask, threshold=0.3)
+        mask = apply_confidence_threshold(probs, mask, threshold=threshold)
 
 
         mask = refine_water_only(mask, probs, water_conf_thresh=1)

@@ -3,11 +3,16 @@ from fastapi.responses import JSONResponse
 from ultralytics import YOLO
 from PIL import Image
 import io, time
+import os
 
 # ===================================================
 # Load YOLO model once
 # ===================================================
 MODEL_PATH = "models/anomaly_detection_api.pt"
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"❌ Model weights not found at: {MODEL_PATH}")
+
 model = YOLO(MODEL_PATH)
 
 app = FastAPI(title="Anomaly Detection API", version="1.0")

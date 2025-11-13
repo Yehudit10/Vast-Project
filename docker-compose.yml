@@ -1331,7 +1331,7 @@ services:
     build:
       context: ./services/sensorAnomalyPro
       dockerfile: Dockerfile.flink
-    container_name: flink-jobmanager
+    container_name: jobmanager
     command: >
       bash -c "
       /docker-entrypoint.sh jobmanager &
@@ -1366,7 +1366,7 @@ services:
     build:
       context: ./services/sensorAnomalyPro
       dockerfile: Dockerfile.flink
-    container_name: flink-taskmanager
+    container_name: taskmanager
     command: taskmanager -D taskmanager.numberOfTaskSlots=4
     depends_on:
       - jobmanager
@@ -1468,6 +1468,23 @@ services:
   # --------------------------
   # Flink Air Processing
   # --------------------------
+
+  air-jobmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: air-jobmanager
+    command: jobmanager
+    ports:
+      - "8085:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=air-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=image.new.aerial 
+      - KAFKA_GROUP_ID=flink-air-device-pipeline
+    networks:
+      - flink-net
+      - ag_cloud
 
   air-taskmanager:
     build:

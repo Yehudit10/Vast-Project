@@ -30,7 +30,8 @@ model = ModelWrapper(weights_path=WEIGHTS_PATH, conf=0.25, iou=0.45)
 OUTPUT_DIR = Path("outputs")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-
+if not os.path.exists(WEIGHTS_PATH):
+    raise FileNotFoundError(f"❌ Model weights not found at: {WEIGHTS_PATH}")
 # -----------------------------------------------------------
 # Utility: convert NumPy types to JSON serializable types
 # -----------------------------------------------------------
