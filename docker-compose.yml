@@ -10,6 +10,9 @@ networks:
   ag_cloud:
     name: ag_cloud
     driver: bridge
+  flink-net:
+    driver: bridge
+  
 
 # --------------------------
 # Volumes
