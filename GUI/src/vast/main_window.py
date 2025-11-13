@@ -16,6 +16,7 @@ from views.ground_view import GroundView
 from views.auth_status_view import AuthStatusView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
+from views.leaf_diseases import LeafDiseaseView
 
 
 class MainWindow(QMainWindow):
@@ -209,7 +210,7 @@ class MainWindow(QMainWindow):
         self.nav_list.setFont(font)
 
         for name in [
-            "Home", "Sensors", "Sound", "Ground Image",
+            "Home", "Sensors", "Sound", "Ground Image", "Leaf Diseases",
             "Aerial Image", "Fruits", "Security", "Settings",
             "Notifications", "Auth"
         ]:
@@ -248,7 +249,7 @@ class MainWindow(QMainWindow):
         self.fruits_view = FruitsView(api, self)
         self.ground_view = GroundView(api, self)
         self.auth_status = AuthStatusView(api, self)
-
+        self.leaf_diseases_view = LeafDiseaseView(api, self)
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
 
@@ -259,6 +260,7 @@ class MainWindow(QMainWindow):
             "Fruits": self.fruits_view,
             "Ground": self.ground_view,
             "Auth": self.auth_status,
+            "Leaf Diseases": self.leaf_diseases_view
         }
         for view in self.views.values():
             self.stack.addWidget(view)

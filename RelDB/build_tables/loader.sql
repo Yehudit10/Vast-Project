@@ -1,14 +1,20 @@
 -- Extended synthetic data loader for schema_extended_v2.sql
 
 -- Insert devices
-INSERT INTO devices (device_id, model, owner, active) VALUES
-  ('dev-a','drone-x','TeamA',true),
-  ('dev-b','drone-x','TeamA',true),
-  ('dev-c','rover-y','TeamB',true),
-  ('dev-d','rover-y','TeamB',true),
-  ('dev-e','sensor-z','TeamC',true),
-  ('dev-f','sensor-z','TeamC',true)
+INSERT INTO devices (device_id, model, owner, active, location_lat, location_lon) VALUES
+  ('dev-a','drone-x','TeamA',true,NULL,NULL),
+  ('dev-b','drone-x','TeamA',true,NULL,NULL),
+  ('dev-c','rover-y','TeamB',true,NULL,NULL),
+  ('dev-d','rover-y','TeamB',true,NULL,NULL),
+  ('dev-e','sensor-z','TeamC',true,NULL,NULL),
+  ('dev-f','sensor-z','TeamC',true,NULL,NULL),
+  ('dev-g','ground-l','TeamD',true,NULL,NULL),
+  ('dev-h','ground-l','TeamD',true,NULL,NULL),
+  ('dev-i','ground-l','TeamD',true,NULL,NULL),
+  ('dev-j','ground-l','TeamD',true,NULL,NULL),
+  ('dev-k','ground-l','TeamD',true,NULL,NULL)
 ON CONFLICT DO NOTHING;
+
 -- Insert synthetic sensors
 INSERT INTO sensors (
   sensor_name,
@@ -48,7 +54,22 @@ ON CONFLICT DO NOTHING;
 
 -- Seed leaf disease types
 INSERT INTO leaf_disease_types (name)
-VALUES ('Blight'), ('Mildew'), ('Rust')
+VALUES 
+  ('pepper__bacterial_spot'),
+  ('pepper__healthy'),
+  ('potato__early_blight'),
+  ('potato__healthy'),
+  ('potato__late_blight'),
+  ('tomato__bacterial_spot'),
+  ('tomato__early_blight'),
+  ('tomato__healthy'),
+  ('tomato__late_blight'),
+  ('tomato__leaf_mold'),
+  ('tomato__mosaic_virus'),
+  ('tomato__septoria_leaf_spot'),
+  ('tomato__spider_mites'),
+  ('tomato__target_spot'),
+  ('tomato__yellowleaf_curl_virus')
 ON CONFLICT DO NOTHING;
 
 -- Insert 5 missions
@@ -170,12 +191,32 @@ DO UPDATE SET
     updated_by = EXCLUDED.updated_by,
     updated_at = NOW();
 
--- Seed sample leaf reports
-INSERT INTO leaf_reports (device_id, leaf_disease_type_id, ts, confidence, sick)
-SELECT d.device_id, t.id, now() - ((g % 2000) || ' seconds')::interval,
-       (random()*0.5 + 0.5)::double precision,         -- 0.5..1.0
-       (random() < 0.5)
-FROM devices d, leaf_disease_types t, generate_series(1,20) g
-LIMIT 30;
+-- Seed sample leaf reports with random data
+DO $$
+DECLARE
+    devices_arr text[] := ARRAY['dev-g', 'dev-h', 'dev-i', 'dev-j', 'dev-k'];
+    disease_ids int[];
+    d text;
+    t int;
+    start_date timestamptz := now() - interval '30 days';
+    rand_ts timestamptz;
+    conf double precision;
+    sick_val boolean;
+BEGIN
+    -- Get all disease type IDs
+    SELECT array_agg(id) INTO disease_ids FROM leaf_disease_types;
+    
+    -- Insert 300 random reports
+    FOR i IN 1..300 LOOP
+        d := devices_arr[ceil(random() * array_length(devices_arr,1))];
+        t := disease_ids[ceil(random() * array_length(disease_ids,1))];
+        rand_ts := start_date + (random() * interval '30 days');
+        conf := round(random()::numeric, 2);
+        sick_val := (conf > 0.4);
+        
+        INSERT INTO leaf_reports(device_id, leaf_disease_type_id, ts, confidence, sick)
+        VALUES (d, t, rand_ts, conf, sick_val);
+    END LOOP;
+END $$;
 
 
