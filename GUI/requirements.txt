@@ -29,6 +29,7 @@ shapely
 
 # ───── Async / misc ─────
 aiohttp
+folium
 plotly
 shapely
 PyJWT>=2.9.0
