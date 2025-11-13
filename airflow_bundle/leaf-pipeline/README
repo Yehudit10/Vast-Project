@@ -1,1 +1,8 @@
 docker compose --profile images up -d --build
+
+
+projects/leaf-counting/weights/
+https://drive.google.com/drive/folders/1RIp71J7kSLdyQ7UtCdS_piiPYG5hvKOD?usp=sharing
+
+projects/Detection_Jobs/Detection_Jobs/models/
+https://drive.google.com/drive/folders/1u3S8nryoGgjUC_5LKTdc-qvXZmOyJT7X?usp=sharing
