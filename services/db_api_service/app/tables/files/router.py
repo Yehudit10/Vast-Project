@@ -1,4 +1,3 @@
-
 from typing import Optional, Any, Dict
 from urllib.parse import unquote, quote
 import os, json
@@ -13,12 +12,11 @@ router = APIRouter(prefix="/files", tags=["files"])
 # From docker-compose: minio-hot is on port 9001 externally
 PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE", "http://localhost:9002")
 
-
 def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
-    """Attach a public URL to access the file from MinIO"""
+    """Attach a public URL to access the file from MinIO."""
     if not row:
         return row
-    
+
     # Try to extract URL from metadata first
     meta = row.get("metadata")
     if isinstance(meta, str):
@@ -31,19 +29,22 @@ def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
             if meta.get(k):
                 row.setdefault("url", meta[k])
                 return row
-    
-    # Build URL from bucket + key
+
+    # If bucket/object_key directly available, use them
     bucket = row.get("bucket")
-    key = row.get("key") or row.get("object_key")
-    
-    if PUBLIC_S3_BASE and bucket and key:
-        bucket_str = str(bucket)
-        key_str = str(key)
-        # MinIO URL format: http://host:port/bucket/path/to/file
-        built = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(key_str, safe='/')}"
-        # built = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket_str, safe='')}/{quote(key_str, safe='/')}"
+    object_key = row.get("object_key") or row.get("key")
+
+    # If bucket missing but combined key exists (bucket/path/to/file), try to split it
+    if not bucket and object_key and isinstance(object_key, str) and '/' in object_key:
+        parts = object_key.split('/', 1)
+        if len(parts) == 2:
+            bucket = parts[0]
+            object_key = parts[1]
+
+    if PUBLIC_S3_BASE and bucket and object_key:
+        built = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
         row.setdefault("url", built)
-    
+
     return row
 
 def _is_compressed(filename: str) -> bool:
@@ -97,46 +98,49 @@ def list_audio_aggregates(
             for i, dev in enumerate(device_list):
                 params[f"dev_{i}"] = dev
 
-    # Date filters (based on public.files.created_at)
+    # Date filters (use capture_time from sounds_metadata or snsc.linked_time)
     if date_from:
-        conditions.append("f.created_at >= CAST(:date_from AS timestamptz)")
+        conditions.append("COALESCE(sm.capture_time, snsc.linked_time) >= CAST(:date_from AS timestamptz)")
         params["date_from"] = date_from
 
     if date_to:
-        conditions.append("f.created_at < CAST(:date_to AS timestamptz) + INTERVAL '1 day'")
+        conditions.append("COALESCE(sm.capture_time, snsc.linked_time) < CAST(:date_to AS timestamptz) + INTERVAL '1 day'")
         params["date_to"] = date_to
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
     # Sorting options
     sort_map = {
-        "Date (Newest)": "f.created_at DESC",
-        "Date (Oldest)": "f.created_at ASC",
-        "Length": "f.size_bytes DESC",
+        "Date (Newest)": "COALESCE(sm.capture_time, snsc.linked_time) DESC",
+        "Date (Oldest)": "COALESCE(sm.capture_time, snsc.linked_time) ASC",
+        "Length": "sm.duration_sec DESC",  # if you prefer duration from sounds_metadata
         "Device": "snsc.file_name ASC",
         "processing_ms": "fa.processing_ms DESC",
         "filename": "snsc.file_name ASC",
     }
-    order_clause = sort_map.get(sort_by, "f.created_at DESC")
-
+    order_clause = sort_map.get(sort_by, "COALESCE(sm.capture_time, snsc.linked_time) DESC")
+        
     query = f"""
-    SELECT
-        fa.file_id,
-        f.bucket,
-        f.object_key,
-        snsc.file_name AS filename,
-        fa.head_pred_label,
-        fa.head_pred_prob,
-        f.created_at,
-        f.content_type
-    FROM agcloud_audio.file_aggregates fa
-    JOIN public.sound_new_sounds_connections snsc 
-        ON fa.file_id = snsc.id
-    JOIN public.files f
-        ON f.object_key LIKE '%' || snsc.key
-    {where_clause}
-    ORDER BY {order_clause}
-    LIMIT :limit;
+        SELECT
+            fa.file_id,
+            snsc.key AS combined_key,
+            split_part(snsc.key, '/', 1) AS bucket,
+            regexp_replace(snsc.key, '^[^/]+/', '') AS object_key,
+            COALESCE(sm.file_name, snsc.file_name) AS filename,
+            sm.device_id AS device_id,
+            COALESCE(sm.capture_time, snsc.linked_time) AS capture_time,
+            fa.head_pred_label,
+            fa.head_pred_prob,
+            fa.agg_mode,
+            fa.num_windows
+        FROM agcloud_audio.file_aggregates fa
+        JOIN public.sound_new_sounds_connections snsc
+            ON fa.file_id = snsc.id
+        LEFT JOIN public.sounds_metadata sm
+            ON sm.file_name = snsc.file_name
+        {where_clause}
+        ORDER BY {order_clause}
+        LIMIT :limit;
     """
 
     params["limit"] = limit
@@ -146,13 +150,14 @@ def list_audio_aggregates(
         results = []
 
         for r in rows:
+            # build URL server-side
+            bucket = r.get("bucket")
+            object_key = r.get("object_key")
             url = None
-            if r.get("bucket") and r.get("object_key"):
-                url = (
-                    f"{PUBLIC_S3_BASE.rstrip('/')}/"
-                    f"{quote(str(r['bucket']), safe='')}/"
-                    f"{quote(str(r['object_key']), safe='/')}"
-                )
+            if bucket and object_key:
+                # PUBLIC_S3_BASE should be like "https://minio.example.com"
+                url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
+
 
             results.append({
                 "file_id": r.get("file_id"),
@@ -223,13 +228,22 @@ def list_plant_predictions(
         upp.predicted_class,
         upp.confidence,
         upp.watering_status,
-        upp.status
+        upp.status,
+        snpc.key AS combined_key,
+        split_part(snpc.key, '/', 1) AS bucket,
+        regexp_replace(snpc.key, '^[^/]+/', '') AS object_key,
+        COALESCE(sm.file_name, snpc.file_name) AS filename,
+        COALESCE(sm.capture_time, snpc.linked_time) AS capture_time
     FROM public.ultrasonic_plant_predictions upp
-    LEFT JOIN public.files f ON upp.id = f.file_id
+    LEFT JOIN public.sound_new_plants_connections snpc
+        ON snpc.file_name = upp.file
+    LEFT JOIN public.sounds_metadata sm
+        ON sm.file_name = snpc.file_name
     {where_clause}
     ORDER BY {order_clause}
     LIMIT :limit;
     """
+
     params["limit"] = limit
 
     try:
@@ -237,13 +251,11 @@ def list_plant_predictions(
         results = []
         
         for r in rows:
-            # Build MinIO URL
             url = None
             if r.get("bucket") and r.get("object_key"):
                 bucket = str(r["bucket"])
                 key = str(r["object_key"])
                 url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(key, safe='/')}"
-            
             results.append({
                 "id": r.get("id"),
                 "file": r.get("file"),
@@ -254,7 +266,7 @@ def list_plant_predictions(
                 "device_id": ((r.get("file") or "").split("_")[0] or "Unknown"),
                 "url": url
             })
-        
+
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
