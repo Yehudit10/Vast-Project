@@ -1022,7 +1022,7 @@ class RecordingsTab(QWidget):
     def _enable_all_play_buttons(self):
         """Enable all play buttons and disable all stop buttons"""
         for row in range(self.file_table.rowCount()):
-            widget = self.file_table.cellWidget(row, 6)
+            widget = self.file_table.cellWidget(row, 5)
             if widget:
                 layout = widget.layout()
                 if layout and layout.count() >= 2:
