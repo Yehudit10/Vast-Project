@@ -26,6 +26,7 @@ from views.ground_view import GroundView
 from views.auth_status_view import AuthStatusView
 from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
+from views.leaf_diseases import LeafDiseaseView
 
 # === New Sensors GUI imports ===
 from views.sensorsMainView import SensorsMainView
@@ -341,6 +342,7 @@ class MainWindow(QMainWindow):
 
         font = QFont(); font.setPointSize(12)
         self.nav_list.setFont(font)
+        for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Auth", "Leaf Diseases"]:
 
         for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Auth"]:
             item = QListWidgetItem(main_item)
@@ -395,7 +397,7 @@ class MainWindow(QMainWindow):
         self.sound_view = SoundView(api, self)
         self.ground_view = GroundView(api, self)
         self.auth_status = AuthStatusView(api, self)
-
+        self.leaf_diseases_view = LeafDiseaseView(api, self)
         self.sensors_status_summary = SensorsStatusSummary(api, self)
         self.sensors_health = SensorsView(api, self)
         self.sensors_main = SensorsMainView(api, self)
@@ -419,6 +421,7 @@ class MainWindow(QMainWindow):
             "Sensors - Sensor Health": self.sensors_health,
             "Sensors - Location Map": self.sensors_main,
             "Notifications": self.notification_view,
+            "Leaf Diseases": self.leaf_diseases_view,
             "Fruits": self.fruits_view,
             "Ground Image": self.ground_view,
             "Auth": self.auth_status,
