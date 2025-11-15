@@ -137,7 +137,7 @@ def get_file(bucket: str, object_key: str) -> Optional[Dict[str, Any]]:
     q = text("""
         SELECT
             file_id, bucket, object_key,
-            object_key AS key,                       -- convenient alias
+            object_key AS key,
             content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
@@ -152,14 +152,14 @@ def get_file(bucket: str, object_key: str) -> Optional[Dict[str, Any]]:
 
 
 def get_file_by_id(file_id: int) -> Optional[Dict[str, Any]]:
-    """New: fetch by numeric file_id."""
+    """Fetch by numeric file_id."""
     if DRY_RUN:
         return None
 
     q = text("""
         SELECT
             file_id, bucket, object_key,
-            object_key AS key,                       -- convenient alias
+            object_key AS key,
             content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
@@ -193,7 +193,7 @@ def list_files(bucket: Optional[str], device_id: Optional[str], limit: int) -> L
     q = text(f"""
         SELECT
             file_id, bucket, object_key,
-            object_key AS key,                       -- convenient alias
+            object_key AS key,
             content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
@@ -222,16 +222,16 @@ def delete_file(bucket: str, object_key: str) -> bool:
         row = s.execute(q, {"bucket": bucket, "object_key": object_key}).first()
         return bool(row)
 
-def db_query(query: str, params: Any = None):
-    """Generic helper to execute raw SQL and return rows as dictionaries."""
-    from app.db import session_scope
-    from sqlalchemy import text
+
+def db_query(query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    """
+    Generic helper to execute raw SQL and return rows as dictionaries.
+    This is used by the audio-aggregates and plant-predictions endpoints.
+    """
+    if DRY_RUN:
+        return []
 
     with session_scope() as s:
-        if params is not None:
-            result = s.execute(text(query), params)
-        else:
-            result = s.execute(text(query))
-        
+        result = s.execute(text(query), params or {})
         rows = result.mappings().all()
         return [dict(r) for r in rows]
