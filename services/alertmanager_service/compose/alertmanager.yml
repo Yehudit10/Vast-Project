@@ -15,16 +15,67 @@ route:
       matchers:
         - source="agcloud-alerts"
 
-    # # 2️⃣ Slack route
-    # - receiver: "slack"
-    #   continue: false
-    #   matchers:
-    #     - source="agcloud-alerts"
+    # 2️⃣ Slack route
+    - receiver: "slack"
+      continue: false
+      matchers:
+        - source="agcloud-alerts"
 
 receivers:
   - name: "null"
+
   - name: "gateway"
     webhook_configs:
       - url: "http://alerts-gateway:8000/internal/alert"
         send_resolved: true
-  
+
+  - name: "slack"
+    slack_configs:
+      - api_url_file: /run/secrets/slack_webhook
+        channel: "all-agcloud"         # FIXED (no "#")
+        send_resolved: true
+        username: "AgCloud Alerts"
+        icon_emoji: ":rotating_light:"
+
+        title: >-
+          {{ if eq .Status "resolved" }}
+            ⚪ EVENT CLOSED: {{ .CommonLabels.alertname }} on {{ .CommonLabels.device }}
+          {{ else }}
+            🔴 ACTIVE ALERT: {{ .CommonLabels.alertname }} on {{ .CommonLabels.device }}
+          {{ end }}
+
+        text: |-
+          {{ if eq .Status "resolved" }}
+          *Event closed.*
+
+          *Type:* {{ .CommonLabels.alertname }}
+          *Device:* {{ .CommonLabels.device }}
+          *Alert ID:* {{ .CommonLabels.alert_id }}
+
+          *Duration:* {{ (index .Alerts 0).StartsAt }} → {{ (index .Alerts 0).EndsAt }}
+
+          *Summary:* {{ .CommonAnnotations.summary }}
+
+          _No further activity detected. The alert has been automatically closed._
+
+          {{ else }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Recommendation:* {{ .CommonAnnotations.recommendation }}
+          *Severity:* {{ .CommonAnnotations.severity }}
+          *Category:* {{ .CommonAnnotations.category }}
+
+          {{- if .CommonAnnotations.image_url }}
+          <{{ .CommonAnnotations.image_url }}|📷 Image>
+          {{- end }}
+
+          {{- if .CommonAnnotations.vod }}
+          | <{{ .CommonAnnotations.vod }}|🎞️ VOD>
+          {{- end }}
+
+          {{- if .CommonAnnotations.hls }}
+          | <{{ .CommonAnnotations.hls }}|📺 HLS>
+          {{- end }}
+
+          _🕒 ID: {{ .CommonLabels.alert_id }}_
+          {{ end }}
+

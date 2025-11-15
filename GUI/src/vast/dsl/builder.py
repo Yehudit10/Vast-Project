@@ -24,7 +24,9 @@ class SQLState:
     source: str
     dialect: Dialect
     clauses: Dict[str, List[Clause]] = field(default_factory=lambda: defaultdict(list))
-    CLAUSE_ORDER: List[str] = field(default_factory=lambda: ["select", "from", "where"])  # extend externally
+    CLAUSE_ORDER: List[str] = field(default_factory=lambda: [
+    "select", "from", "where", "group_by", "having", "order_by", "limit", "offset"
+])
 
     # Helper methods to avoid importing Clause classes in ops
     def add_select(self, columns: List[str]) -> None:
@@ -75,10 +77,19 @@ class SQLBuilder:
         p = plan if isinstance(plan, Plan) else Plan.from_dict(plan)
         st = SQLState(source=p.source, dialect=self.dialect)
         for op in p._ops:
-            if set(op.keys()) - {"op", "columns", "cond"}:
+            if not isinstance(op, dict):
+                raise TypeError(f"Each operation must be a dict, got {type(op).__name__}: {op}")
+
+            allowed_keys = {"op", "columns", "cond", "directions", "limit", "offset"}
+            extra = set(op.keys()) - allowed_keys
+            if extra:
                 raise ValueError(f"Unknown keys in op: {op}")
+
             op_type = op.get("op")
             if op_type not in Op.registry:
                 raise ValueError(f"Unsupported op {op_type!r}. Allowed: {sorted(Op.registry)}")
+
+            # Pass all keys except "op" as kwargs
             Op.registry[op_type](**{k: v for k, v in op.items() if k != "op"}).apply(st)
+
         return st.build()

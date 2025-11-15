@@ -34,20 +34,52 @@ class SQLiteDialect(Dialect):
     def placeholder(self, idx: int) -> str:
         return "?"  # qmark style
 
-class PostgresDialect(Dialect):
-    def __init__(self, style: str = "psycopg"):
-        """style:
-        - 'psycopg'  → %s style placeholders (psycopg2/3)
-        - 'numeric'  → $1, $2, ... style placeholders (asyncpg)
-        """
+# class PostgresDialect(Dialect):
+#     def __init__(self, style: str = "psycopg"):
+#         """style:
+#         - 'psycopg'  → %s style placeholders (psycopg2/3)
+#         - 'numeric'  → $1, $2, ... style placeholders (asyncpg)
+#         """
         
-        if style not in ("psycopg", "numeric"):
-            raise ValueError("PostgresDialect.style must be 'psycopg' or 'numeric'")
+#         if style not in ("psycopg", "numeric"):
+#             raise ValueError("PostgresDialect.style must be 'psycopg' or 'numeric'")
+#         self.style = style
+#     def quote_ident(self, name: str) -> str:
+#         parts = name.split(".")
+#         return ".".join('"' + p.replace('"', '""') + '"' for p in parts)
+#     def normalize_bool(self, v: Any) -> Any:
+#         return v  # PostgreSQL has a real boolean type
+#     def placeholder(self, idx: int) -> str:
+#         return "%s" if self.style == "psycopg" else f"${idx}"
+# dialects.py
+class PostgresDialect(Dialect):
+    def __init__(self, style: str = "named"):
+        """
+        style:
+        - 'psycopg'  → %s placeholders (for psycopg2)
+        - 'numeric'  → $1, $2 placeholders (for asyncpg)
+        - 'named'    → :p1, :p2 placeholders (for SQLAlchemy.text)
+        """
+        if style not in ("psycopg", "numeric", "named"):
+            raise ValueError("PostgresDialect.style must be 'psycopg', 'numeric', or 'named'")
         self.style = style
+
     def quote_ident(self, name: str) -> str:
         parts = name.split(".")
-        return ".".join('"' + p.replace('"', '""') + '"' for p in parts)
+        escaped = []
+        for p in parts:
+            escaped_name = p.replace('"', '""')
+            escaped.append(f'"{escaped_name}"')
+        return ".".join(escaped)
+
+
     def normalize_bool(self, v: Any) -> Any:
-        return v  # PostgreSQL has a real boolean type
+        return v
+
     def placeholder(self, idx: int) -> str:
-        return "%s" if self.style == "psycopg" else f"${idx}"
+        if self.style == "psycopg":
+            return "%s"
+        elif self.style == "numeric":
+            return f"${idx}"
+        else:  # named
+            return f":p{idx}"
