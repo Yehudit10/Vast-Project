@@ -1658,6 +1658,7 @@ services:
       kafka:
         condition: service_healthy
       connect:
+        condition: service_healthy
     networks:
       - ag_cloud
 
