@@ -329,8 +329,7 @@ class MainWindow(QMainWindow):
         font = QFont(); font.setPointSize(12)
         self.nav_list.setFont(font)
 
-        for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Auth"]:
-            item = QListWidgetItem(main_item)
+for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Auth", "Leaf Diseases"]:            item = QListWidgetItem(main_item)
             item.setData(Qt.ItemDataRole.UserRole, {"type": "main"})
             self.nav_list.addItem(item)
             if main_item == "Sensors":
