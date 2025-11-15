@@ -414,14 +414,9 @@ for main_item in ["Home", "Sensors", "Sound", "Ground Image", "Aerial Image", "F
             "Sensors - Live Data": self.sensors_status_summary,
             "Sensors - Sensor Health": self.sensors_health,
             "Sensors - Location Map": self.sensors_main,
-            "Sensors - Live Data": self.sensors_status_summary,
-            "Sensors - Sensor Health": self.sensors_health,
-            "Sensors - Location Map": self.sensors_main,
             "Notifications": self.notification_view,
             "Leaf Diseases": self.leaf_diseases_view,
             "Fruits": self.fruits_view,
-            "Ground Image": self.ground_view,
-            "Auth": self.auth_status,
             "Ground Image": self.ground_view,
             "Auth": self.auth_status
         }
