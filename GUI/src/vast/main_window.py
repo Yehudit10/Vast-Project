@@ -1,5 +1,4 @@
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
     QMainWindow, QDockWidget, QListWidget, QListWidgetItem, QStatusBar,
     QStackedWidget, QToolButton, QLabel, QWidget, QHBoxLayout, QVBoxLayout,
