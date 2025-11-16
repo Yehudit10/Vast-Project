@@ -45,6 +45,14 @@ scrape_configs:
     static_configs:
       - targets: ['fruit_metrics:8050']
 
+  - job_name: 'security-models'
+    static_configs:
+      - targets:
+          - 'mega-detector:8007'
+          - 'animal-classifier:8008'
+          - 'anomalies-classifier:8011'
+          - 'mask-classifier:8012'
+
   - job_name: "fruit_ripeness"
     static_configs:
       - targets: ["ripeness-exporter:9128"]

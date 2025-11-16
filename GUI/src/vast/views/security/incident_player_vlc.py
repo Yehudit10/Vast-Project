@@ -25,6 +25,7 @@ import vlc  # python-vlc
 from aiohttp import web, ClientSession
 from vast.views.security.events_history_page import EventsHistoryPage
 
+from src.vast.views.security.analytics.analytics_page import GeoAnalyticsView
 
 
 
@@ -51,7 +52,7 @@ class Config:
 
     ALERTS_WS = os.getenv("ALERTS_WS", "ws://host.docker.internal:8010/ws/alerts")
     ALERTS_SNAPSHOT_HTTP = os.getenv("ALERTS_SNAPSHOT_HTTP", "")
-
+    ALLOWED_TYPES = {"climbing_fence", "masked_person","intruding animal"}
 # ──────────────────────────────────────────────────────────────────────────────
 # Upstream fetcher + DVR state
 # ──────────────────────────────────────────────────────────────────────────────
@@ -250,6 +251,8 @@ class ProxyServer:
         self._app.router.add_get('/', self.handle_root)
         self._app.router.add_get('/dvr_seek.m3u8', self.handle_dvr_seek)
         self._app.router.add_get("/vod", self.handle_vod)
+        self._app.router.add_get("/img", self.handle_img)
+
 
 
         # DEBUG routes
@@ -260,6 +263,26 @@ class ProxyServer:
         self._runner: Optional[web.AppRunner] = None
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+    
+    async def handle_img(self, request):
+        img_url = request.query.get("u")
+        if not img_url:
+            raise web.HTTPBadRequest(text="missing u")
+
+        headers = {}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+
+        try:
+            async with ClientSession() as session:
+                async with session.get(img_url, headers=headers, timeout=15) as resp:
+                    body = await resp.read()
+                    ctype = resp.headers.get("Content-Type", "image/jpeg")
+                    return web.Response(body=body, content_type=ctype, status=resp.status, headers=self._nocache_headers())
+        except Exception as e:
+            print(f"[HTTP] image fetch error: {e!r}")
+            return web.Response(text=f"image fetch error: {type(e).__name__}: {e}", content_type="text/plain", status=502)
+
 
     # no-cache headers helper
     def _nocache_headers(self) -> dict:
@@ -415,12 +438,26 @@ class ProxyServer:
         return web.json_response(info, headers=self._nocache_headers())
 
     # URL helpers
+
     def _rewrite_to_media_base(self, any_hls_url: str) -> str:
         if not any_hls_url:
             return any_hls_url
+
         mb = urlparse(self.media_base)
+
+        # Case 1: bare camera/incident/index.m3u8 → add /hls/ prefix
+        if not any_hls_url.startswith(("http://", "https://", "/")):
+            return f"{mb.scheme}://{mb.netloc}/hls/{any_hls_url.lstrip('/')}"
+
+        # Case 2: starts with / but not // → relative path
         if any_hls_url.startswith('/') and not any_hls_url.startswith('//'):
-            return f"{mb.scheme}://{mb.netloc}{any_hls_url}"
+            # Ensure it passes through /hls/ too
+            path = any_hls_url.lstrip('/')
+            if not path.startswith('hls/'):
+                path = f"hls/{path}"
+            return f"{mb.scheme}://{mb.netloc}/{path}"
+
+        # Case 3: full URL → normalize its host to media_base
         u = urlparse(any_hls_url)
         if not u.scheme or not u.netloc:
             return f"{mb.scheme}://{mb.netloc}/{any_hls_url.lstrip('/')}"
@@ -517,12 +554,23 @@ class ProxyServer:
         self._last_seg_404_ts = 0.0
         self._extra_lag_floor = 0
 
+        # if upstream_hls:
+        #     self.upstream_index = self._rewrite_to_media_base(upstream_hls)
+        # else:
+        #     if not (self.camera and self.incident):
+        #         return
+        #     self.upstream_index = f"{self.media_base}/hls/{self.camera}/{self.incident}/index.m3u8"
         if upstream_hls:
+            # Always normalize, even if relative like "CAM-482A/incident-123/index.m3u8"
             self.upstream_index = self._rewrite_to_media_base(upstream_hls)
+        elif self.camera and self.incident:
+            # Build from camera/incident if no explicit URL
+            rel_path = f"{self.camera}/{self.incident}/index.m3u8"
+            self.upstream_index = self._rewrite_to_media_base(rel_path)
         else:
-            if not (self.camera and self.incident):
-                return
-            self.upstream_index = f"{self.media_base}/hls/{self.camera}/{self.incident}/index.m3u8"
+            return
+        
+    
 
         print(f"[SRC] switch to upstream={self.upstream_index}")
 
@@ -776,6 +824,12 @@ class AlertItemDelegate(QtWidgets.QStyledItemDelegate):
         x = chip.right() + 10
         cam = str(a.get("camera") or "")
         anom = str(a.get("anomaly") or "")
+        subject = str(a.get("subject") or "")
+        if anom.lower() in ("intruding animal", "intruding_animal", "climbing_fence") and subject:
+            anom = f"{anom.title()} ({subject.title()})"
+        else:
+            anom = anom.title()
+
         inc = str(a.get("incident_id") or "")[:8]
 
         title_font = QtGui.QFont(option.font); title_font.setPointSizeF(option.font.pointSizeF() + 1); title_font.setBold(True)
@@ -957,6 +1011,8 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         super().__init__(parent)
         self.api = api
         self.alert_service = alert_service
+        self.allow_autoplay = False
+        self._is_current_page = False
         self.cfg = Config()
         self.proxy = ProxyServer(
             media_base=self.cfg.MEDIA_BASE,
@@ -1148,6 +1204,8 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         btnLiveView.setChecked(True)
         btnHistory = QtWidgets.QPushButton("Events History")
         btnHistory.setCheckable(True)
+        btnGeo = QtWidgets.QPushButton("Analytics")
+        btnGeo.setCheckable(True)
 
         btnStyle = """
         QPushButton {
@@ -1158,10 +1216,13 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         """
         btnLiveView.setStyleSheet(btnStyle)
         btnHistory.setStyleSheet(btnStyle)
+        btnGeo.setStyleSheet(btnStyle) 
 
         navBar.addWidget(btnLiveView)
         navBar.addWidget(btnHistory)
+        navBar.addWidget(btnGeo)
         navBar.addStretch(1)
+
 
         # --- Main content stack ---
         self.stack = QtWidgets.QStackedWidget()
@@ -1169,19 +1230,22 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self.liveLayout = QtWidgets.QVBoxLayout(self.livePage)
         self.liveLayout.setContentsMargins(0, 0, 0, 0)
         self.liveLayout.addWidget(splitter)
-
-        self.historyPage = EventsHistoryPage(api=self.api)
+        self.historyPage = EventsHistoryPage(api=self.api, parent=self)
+        self.analyticsPage = GeoAnalyticsView(parent=self) 
 
         self.stack.addWidget(self.livePage)
         self.stack.addWidget(self.historyPage)
+        self.stack.addWidget(self.analyticsPage) 
 
         # --- Combine all together ---
         outer.addLayout(navBar)
         outer.addWidget(self.stack)
 
         # --- Navigation logic ---
-        btnLiveView.clicked.connect(lambda: self._switch_page(0, btnLiveView, btnHistory))
-        btnHistory.clicked.connect(lambda: self._switch_page(1, btnHistory, btnLiveView))
+        btnLiveView.clicked.connect(lambda: self._switch_page(0, btnLiveView, btnHistory, btnGeo))
+        btnHistory.clicked.connect(lambda: self._switch_page(1, btnHistory, btnLiveView, btnGeo))
+        btnGeo.clicked.connect(lambda: self._switch_page(2, btnGeo, btnLiveView, btnHistory))
+
 
 
         # State
@@ -1219,24 +1283,7 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         else:
             print("[IncidentPlayer] Using cached alerts:", len(self.alert_service.alerts))
             self._on_alerts_updated(self.alert_service.alerts)
-        # WebSocket + snapshot
-        # self.ws: Optional[QWebSocket] = None
-        # self.ws_url: Optional[QUrl] = QUrl(self.cfg.ALERTS_WS) if self.cfg.ALERTS_WS else None
-        # self._ws_backoff_sec = 1
-        # self._ws_ping = QTimer(self)
-        # self._ws_ping.setInterval(15000)
-        # self._ws_ping.timeout.connect(self._ws_send_ping)
-        # self._got_initial_snapshot = False
-        # self._snapshot_resends = 0
-        # self._snapshot_retry_timer = QTimer(self)
-        # self._snapshot_retry_timer.setInterval(1200)
-        # self._snapshot_retry_timer.timeout.connect(self._on_snapshot_retry_tick)
-        # self.net = QNetworkAccessManager(self)
-        # self.net.finished.connect(self._on_http_finished)
-        # self._awaiting_http_snapshot = False
 
-        # if self.ws_url:
-        #     self._ws_connect()
 
         # Connections
         self.btnLive.clicked.connect(self._go_live)
@@ -1249,11 +1296,55 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
 
         self._show_player(False)
         self._set_idle()
+    
+
+    def showEvent(self, event):
+        super().showEvent(event)
+
+        # Only run when *actually* visible in the QStackedWidget
+        if not self.isVisible():
+            return
+
+        if not self._is_current_page:
+            self._is_current_page = True
+            self.allow_autoplay = True
+            print("[IncidentPlayer] Activated (autoplay enabled)")
+
+            # Restore video surface
+            self.videoSurface.show()
+
+            # If alerts exist, auto-play the first one
+            if self.alertModel._items:
+                self._show_player(True)
+                self._play_alert(self.alertModel._items[0])
+
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+
+        # Only deactivate once
+        if self._is_current_page:
+            self._is_current_page = False
+            self.allow_autoplay = False
+            print("[IncidentPlayer] Deactivated (autoplay disabled)")
+
+            # Stop VLC safely
+            try:
+                self.vlcw.mediaplayer.stop()
+            except:
+                pass
+
+            # Hide video surface to stop painting
+            self.videoSurface.hide()
+
+            self._set_idle()
+
+
 
     def _on_alerts_updated(self, alerts: list):
         """Called when AlertService emits full list (on initial load)."""
         print(f"[AlertService] Full update: {len(alerts)} alerts")
-        print("[DEBUG] alerts from AlertService:", alerts)
+        # print("[DEBUG] alerts from AlertService:", alerts)
         self._apply_firing_list(alerts)
 
     def _on_alert_added(self, alert: dict):
@@ -1307,10 +1398,11 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         else:
             self._show_player(True)
     
-    def _switch_page(self, index: int, active_btn: QtWidgets.QPushButton, inactive_btn: QtWidgets.QPushButton):
+    def _switch_page(self, index: int, active_btn: QtWidgets.QPushButton, *others: QtWidgets.QPushButton):
         self.stack.setCurrentIndex(index)
         active_btn.setChecked(True)
-        inactive_btn.setChecked(False)
+        for b in others:
+            b.setChecked(False)
         print(f"[UI] switched to page index={index}")
 
 
@@ -1318,41 +1410,20 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
     def _key(self, it: dict) -> tuple[str, str]:
         return (str(it.get('camera') or ''), str(it.get('incident_id') or ''))
 
-    # def _normalize_alert(self, it: dict) -> dict:
-    #     if not isinstance(it, dict):
-    #         return {}
-
-    #     labels = it.get("labels", {}) or {}
-    #     ann    = it.get("annotations", {}) or {}
-
-    #     # Normalize field names
-    #     flat = {
-    #         "camera": labels.get("device") or ann.get("device") or "unknown",
-    #         "incident_id": labels.get("alert_id") or ann.get("alert_id"),
-    #         "anomaly": labels.get("alertname") or ann.get("category") or "unknown",
-    #         "hls": ann.get("hls"),
-    #         "vod": ann.get("vod"),
-    #         "image_url": ann.get("image_url"),
-    #         "lat": ann.get("lat"),
-    #         "lon": ann.get("lon"),
-    #         "severity": ann.get("severity"),
-    #         "summary": ann.get("summary"),
-    #         "recommendation": ann.get("recommendation"),
-    #         "category": ann.get("category"),
-    #         "startsAt": it.get("startsAt"),
-    #         "endsAt": it.get("endsAt"),
-    #     }
-
-    #     # Status inference (Alertmanager has endsAt → resolved)
-    #     ends_at = it.get("endsAt")
-    #     flat["status"] = "resolved" if ends_at else "firing"
-
-    #     return flat
+    
     def _normalize_alert(self, it: dict) -> dict:
+        meta = it.get("meta") or {}
+        if isinstance(meta, str):
+            import json
+            try:
+                meta = json.loads(meta)
+            except Exception:
+                meta = {}
         return {
             "camera": it.get("device_id") or it.get("camera"),
             "incident_id": it.get("alert_id") or it.get("incident_id"),
             "anomaly": it.get("alert_type") or it.get("anomaly"),
+            "subject": it.get("subject") or meta.get("subject"),   # 👈 added line
             "hls": it.get("hls"),
             "vod": it.get("vod"),
             "image_url": it.get("image_url"),
@@ -1382,8 +1453,15 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
 
     def _apply_firing_list(self, firing: list[dict]):
         firing = [self._normalize_alert(it) for it in (firing or []) if it]
-        print("[DEBUG] normalized firing list:", firing)
-        firing = [it for it in firing if (it.get("status") or "firing").lower() == "firing"]
+        # print("[DEBUG] normalized firing list:", firing)
+        
+        # ⬇️ Only keep desired alert types
+
+        firing = [
+            it for it in firing
+            if (it.get("status") or "firing").lower() == "firing"
+            and (it.get("anomaly") or "").lower() in self.cfg.ALLOWED_TYPES
+        ]
 
         sel = self.alertList.selectionModel().currentIndex() if self.alertList.selectionModel() else QtCore.QModelIndex()
         selected_inc = selected_cam = None
@@ -1432,16 +1510,24 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             return
 
         if firing and not still_there:
-            self._show_player(True)
-            self._play_alert(firing[0])
+            if self.allow_autoplay:
+                self._show_player(True)
+                self._play_alert(firing[0])
+            else:
+                print("[IncidentPlayer] Ignored new alert (page not visible)")
+
+
 
     def _merge_firing_deltas(self, deltas: list[dict]):
         current = self.alertModel.as_dict()
         changed = False
 
+
+
         for raw in (deltas or []):
             it = self._normalize_alert(raw)
-            print("[DEBUG] normalized:", it)
+            if (it.get("anomaly") or "").lower() not in self.cfg.ALLOWED_TYPES:
+                continue  # ⬅️ skip other alert types
             k = self._key(it)
 
             if it.get('status') == 'firing':
@@ -1493,13 +1579,27 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         if not has_current:
             items = list(current.values())
             if items:
-                self._show_player(True)
-                self._play_alert(items[0])
+                if self.allow_autoplay:
+                    self._show_player(True)
+                    self._play_alert(items[0])
+                else:
+                    print("[IncidentPlayer] Ignored alert (page not visible)")
             else:
-                try: self.vlcw.mediaplayer.stop()
-                except Exception: pass
+                try:
+                    self.vlcw.mediaplayer.stop()
+                except Exception:
+                    pass
                 self._set_idle()
                 self._show_player(False)
+
+            # if items:
+            #     self._show_player(True)
+            #     self._play_alert(items[0])
+            # else:
+            #     try: self.vlcw.mediaplayer.stop()
+            #     except Exception: pass
+            #     self._set_idle()
+            #     self._show_player(False)
 
     # ───── helpers ─────
     def _freeze_ui(self, seconds: float = 0.8):
@@ -1533,185 +1633,6 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             self._last_abs_t_ms = abs_t
             self._update_time_label(abs_t)
 
-    # WebSocket & snapshot (same as before) …
-    def _ws_connect(self):
-        if not self.ws_url:
-            print("[WS] ALERTS_WS not set; skipping alerts websocket.")
-            return
-        if self.ws:
-            try:
-                self.ws.abort()
-            except Exception:
-                pass
-        self.ws = QWebSocket()
-        self.ws.connected.connect(self._on_ws_connected)
-        self.ws.textMessageReceived.connect(self._on_ws_msg)
-        self.ws.disconnected.connect(self._on_ws_disconnected)
-        self.ws.errorOccurred.connect(self._on_ws_error)
-        print(f"[WS] connecting to {self.ws_url.toString()}")
-        self.ws.open(self.ws_url)
-
-    def _send_ws_snapshot_request(self):
-        try:
-            if self.ws and self.ws.isValid():
-                self.ws.sendTextMessage('{"type":"get_snapshot"}')
-                self.ws.sendTextMessage('{"type":"snapshot_request"}')
-        except Exception:
-            pass
-
-    def _on_ws_connected(self):
-        print("[WS] connected")
-        self._ws_backoff_sec = 1
-        self._ws_ping.start()
-
-        # Instead of waiting for a snapshot message, immediately fetch from DB
-        alerts = self._fetch_active_alerts_from_db()
-        if alerts:
-            print(f"[WS] Initial load: {len(alerts)} alerts fetched from DB")
-            self._apply_firing_list(alerts)
-        else:
-            print("[WS] No active alerts found in DB")
-
-        # Continue listening for WebSocket deltas
-        self._got_initial_snapshot = True
-        self._snapshot_retry_timer.stop()
-
-
-    def _on_snapshot_retry_tick(self):
-        if self._got_initial_snapshot:
-            self._snapshot_retry_timer.stop()
-            return
-        if self._snapshot_resends < 3:
-            print(f"[WS] requesting snapshot again (attempt {self._snapshot_resends+2}/4)")
-            self._send_ws_snapshot_request()
-            self._snapshot_resends += 1
-        if self.cfg.ALERTS_SNAPSHOT_HTTP and not self._awaiting_http_snapshot:
-            self._request_http_snapshot()
-        if self._snapshot_resends >= 3 and not self.cfg.ALERTS_SNAPSHOT_HTTP:
-            self._snapshot_retry_timer.stop()
-
-    def _request_http_snapshot(self):
-        try:
-            url = QUrl(self.cfg.ALERTS_SNAPSHOT_HTTP)
-            if not url.isValid() or url.isEmpty():
-                return
-            req = QNetworkRequest(url)
-            if self.cfg.TOKEN and self.cfg.TOKEN != "CHANGE_ME":
-                req.setRawHeader(b"Authorization", f"Bearer {self.cfg.TOKEN}".encode("utf-8"))
-            self._awaiting_http_snapshot = True
-            print(f"[HTTP] requesting snapshot from {url.toString()}")
-            self.net.get(req)
-        except Exception as e:
-            print(f"[HTTP] snapshot request error: {e!r}")
-
-    def _on_http_finished(self, reply):
-        try:
-            if not self._awaiting_http_snapshot:
-                reply.deleteLater()
-                return
-            self._awaiting_http_snapshot = False
-            data = bytes(reply.readAll())
-            try:
-                payload = json.loads(data.decode("utf-8"))
-            except Exception:
-                payload = []
-            if isinstance(payload, dict):
-                items = payload.get("items") or payload.get("alerts") or payload.get("data") or []
-            elif isinstance(payload, list):
-                items = payload
-            else:
-                items = []
-            firing = [it for it in items if (it or {}).get("status", "").lower() == "firing"]
-            print(f"[HTTP] snapshot received: {len(firing)} firing")
-            self._apply_firing_list(firing)
-            self._got_initial_snapshot = True
-            self._snapshot_retry_timer.stop()
-        finally:
-            reply.deleteLater()
-
-    def _on_ws_disconnected(self):
-        print("[WS] disconnected")
-        self._ws_ping.stop()
-        self._schedule_ws_reconnect()
-
-    def _on_ws_error(self, err):
-        print(f"[WS] error: {self.ws.errorString()}")
-        if not self._ws_ping.isActive():
-            self._schedule_ws_reconnect()
-
-    def _ws_send_ping(self):
-        try:
-            if self.ws and self.ws.isValid():
-                self.ws.sendTextMessage('{"type":"ping"}')
-        except Exception:
-            pass
-
-    def _schedule_ws_reconnect(self):
-        delay = min(self._ws_backoff_sec, 30)
-        print(f"[WS] reconnecting in {delay}s...")
-        QtCore.QTimer.singleShot(int(delay * 1000), self._ws_connect)
-        self._ws_backoff_sec = min(self._ws_backoff_sec * 2, 30)
-
-    def _on_ws_msg(self, text: str):
-        print("=" * 80)
-        print("[WS] RAW MESSAGE:", text[:600].replace("\n", " "))
-
-        # Try to parse JSON
-        try:
-            msg = json.loads(text)
-        except Exception as e:
-            print(f"[WS] non-JSON message ({type(e).__name__}):", text[:120])
-            return
-
-        t = (msg.get("type") or "").lower()
-        items = msg.get("items") or msg.get("alerts") or msg.get("data") or []
-        print(f"[WS] Type='{t}' | items={len(items)}")
-
-        # Log short summary of each alert item
-        for i, it in enumerate(items):
-            print(f"  [{i}] camera={it.get('camera')} "
-                f"incident={it.get('incident_id')} "
-                f"status={it.get('status')} "
-                f"endsAt={it.get('endsAt')} "
-                f"summary={it.get('summary')}")
-
-        # Normalize alerts
-        norm = [self._normalize_alert(it) for it in (items or []) if it]
-        print(f"[WS] After normalize → {[it.get('status') for it in norm]}")
-
-        # Infer missing statuses
-        for it in norm:
-            st = (it.get("status") or "").lower()
-            if not st:
-                it["status"] = "resolved" if it.get("endsAt") else "firing"
-
-        # Compute "currently firing" view
-        firing_now = [it for it in norm if (it.get("status") or "firing").lower() == "firing"]
-        print(f"[WS] Firing after filter: {len(firing_now)} / {len(norm)} → "
-            f"{[it.get('status') for it in firing_now]}")
-
-        # Decide what to do based on type
-        if t == 'am_alerts':
-            print("[WS] Handling am_alerts as delta update (can include resolved)")
-            self._merge_firing_deltas(norm)
-            return
-
-        if t in ('snapshot', 'update', 'delta', 'patch'):
-            print(f"[WS] Handling message type '{t}' as full state replace")
-            self._apply_firing_list(firing_now)
-            if t == 'snapshot':
-                self._got_initial_snapshot = True
-                self._snapshot_retry_timer.stop()
-            return
-
-
-        # Fallback for unknown message types
-        if isinstance(items, list):
-            print(f"[WS] Unknown type '{t}' → applying default rule ({len(firing_now)} firing)")
-            self._apply_firing_list(firing_now)
-
-
-
     # List click → play
     def _on_pick_alert_from_list(self, idx: QtCore.QModelIndex):
         if not idx.isValid():
@@ -1722,6 +1643,9 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self._play_alert(it)
 
     def _play_alert(self, it: dict):
+        # Normalize to ensure keys like 'camera', 'anomaly', 'incident_id', 'started_at' exist
+        it = self._normalize_alert(it)
+
         cam = it.get('camera')
         inc = it.get('incident_id') or self.cfg.INCIDENT
         hls_url = it.get('hls') or None
@@ -1729,7 +1653,7 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self.current_camera = cam
         self.current_incident = inc
         self.current_status = (it.get('status') or 'firing').lower()
-   
+
         self.proxy.switch_source(camera=cam, incident=inc, upstream_hls=hls_url)
         self.setWindowTitle("AgGuard — Live Incidents")
         self._update_details(it)
@@ -1737,16 +1661,23 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
 
         QtCore.QTimer.singleShot(150, self._go_live)
 
+
     def _update_details(self, it: dict):
+        subject = it.get("subject")
+        anom = it.get("anomaly") or "–"
+        if anom.lower() in ("intruding animal", "intruding_animal","climbing_fence") and subject:
+            anom = f"{anom.title()} ({subject.title()})"
+
         vals = [
             it.get('camera') or '–',
-            it.get('anomaly') or '–',
+            anom,
             it.get('incident_id') or '–',
             (it.get('status') or self.current_status or '–'),
-            it.get('startsAt') or '–',
+            it.get('started_at') or '–',
         ]
         for lbl, v in zip(self.lblVals, vals):
             lbl.setText(v)
+
 
     # ───── slider / playback helpers ─────
     def _fmt(self, ms: int) -> str:

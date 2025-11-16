@@ -272,9 +272,17 @@ CREATE INDEX IF NOT EXISTS ix_rwrt_device ON ripeness_weekly_rollups_ts(device_i
 CREATE INDEX IF NOT EXISTS ix_rwrt_run ON ripeness_weekly_rollups_ts(run_id);
 
 -- Sensor event logs table.
+CREATE TABLE IF NOT EXISTS devices_sensor (
+  id           TEXT UNIQUE NOT NULL,
+  plant_id     INT,
+  sensor_type  TEXT,
+  last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id)
+);
+-- Sensor event logs table.
 CREATE TABLE IF NOT EXISTS event_logs_sensors(
     id         bigserial PRIMARY KEY,
-    device_id  text        NOT NULL REFERENCES devices(device_id),
+    device_id  TEXT     NOT NULL REFERENCES devices_sensor(id),
     issue_type text        NOT NULL,
     severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
     start_ts   timestamptz NOT NULL DEFAULT now(),
@@ -286,20 +294,50 @@ CREATE TABLE IF NOT EXISTS event_logs_sensors(
 
 
 
-CREATE TABLE IF NOT EXISTS sensors (
-  id SERIAL PRIMARY KEY,
-  sensor_name TEXT UNIQUE NOT NULL,
+CREATE TABLE IF NOT EXISTS public.sensors (
+  id  SERIAL PRIMARY KEY,
+  sid TEXT,
+  sensor_name TEXT  NOT NULL,
   sensor_type TEXT NOT NULL,
   owner_name TEXT,
-  location_lat DOUBLE PRECISION,
-  location_lon DOUBLE PRECISION,
+  lat DOUBLE PRECISION,
+  lon DOUBLE PRECISION,
   install_date TIMESTAMP DEFAULT NOW(),
   status TEXT DEFAULT 'active',
   description TEXT,
-  last_maintenance TIMESTAMP
+  last_maintenance TIMESTAMP,
+  value DOUBLE PRECISION,
+  humidity DOUBLE PRECISION,
+  temperature DOUBLE PRECISION,
+  ph DOUBLE PRECISION,
+  rainfall DOUBLE PRECISION,
+  soil_moisture DOUBLE PRECISION,
+  co2_concentration DOUBLE PRECISION,
+  n DOUBLE PRECISION,
+  p DOUBLE PRECISION,
+  k DOUBLE PRECISION,
+  label TEXT,
+  timestamp TIMESTAMPTZ NOT NULL,
+  msg_type TEXT,
+  plant_id INT,
+  soil_type INT,
+  sunlight_exposure DOUBLE PRECISION,
+  wind_speed DOUBLE PRECISION,
+  organic_matter DOUBLE PRECISION,
+  irrigation_frequency DOUBLE PRECISION,
+  crop_density DOUBLE PRECISION,
+  pest_pressure DOUBLE PRECISION,
+  fertilizer_usage DOUBLE PRECISION,
+  growth_stage INT,
+  urban_area_proximity DOUBLE PRECISION,
+  water_source_type INT,
+  frost_risk DOUBLE PRECISION,
+  water_usage_efficiency DOUBLE PRECISION
 );
-CREATE TABLE IF N;OT EXISTS public.sensor_anomalies (
+
+CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     id BIGSERIAL PRIMARY KEY,
+    idSensor INT NOT NULL,
     plant_id INT NOT NULL,
     sensor VARCHAR(64) NOT NULL,
     ts TIMESTAMPTZ NOT NULL,
@@ -327,6 +365,8 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     anomalies INT,
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+
 
 --- Alerts_leaves table
 
@@ -676,6 +716,7 @@ CREATE TABLE IF NOT EXISTS public.sounds_ultra_metadata (
   CONSTRAINT ux_ultra_sounds_dev_time UNIQUE (device_id, capture_time)
 );
 
+
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_ts_brin
   ON public.sounds_ultra_metadata USING BRIN (capture_time);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_device_time
@@ -686,6 +727,14 @@ CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_file_name
   ON public.sounds_ultra_metadata (file_name);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_created_brin
   ON public.sounds_ultra_metadata USING BRIN (created_at);
+
+
+CREATE TABLE public.image_new_security_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
 
 
 -- === Indexes for performance optimization ===
@@ -754,85 +803,6 @@ CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sens
 
 
 
-/* ===========================
-   ADDED: Incidents schema v1
-   =========================== */
-
--- =========================
--- Incidents: one event row
--- =========================
--- anomaly_type_id   int    REFERENCES anomaly_types(anomaly_type_id) ON DELETE SET NULL, 
-CREATE TABLE IF NOT EXISTS incidents (                                                                                              -- [ADDED]
-  incident_id       uuid PRIMARY KEY,                                                                                               -- [ADDED]
-  mission_id        bigint REFERENCES missions(mission_id)           ON DELETE SET NULL,                                            -- [ADDED]
-  device_id         text   REFERENCES devices(device_id)             ON DELETE SET NULL,                                            -- [ADDED]
-  anomaly           text,                                                                                                                      -- [ADDED]
-  started_at        timestamptz NOT NULL,                                                                                            -- [ADDED]
-  ended_at          timestamptz,                                                                                                     -- [ADDED]
-  duration_sec      double precision,                                                                                                 -- [ADDED]
-  frame_start       int,                                                                                                              -- [ADDED]
-  frame_end         int,                                                                                                              -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  -- NEW: aggregate severity (mean tracks/frame over the incident)                                                                    -- [ADDED]
-  severity          real,                                                                                                             -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  -- image-space ROI; keep flexible                                                                                                   -- [ADDED]
-  roi_pixels        jsonb,                                                                                                            -- [ADDED]
-  -- optional map footprint (camera frustum, area of interest, etc.)                                                                  -- [ADDED]
-  footprint         geometry(Polygon,4326),                                                                                           -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  -- canonical media for playback (referencing your existing files table)                                                             -- [ADDED]
-  clip_file_id      bigint REFERENCES files(file_id)   ON DELETE SET NULL,                                                            -- [ADDED]
-  poster_file_id    bigint REFERENCES files(file_id)   ON DELETE SET NULL,                                                            -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  -- optional pre-baked UI timeline (array of {frame,ts,box,conf,url,...})                                                            -- [ADDED]
-  frames_manifest   jsonb,                                                                                                            -- [ADDED]
-  is_real           boolean,
-  ack     boolean DEFAULT false,                                                                                                       -- [ADDED]
-  meta              jsonb DEFAULT '{}'::jsonb                                                                                        -- [ADDED]
-);                                                                                                                                  -- [ADDED]
-
--- Helpful indexes                                                                                                                  -- [ADDED]
-CREATE INDEX IF NOT EXISTS ix_incidents_device_time  ON incidents (device_id, started_at DESC);                                      -- [ADDED]
-CREATE INDEX IF NOT EXISTS ix_incidents_mission_time ON incidents (mission_id, started_at DESC);                                     -- [ADDED]
-
--- ==========================================
--- Per-frame timeline: one row per frame
--- Store ALL detections (bbox + conf + track_id) in JSONB
--- ==========================================
-DROP TABLE IF EXISTS incident_frames CASCADE;                                                                                        -- [ADDED]
-
-CREATE TABLE incident_frames (                                                                                                       -- [ADDED]
-  incident_id   uuid NOT NULL REFERENCES incidents(incident_id) ON DELETE CASCADE,                                                   -- [ADDED]
-  frame_idx     int  NOT NULL,                                                                                                       -- [ADDED]
-  ts            timestamptz NOT NULL,                                                                                                -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  -- List of detection objects:                                                                                                       -- [ADDED]
-  -- [{"x1":int,"y1":int,"x2":int,"y2":int,"conf":float|null,"track_id":int|null}, ...]                                               -- [ADDED]
-  detections    jsonb NOT NULL DEFAULT '[]'::jsonb,                                                                                  -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  cls_name      text,                                                                                                                -- [ADDED]
-  cls_id        text,                                                                                                                -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  -- Annotated (or raw) frame stored in files                                                                                         -- [ADDED]
-  file_id       bigint REFERENCES files(file_id) ON DELETE SET NULL,                                                                 -- [ADDED]
-                                                                                                                                    -- [ADDED]
-  meta          jsonb DEFAULT '{}'::jsonb,                                                                                           -- [ADDED]
-  PRIMARY KEY (incident_id, frame_idx)                                                                                               -- [ADDED]
-);                                                                                                                                  -- [ADDED]
-
--- Useful indexes                                                                                                                    -- [ADDED]
-CREATE INDEX IF NOT EXISTS ix_incident_frames_ts                                                                                     -- [ADDED]
-  ON incident_frames (incident_id, ts);                                                                                              -- [ADDED]
-
--- JSONB GIN index for detection queries (by bbox/conf/track_id)                                                                     -- [ADDED]
-CREATE INDEX IF NOT EXISTS ix_incident_frames_detections_gin                                                                         -- [ADDED]
-  ON incident_frames USING GIN (detections jsonb_path_ops);                                                                          -- [ADDED]
-
--- (Optional) denormalized count for quick metrics                                                                                    -- [ADDED]
-ALTER TABLE incident_frames                                                                                                          -- [ADDED]
-  ADD COLUMN IF NOT EXISTS num_tracks int                                                                                            -- [ADDED]
-  GENERATED ALWAYS AS (jsonb_array_length(detections)) STORED;                                                                       -- [ADDED]
 
 -- CREATE INDEX IF NOT EXISTS ix_alerts_entity_rule ON public.alerts(entity_id, rule);
 -- CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
@@ -841,13 +811,6 @@ ALTER TABLE incident_frames                                                     
 -- 🔹 MISSING TABLES AND INDEXES FROM FIRST SCHEMA
 -- ============================================
 
--- Devices sensor mapping
-CREATE TABLE IF NOT EXISTS devices_sensor (
-  id           TEXT UNIQUE NOT NULL,
-  plant_id     INT NOT NULL,
-  sensor_type  TEXT NOT NULL,
-  PRIMARY KEY (plant_id, id)
-);
 
 -- Zones table (for linking sensors to geographic areas)
 CREATE TABLE IF NOT EXISTS public.zones (
@@ -917,7 +880,7 @@ CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
 -- Sensors anomalies modal (aggregated anomaly detection model)
 CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
     id           BIGSERIAL PRIMARY KEY,
-    sensor_id    TEXT NOT NULL REFERENCES sensors(sensor_name) ON DELETE CASCADE,
+    sensor_id    INT NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
     ts           TIMESTAMPTZ NOT NULL,
     anomaly      REAL NOT NULL CHECK (anomaly >= 0),
     inserted_at  TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -979,3 +942,23 @@ CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
 CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
 CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
 CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (location_lat, location_lon);
+
+
+
+
+
+CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
+    ON public.sensor_anomalies USING BRIN (ts);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
+    ON public.sensor_anomalies (zone);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
+    ON public.sensor_anomalies (sensor);
+
+
+CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
+    ON public.sensor_zone_stats (zone, window_start, window_end);
+
+CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_anomalies
+    ON public.sensor_zone_stats (anomalies);

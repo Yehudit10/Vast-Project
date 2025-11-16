@@ -1,0 +1,254 @@
+{
+  "id": null,
+  "uid": "security-models",
+  "title": "Security – Model Inference Overview",
+  "tags": ["agguard", "models", "metrics"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 11,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "📈 Inference Throughput (req/s)",
+      "targets": [
+        {
+          "expr": "sum(rate(inference_requests_total{service=~\"$service\"}[1m])) by (service)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 7 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "req/s",
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "lines", "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "type": "gauge",
+      "title": "⚙️ Model Load Time (s)",
+      "targets": [
+        {
+          "expr": "model_load_seconds{service=~\"$service\"}",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 7 },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "🧮 Total Inference Requests",
+      "targets": [
+        {
+          "expr": "sum(inference_requests_total{service=~\"$service\"})",
+          "legendFormat": "Total"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 100 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "🚨 Inference Error Rate (%)",
+      "targets": [
+        {
+          "expr": "100 * sum(rate(inference_errors_total{service=~\"$service\"}[5m])) by (service) / sum(rate(inference_requests_total{service=~\"$service\"}[5m])) by (service)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "continuous-GrYlRd" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "⏱ Inference Latency (p50 & p90)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(inference_latency_seconds_bucket{service=~\"$service\"}[5m])) by (le, service))",
+          "legendFormat": "{{service}} p50"
+        },
+        {
+          "expr": "histogram_quantile(0.9, sum(rate(inference_latency_seconds_bucket{service=~\"$service\"}[5m])) by (le, service))",
+          "legendFormat": "{{service}} p90"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 7 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "lines", "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "🖥️ System & Process CPU Usage (%)",
+      "targets": [
+        {
+          "expr": "system_cpu_usage_percent",
+          "legendFormat": "System CPU %"
+        },
+        {
+          "expr": "process_cpu_usage_percent{service=~\"$service\"}",
+          "legendFormat": "{{service}} CPU %"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "lines", "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "💾 Process Memory Usage (MB)",
+      "targets": [
+        {
+          "expr": "process_memory_megabytes{service=~\"$service\"}",
+          "legendFormat": "{{service}} memory"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "megabytes",
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "lines", "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "🎮 GPU Utilization & Memory (MB)",
+      "targets": [
+        {
+          "expr": "gpu_utilization_percent{service=~\"$service\"}",
+          "legendFormat": "GPU {{gpu_id}} util %"
+        },
+        {
+          "expr": "gpu_memory_used_megabytes{service=~\"$service\"}",
+          "legendFormat": "GPU {{gpu_id}} used"
+        },
+        {
+          "expr": "gpu_memory_total_megabytes{service=~\"$service\"}",
+          "legendFormat": "GPU {{gpu_id}} total"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 7 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" },
+          "custom": { "drawStyle": "lines", "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values({service!=\"\"}, service)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "sort": 1,
+        "label": "Model Service"
+      }
+    ]
+  }
+  
+  
+  ,
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h"]
+  }
+}
