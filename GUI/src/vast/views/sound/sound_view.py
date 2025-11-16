@@ -493,10 +493,12 @@ class ImageMapView(QWidget):
 # ==========================================================
 
 class RecordingsTab(QWidget):
-    def __init__(self, mic_ids: list = None, recording_type: str = "audio", parent=None):
+    def __init__(self, mic_ids=None, recording_type="audio", parent=None, api=None):
         super().__init__(parent)
         self.mic_ids = mic_ids if mic_ids else []
         self.recording_type = recording_type
+        self.api = api
+
         
         # API endpoints
         if recording_type == "ultrasound":
@@ -744,7 +746,8 @@ class RecordingsTab(QWidget):
             params["device_ids"] = ",".join(self.mic_ids)
         
         try:
-            response = requests.get(self.api_url, params=params, timeout=10)
+            # response = requests.get(self.api_url, params=params, timeout=10)
+            response = self.api.http.get(self.api_url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
@@ -2011,8 +2014,9 @@ class SoundView(QWidget):
         """)
 
         self.map_tab = ImageMapView()
-        self.env_tab = RecordingsTab(recording_type="audio")
-        self.plant_tab = RecordingsTab(recording_type="ultrasound")
+        self.env_tab = RecordingsTab(recording_type="audio", api=self.api)
+        self.plant_tab = RecordingsTab(recording_type="ultrasound", api=self.api)
+
         
         # Add Analytics Dashboard tab if API is provided
         if self.api:

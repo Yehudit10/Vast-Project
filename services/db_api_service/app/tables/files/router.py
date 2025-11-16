@@ -12,8 +12,11 @@ PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE")
 
 
 def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Attach a public URL to access the file from MinIO."""
     if not row:
         return row
+
+    # Try to extract URL from metadata first
     meta = row.get("metadata")
     if isinstance(meta, str):
         try:
@@ -80,46 +83,49 @@ def list_audio_aggregates(
             for i, dev in enumerate(device_list):
                 params[f"dev_{i}"] = dev
 
-    # Date filters (based on public.files.created_at)
+    # Date filters (use capture_time from sounds_metadata or snsc.linked_time)
     if date_from:
-        conditions.append("f.created_at >= CAST(:date_from AS timestamptz)")
+        conditions.append("COALESCE(sm.capture_time, snsc.linked_time) >= CAST(:date_from AS timestamptz)")
         params["date_from"] = date_from
 
     if date_to:
-        conditions.append("f.created_at < CAST(:date_to AS timestamptz) + INTERVAL '1 day'")
+        conditions.append("COALESCE(sm.capture_time, snsc.linked_time) < CAST(:date_to AS timestamptz) + INTERVAL '1 day'")
         params["date_to"] = date_to
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
     # Sorting options
     sort_map = {
-        "Date (Newest)": "f.created_at DESC",
-        "Date (Oldest)": "f.created_at ASC",
-        "Length": "f.size_bytes DESC",
+        "Date (Newest)": "COALESCE(sm.capture_time, snsc.linked_time) DESC",
+        "Date (Oldest)": "COALESCE(sm.capture_time, snsc.linked_time) ASC",
+        "Length": "sm.duration_sec DESC",  # if you prefer duration from sounds_metadata
         "Device": "snsc.file_name ASC",
         "processing_ms": "fa.processing_ms DESC",
         "filename": "snsc.file_name ASC",
     }
-    order_clause = sort_map.get(sort_by, "f.created_at DESC")
-
+    order_clause = sort_map.get(sort_by, "COALESCE(sm.capture_time, snsc.linked_time) DESC")
+        
     query = f"""
-    SELECT
-        fa.file_id,
-        f.bucket,
-        f.object_key,
-        snsc.file_name AS filename,
-        fa.head_pred_label,
-        fa.head_pred_prob,
-        f.created_at,
-        f.content_type
-    FROM agcloud_audio.file_aggregates fa
-    JOIN public.sound_new_sounds_connections snsc 
-        ON fa.file_id = snsc.id
-    JOIN public.files f
-        ON f.object_key LIKE '%' || snsc.key
-    {where_clause}
-    ORDER BY {order_clause}
-    LIMIT :limit;
+        SELECT
+            fa.file_id,
+            snsc.key AS combined_key,
+            split_part(snsc.key, '/', 1) AS bucket,
+            regexp_replace(snsc.key, '^[^/]+/', '') AS object_key,
+            COALESCE(sm.file_name, snsc.file_name) AS filename,
+            sm.device_id AS device_id,
+            COALESCE(sm.capture_time, snsc.linked_time) AS capture_time,
+            fa.head_pred_label,
+            fa.head_pred_prob,
+            fa.agg_mode,
+            fa.num_windows
+        FROM agcloud_audio.file_aggregates fa
+        JOIN public.sound_new_sounds_connections snsc
+            ON fa.file_id = snsc.id
+        LEFT JOIN public.sounds_metadata sm
+            ON sm.file_name = snsc.file_name
+        {where_clause}
+        ORDER BY {order_clause}
+        LIMIT :limit;
     """
 
     params["limit"] = limit
@@ -129,13 +135,14 @@ def list_audio_aggregates(
         results = []
 
         for r in rows:
+            # build URL server-side
+            bucket = r.get("bucket")
+            object_key = r.get("object_key")
             url = None
-            if r.get("bucket") and r.get("object_key"):
-                url = (
-                    f"{PUBLIC_S3_BASE.rstrip('/')}/"
-                    f"{quote(str(r['bucket']), safe='')}/"
-                    f"{quote(str(r['object_key']), safe='/')}"
-                )
+            if bucket and object_key:
+                # PUBLIC_S3_BASE should be like "https://minio.example.com"
+                url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
+
 
             results.append({
                 "file_id": r.get("file_id"),
@@ -150,6 +157,105 @@ def list_audio_aggregates(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+@router.get("/plant-predictions/", summary="List ultrasonic plant predictions")
+def list_plant_predictions(
+    predicted_class: Optional[str] = Query(None, description="Filter by predicted class"),
+    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    search: Optional[str] = Query(None, description="Search by filename"),
+    device_ids: Optional[str] = Query(None, description="Comma-separated device IDs (if applicable)"),
+    sort_by: Optional[str] = Query("Date (Newest)", description="Sort field"),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """
+    Returns ultrasonic plant predictions from public.ultrasonic_plant_predictions
+    
+    This endpoint serves plant stress/watering sounds (Tomato Cut, Tobacco Dry, etc.)
+    """
+    conditions = []
+    params: Dict[str, Any] = {}
+
+    # Filter by predicted class
+    if predicted_class and predicted_class.lower() not in ("all signals", "all types"):
+        conditions.append("upp.predicted_class ILIKE :pred_class")
+        params["pred_class"] = f"%{predicted_class}%"
+
+    # Search by filename
+    if search:
+        conditions.append("upp.file ILIKE :search")
+        params["search"] = f"%{search}%"
+
+    # Date filters
+    if date_from:
+        conditions.append("upp.prediction_time >= CAST(:date_from AS timestamptz)")
+        params["date_from"] = date_from
+    if date_to:
+        conditions.append("upp.prediction_time < CAST(:date_to AS timestamptz) + INTERVAL '1 day'")
+        params["date_to"] = date_to
+
+    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+
+    # Sort mapping
+    sort_map = {
+        "Date (Newest)": "upp.prediction_time DESC",
+        "Date (Oldest)": "upp.prediction_time ASC",
+        "filename": "upp.file ASC"
+    }
+    order_clause = sort_map.get(sort_by, "upp.prediction_time DESC")
+
+    # Join with files table to get bucket/key for URL construction
+    query = f"""
+    SELECT 
+        upp.id,
+        upp.file,
+        upp.predicted_class,
+        upp.confidence,
+        upp.watering_status,
+        upp.status,
+        snpc.key AS combined_key,
+        split_part(snpc.key, '/', 1) AS bucket,
+        regexp_replace(snpc.key, '^[^/]+/', '') AS object_key,
+        COALESCE(sm.file_name, snpc.file_name) AS filename,
+        COALESCE(sm.capture_time, snpc.linked_time) AS capture_time
+    FROM public.ultrasonic_plant_predictions upp
+    LEFT JOIN public.sound_new_plants_connections snpc
+        ON snpc.file_name = upp.file
+    LEFT JOIN public.sounds_metadata sm
+        ON sm.file_name = snpc.file_name
+    {where_clause}
+    ORDER BY {order_clause}
+    LIMIT :limit;
+    """
+
+    params["limit"] = limit
+
+    try:
+        rows = repo.db_query(query, params)
+        results = []
+        
+        for r in rows:
+            url = None
+            if r.get("bucket") and r.get("object_key"):
+                bucket = str(r["bucket"])
+                key = str(r["object_key"])
+                url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(key, safe='/')}"
+            results.append({
+                "id": r.get("id"),
+                "file": r.get("file"),
+                "predicted_class": r.get("predicted_class"),
+                "confidence": r.get("confidence"),
+                "watering_status": r.get("watering_status"),
+                "status": r.get("status"),
+                "device_id": ((r.get("file") or "").split("_")[0] or "Unknown"),
+                "url": url
+            })
+
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
 
 @router.get("/{file_id:int}", summary="Get file by ID")
 def get_file_by_id(file_id: int):
