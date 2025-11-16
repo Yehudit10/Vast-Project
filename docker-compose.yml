@@ -1657,7 +1657,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-      connect:
+      mqtt-router:
         condition: service_healthy
     networks:
       - ag_cloud
