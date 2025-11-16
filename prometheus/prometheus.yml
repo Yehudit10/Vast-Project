@@ -41,5 +41,12 @@ scrape_configs:
     static_configs:
       - targets: ['pushgateway:9091']
  
+  - job_name: 'security-models'
+    static_configs:
+      - targets:
+          - 'mega-detector:8007'
+          - 'animal-classifier:8008'
+          - 'anomalies-classifier:8011'
+          - 'mask-classifier:8012'
 
 

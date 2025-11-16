@@ -1,0 +1,222 @@
+import os, json, boto3, cv2, numpy as np, yaml, logging
+
+from pyflink.datastream import StreamExecutionEnvironment, RuntimeContext
+from pyflink.datastream.functions import KeyedProcessFunction
+from pyflink.datastream.connectors.kafka import (
+    KafkaSource,
+    KafkaSink,
+    KafkaOffsetsInitializer,
+    KafkaRecordSerializationSchema,   # ✅ add this
+)
+from pyflink.common import WatermarkStrategy, Types
+from pyflink.common.serialization import SimpleStringSchema
+from pyflink.datastream.connectors.kafka import DeliveryGuarantee
+
+
+
+from agguard.pipeline.flink_manager import FlinkPipelineManager
+from agguard.core.events.models import Rule
+
+log = logging.getLogger("flink")
+
+# ---- Force all Python logs to stdout so Flink sees them ----
+import logging, sys
+
+import sys, logging
+
+# ---- Force all Python logs to go to stdout (captured by Flink) ----
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+
+# Remove any default handlers (Beam might pre-configure one that discards logs)
+for h in list(root.handlers):
+    root.removeHandler(h)
+
+# Create stdout handler
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+))
+root.addHandler(stdout_handler)
+
+# Make sure every library logger propagates up to root
+logging.captureWarnings(True)  # also capture warnings.warn() calls
+logging.getLogger().propagate = True
+logging.getLogger("pyflink").setLevel(logging.DEBUG)
+logging.getLogger("agguard").setLevel(logging.DEBUG)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+# Optional: sanity check line
+logging.getLogger("flink").info("[Init] Global stdout logger initialized.")
+
+
+
+class CameraOperator(KeyedProcessFunction):
+    def open(self, ctx: RuntimeContext):
+        # Load the same config as gRPC server
+        cfg_path = os.getenv("PIPELINE_CFG", "/app/configs/default.yaml")
+        cfg = yaml.safe_load(open(cfg_path, "r", encoding="utf-8"))
+
+        # ---- Setup logging ----
+        log_level = cfg.get("logging", {}).get("level", "INFO")
+        logging.basicConfig(level=getattr(logging, log_level.upper(), logging.INFO))
+
+        # ---- Create S3 client ----
+        from agguard.adapters.s3_client import S3Client, S3Config
+        s3_cfg = cfg.get("s3", {})
+        self.s3 = S3Client(S3Config(
+            region_name=s3_cfg.get("region_name", "us-east-1"),
+            aws_access_key_id=s3_cfg.get("aws_access_key_id"),
+            aws_secret_access_key=s3_cfg.get("aws_secret_access_key"),
+            endpoint_url=s3_cfg.get("endpoint_url"),
+            connect_timeout=float(s3_cfg.get("connect_timeout", 3.0)),
+            read_timeout=float(s3_cfg.get("read_timeout", 10.0)),
+            max_attempts=int(s3_cfg.get("max_attempts", 3)),
+        ))
+
+        # ---- Rules (same as in grpc_server) ----
+        from agguard.core.events.models import Rule
+        rules = [
+            Rule(
+                name="intruding animal",
+                target_cls="animal",
+                target_cls_id=1,
+                match_classes=[ "fox","red_fox","kit_fox", "grey_fox", "brown_bear","bear", "American_black_bear", "wild_boar"],
+                severity=3,
+                min_conf=0.25,
+                min_consec=2,
+                cooldown=10,
+            ),
+            Rule(
+                name="climbing_fence",
+                target_cls="animal",
+                target_cls_id=1,
+                match_classes=["fox climbing a fence", "bear climbing a fence"],
+                severity=2,
+                min_conf=0.5,
+                min_consec=2,
+                cooldown=10,
+            ),
+            Rule(
+                name="masked_person",
+                target_cls="person",
+                target_cls_id=2,
+                match_classes=["mask"],
+                min_conf=0.5,
+                severity=6,
+                min_consec=2,
+                cooldown=6,
+            ),
+       
+
+        ]
+
+
+        # ---- Create pipeline manager ----
+        from agguard.pipeline.flink_manager import FlinkPipelineManager
+        self.pm = FlinkPipelineManager(cfg, self.s3, rules)
+
+        log.info("[Flink] Initialized CameraOperator with %d rules and S3 at %s",
+                len(rules), s3_cfg.get("endpoint_url"))
+     
+
+    def process_element(self, msg, ctx):
+        data = json.loads(msg)
+
+        full_key = data["key"]               # e.g. "security/imagery/air/2025-10-29/123/drone-01_20251029T093413Z.jpg"
+        file_name = data["file_name"]        # e.g. "drone-01_20251029T093413Z.jpg"
+        linked_time = data.get("linked_time")
+
+        # Split key → bucket + object path
+        parts = full_key.split("/", 1)
+        if len(parts) != 2:
+            log.error(f"Invalid key format (expected 'bucket/path'): {full_key}")
+            return
+        bucket, object_key = parts
+
+        # Derive camera_id from the *first part* of the filename
+        camera_id = file_name.split("_")[0]  # "drone-01"
+
+        # Parse ISO 8601 time → seconds since epoch
+        from datetime import datetime
+        ts_sec = 0.0
+        if linked_time:
+            try:
+                ts_sec = datetime.fromisoformat(linked_time.replace("Z", "+00:00")).timestamp()
+            except Exception as e:
+                log.warning(f"Invalid linked_time format: {linked_time} ({e})")
+
+        # Fetch image from S3
+        frame = self.s3.fetch_image_bgr(bucket, object_key)
+
+        # Process frame through pipeline
+        evt = self.pm.process(
+            camera_id=camera_id,
+            ts_sec=ts_sec,
+            frame_idx=0,
+            frame_bgr=frame,
+        )
+
+        # Emit alert if there’s one
+        if evt:
+            out_json = json.dumps(evt)
+            log.info(f"[CameraOperator] Emitting alert for {evt.get('alert_id')} ({file_name})")
+            yield out_json
+        else:
+            log.debug(f"[CameraOperator] No alert emitted for {file_name}")
+
+
+
+
+
+def main():
+    bootstrap = os.getenv("KAFKA_BROKERS", "kafka:9092")
+    topic_in = os.getenv("IN_TOPIC", "image_new_security_connections")
+    topic_out = os.getenv("OUT_TOPIC", "alerts")
+
+
+    env = StreamExecutionEnvironment.get_execution_environment()
+    env.set_parallelism(1)
+
+    source = (
+        KafkaSource.builder()
+        .set_bootstrap_servers(bootstrap)
+        .set_topics(topic_in)
+        .set_group_id("flink-camera-pipeline")
+        .set_starting_offsets(KafkaOffsetsInitializer.latest())
+        .set_value_only_deserializer(SimpleStringSchema())
+        .build()
+    )
+
+    from pyflink.datastream.connectors.kafka import KafkaRecordSerializationSchema
+
+    sink = (
+    KafkaSink.builder()
+    .set_bootstrap_servers(bootstrap)
+    .set_record_serializer(
+        KafkaRecordSerializationSchema.builder()
+        .set_topic(topic_out)  # static topic, from OUT_TOPIC
+        .set_value_serialization_schema(SimpleStringSchema())
+        .build()
+    )
+    .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+    .build()
+)
+
+
+
+    stream = (
+    env.from_source(source, WatermarkStrategy.no_watermarks(), "CameraFrames")
+    .key_by(lambda m: json.loads(m)["file_name"].split("_")[0])
+    .process(CameraOperator(), output_type=Types.STRING())
+    .sink_to(sink)
+)
+
+
+
+    env.execute("AgGuard Flink Pipeline")
+
+
+if __name__ == "__main__":
+    main()

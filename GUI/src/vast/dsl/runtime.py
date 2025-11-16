@@ -9,10 +9,13 @@ from .dialects import Dialect
 
 class CompileCtx:
     def __init__(self, dialect: Dialect) -> None:
-        self.params: List[Any] = []   # Accumulated bound parameters in order of appearance.
+        self.params: dict[str, Any] = {}
         self.dialect = dialect
 
     def add_param(self, v: Any) -> str:
-        """Append a value (after dialect-specific normalization) and return its placeholder."""
-        self.params.append(self.dialect.normalize_bool(v))
-        return self.dialect.placeholder(len(self.params))
+        """Append a value and return its dialect-specific placeholder."""
+        idx = len(self.params) + 1
+        name = f"p{idx}"
+        self.params[name] = self.dialect.normalize_bool(v)
+        return self.dialect.placeholder(idx)
+

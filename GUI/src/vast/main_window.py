@@ -27,12 +27,14 @@ from dashboard_api import DashboardApi
 from vast.alerts.alert_service import AlertService
 from views.leaf_diseases import LeafDiseaseView
 
+
 # === New Sensors GUI imports ===
 from views.sensorsMainView import SensorsMainView
 from views.sensorsMapView import SensorsMapView
 from views.sensorDetailsTab import SensorDetailsTab
 from views.sensors_status_summary import SensorsStatusSummary
 
+from views.security.incident_player_vlc import IncidentPlayerVLC
 # === New Sensors GUI imports ===
 from views.sensorsMainView import SensorsMainView
 from views.sensorsMapView import SensorsMapView
@@ -397,6 +399,7 @@ class MainWindow(QMainWindow):
         self.sensors_status_summary = SensorsStatusSummary(api, self)
         self.sensors_health = SensorsView(api, self)
         self.sensors_main = SensorsMainView(api, self)
+        self.security_view = IncidentPlayerVLC(api, self.alert_service, self)
         self.ground_view = GroundView(api, self)
         self.auth_status = AuthStatusView(api, self)
 
@@ -417,7 +420,8 @@ class MainWindow(QMainWindow):
             "Leaf Diseases": self.leaf_diseases_view,
             "Fruits": self.fruits_view,
             "Ground Image": self.ground_view,
-            "Auth": self.auth_status
+            "Auth": self.auth_status,
+            "Security": self.security_view,
         }
 
         for view in self.views.values():

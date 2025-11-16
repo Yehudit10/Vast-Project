@@ -1,0 +1,17 @@
+fastapi==0.115.2
+uvicorn[standard]==0.32.0
+
+# AWS SDK for S3 access
+boto3==1.35.29
+botocore==1.35.29
+
+# Streaming + YAML parsing
+PyYAML==6.0.2
+
+# Optional: for your adapters
+requests>=2.32.3
+
+# If S3Client uses aiohttp for async streams
+aiohttp>=3.10.5
+
+opencv-python-headless<5

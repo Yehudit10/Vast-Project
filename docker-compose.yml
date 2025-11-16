@@ -14,6 +14,13 @@ networks:
     driver: bridge
 
 # --------------------------
+# Secrets
+# --------------------------
+secrets:
+  slack_webhook:
+    file: ./secrets/slack_webhook.url
+
+# --------------------------
 # Volumes
 # --------------------------
 volumes:
@@ -1594,4 +1601,181 @@ services:
     networks:
       - flink-net
       - ag_cloud
+    
+
+  # --------------------------
+  # Security
+  # --------------------------
+
+  media-proxy:
+    build:
+      context: ./services/security
+      dockerfile: agguard/app/Dockerfile
+    command: uvicorn agguard.app.media_proxy:app --host 0.0.0.0 --port 8080
+    environment:
+      - MEDIA_AUTH_TOKEN=CHANGE_ME
+      - PYTHONPATH=/app
+    ports:
+      - "8089:8080"
+    networks:
+      - ag_cloud
+  
+
+  security-flink-jobmanager:
+    build:
+      context: ./services/security
+      dockerfile: agguard/pipeline/Dockerfile
+    image: agguard-flink:latest
+    container_name: security-flink-jobmanager
+    
+    command: >
+      bash -c "
+        /docker-entrypoint.sh jobmanager &
+        echo 'Waiting for Kafka...';
+        sleep 15 &&
+        echo '🚀 Submitting Flink job...' &&
+        flink run -py /opt/app/agguard/pipeline/flink_job.py
+      "
+    
+
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=security-flink-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=image_new_security_connections
+      - OUT_TOPIC=alerts
+      - heartbeat.timeout=180000
+      - heartbeat.interval=30000
+    volumes:
+      - ./services/security/agguard/app:/app/agguard/app
+      - ./services/security/agguard/core:/app/agguard/core
+      - ./services/security/agguard/specialists:/app/agguard/specialists
+      - ./services/security/agguard/pipeline:/app/agguard/pipeline
+      - ./services/security/agguard/adapters:/app/agguard/adapters
+      - ./services/security/agguard/media:/app/agguard/media
+      - ./services/security/configs:/app/configs:ro
+    
+    depends_on:
+      kafka:
+        condition: service_healthy
+      connect:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+
+  security-flink-taskmanager:
+    image: agguard-flink:latest
+    container_name: security-flink-taskmanager
+    command: taskmanager -D taskmanager.numberOfTaskSlots=4
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=security-flink-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=image_new_security_connections
+      - OUT_TOPIC=alerts
+      - taskmanager.numberOfTaskSlots=4
+      - heartbeat.timeout=180000
+      - heartbeat.interval=30000
+    volumes:
+      - ./services/security/agguard/app:/app/agguard/app
+      - ./services/security/agguard/core:/app/agguard/core
+      - ./services/security/agguard/specialists:/app/agguard/specialists
+      - ./services/security/agguard/pipeline:/app/agguard/pipeline
+      - ./services/security/agguard/adapters:/app/agguard/adapters
+      - ./services/security/agguard/media:/app/agguard/media
+      - ./services/security/configs:/app/configs:ro
+    depends_on:
+      security-flink-jobmanager:
+        condition: service_started
+    networks:
+      - ag_cloud
+  
+
+
+  
+
+  animal-classifier:
+    build:
+      context: ./services/security
+      dockerfile: agguard/specialists/animal_service/Dockerfile.animal-classifier
+    image: agguard-animal-classifier:latest
+    environment:
+      - PORT=50064
+      - METRICS_PORT=8008
+      - MODEL_PATH=/app/weights/yolov8n-cls.pt
+      - DEVICE=cpu
+    volumes:
+      - ./services/security/weights:/app/weights:ro
+      - ./services/security/agguard/specialists/animal_service:/app/agguard/specialists/animal_service
+    expose:
+      - "50064"
+      - "8008"
+    networks:
+      - ag_cloud
+  
+
+  mega-detector:
+    build:
+      context: ./services/security
+      dockerfile: agguard/specialists/megadetector_service/Dockerfile.mega-detector
+    image: mega-detector:latest
+    environment:
+      - PORT=50063
+      - METRICS_PORT=8007
+      - MODEL_NAME=MDV5A 
+      - CONF_THRESH=0.2
+      - DEVICE=cpu
+    volumes:
+      - ./services/security/agguard/specialists/megadetector_service:/app/agguard/specialists/megadetector_service
+
+    expose:
+      - "50063"
+      - "8007"
+    container_name: mega-detector
+    networks:
+        - ag_cloud
+  
+
+  anomalies-classifier:
+    build:
+      context: ./services/security
+      dockerfile: agguard/specialists/anomalies_service/Dockerfile.anomalies-classifier
+    image: agguard-anomalies-classifier:latest
+    container_name: clip-classifier
+    environment:
+      - PORT=50062
+      - METRICS_PORT=8011
+      - DEVICE=cpu
+      - CLIP_MODEL=RN50
+      - CLIP_PRETRAINED=openai
+      - CLIP_INPUT_SIZE=224
+      - CLIP_TEMPERATURE=100.0
+      - CLIP_BATCH=32
+      - ENABLE_MKLDNN=1
+      - NUM_THREADS=6
+    expose:
+      - "50062"
+    networks:
+        - ag_cloud
+  
+
+
+  mask-classifier:
+    build:
+      context: ./services/security
+      dockerfile: agguard/specialists/mask_service/Dockerfile.mask-classifier
+    image: agguard-mask-classifier:latest
+    environment:
+      - PORT=50061
+      - METRICS_PORT=8012
+      - BACKEND=onnx
+      - MODEL_PATH=/app/weights/mask_yolov8.onnx
+      - CLASSES=no_mask,mask
+      - IMGSZ=224
+      - DEVICE=cpu
+    volumes:
+      - ./services/security/weights:/app/weights:ro
+    expose:
+      - "50061"
+    networks:
+        - ag_cloud
+
 

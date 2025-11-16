@@ -1,0 +1,91 @@
+
+
+# video: "D:/p9.mp4"
+#"C:/Users/yehud/Downloads/cars.mp4"
+fit: "1280x720"          # or null to keep native
+roi: "0,0;1,0;1,1;0,1"   # normalized polygon; or "full"
+change_thresh: 0
+min_blob_area: 200
+morph_open: 3
+show_mask: false
+
+# used to construct clickable HLS URLs inside alerts
+media_base: "http://media-proxy:8080"   # or your public host
+media_auth_token: "CHANGE_ME"
+
+
+video:
+  bucket: imagery
+  prefix: security/incidents
+  fps: 9
+  hls_segment_time: 0.5
+  hls_list_size: 4000
+  hls_use_cmaf: False
+  draw_thickness: 3
+
+logging:
+  level: "INFO"          # DEBUG|INFO|WARNING|ERROR
+  file: null             # e.g., "agguard.log"
+
+detector:
+  backend: "onnx"
+  onnx: "weights/yolov8n.onnx"    # we copied it here at build-time
+  conf: 0.4
+  imgsz: 640
+  roi_pad: 16
+  names:
+    1: animal          # <- add at least the classes you route
+    2: person
+    3: vehicle
+
+
+
+
+tracker:
+  iou_thresh: 0.2
+  max_miss: 20
+  ema: 0.8
+  min_hits: 5
+  high_conf: 0.6
+  appearance_alpha: 0.8
+  center_blend: 0.15
+
+
+specialists:
+  - for_class: "person"
+    grpc:
+      address: "mask-classifier:50061"
+      kind: "mask"
+      timeout_sec: 5
+ 
+  - for_class: "animal"
+    grpc:
+      address: "animal-classifier:50064"
+      kind: "animal"
+      timeout_sec: 6
+
+  - for_class: "intruding animal"
+    grpc:
+      address: "anomalies-classifier:50062"
+      kind: "anomalies"
+      timeout_sec: 6
+
+  
+
+minio:
+  endpoint: "localhost:9001"
+  access_key: "minioadmin"
+  secret_key: "minioadmin123"
+  secure: false
+  default_bucket: "imagery"
+
+s3:
+  # For AWS: set only region_name; credentials come from env/role by default
+  endpoint_url: "http://minio-hot:9000"
+  region_name: "us-east-1"
+  aws_access_key_id: "minioadmin"
+  aws_secret_access_key: "minioadmin123"
+  default_bucket: "imagery"
+  connect_timeout: 3.0
+  read_timeout: 10.0
+  max_attempts: 3
