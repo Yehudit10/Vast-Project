@@ -55,7 +55,7 @@ QUERY_SCHEMA = {
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "enum": ["device_id", "area"]
+                          
                         },
                         "minItems": 1,
                         "maxItems": 2,
