@@ -101,19 +101,16 @@ export AWS_SECRET_ACCESS_KEY='{{ conn.minio_s3.password }}'
 export AWS_DEFAULT_REGION='us-east-1'
 export AWS_S3_FORCE_PATH_STYLE=true
 
+# mkdir -p "$OUT_LOCAL_DET"
+OUT_LOCAL_DET='{{ params.out_run }}/detect'
 mkdir -p "$OUT_LOCAL_DET"
-
+rm -rf "$OUT_LOCAL_DET"/* 2>/dev/null || true
 cd "$PROJECT_ROOT"
 $PY src/detect_only.py \
     --input "$INPUT_DIR" \
     --out   "$OUT_LOCAL_DET" \
     --weights "$WEIGHTS" \
     --conf 0.25 --imgsz 896 --device cpu \
-    --minio-endpoint "$ENDPOINT_HOSTPORT" \
-    --minio-access   "$AWS_ACCESS_KEY_ID" \
-    --minio-secret   "$AWS_SECRET_ACCESS_KEY" \
-    --minio-bucket   "$BUCKET" \
-    --minio-prefix   "leaves/${DATE_ONLY}" \
     --run-id         "detect"
 
 # יישור קו לנתיב המדויק:
@@ -167,11 +164,6 @@ $PY src/predict_pyramid_wbf.py \
     --out   "$OUT_LOCAL_PWB" \
     --weights "$WEIGHTS" \
     --scales 0.75,1.0,1.25 --conf 0.25 --iou 0.55 --imgsz 896 --device cpu \
-    --minio-endpoint "$ENDPOINT_HOSTPORT" \
-    --minio-access   "$AWS_ACCESS_KEY_ID" \
-    --minio-secret   "$AWS_SECRET_ACCESS_KEY" \
-    --minio-bucket   "$BUCKET" \
-    --minio-prefix   "leaves/${DATE_ONLY}" \
     --run-id         "pwb"
 
 pip install -q awscli || true
@@ -358,6 +350,8 @@ echo "[DJ] START"; whoami; pwd; python3 -V
 python3 -m pip install --no-cache-dir -q awscli || true
 
 RID='{{ dag_run.conf.get("run_id") or logical_date.in_timezone("Asia/Jerusalem").strftime("%Y/%m/%d/%H%M") }}'
+export MINIO_RID="$RID"   
+echo "[DJ] MINIO_RID=$MINIO_RID"
 BUCKET='{{ var.value.leaf_minio_bucket | default("imagery") }}'
 SRC="s3://${BUCKET}/leaves/${RID}/crop/"
 ENDPOINT="${MINIO_ENDPOINT:-http://minio-hot:9001}"
@@ -381,22 +375,28 @@ while IFS= read -r -d '' f; do
 done < <(find "$IN_DIR" -type f -print0)
 
 echo "[DJ][ready] tree under: $READY_DIR"
-
 FLAT_DIR="/work/in_flat"
 rm -rf "$FLAT_DIR" && mkdir -p "$FLAT_DIR"
-find "$READY_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.tif' -o -iname '*.tiff' -o -iname '*.bmp' \) -print0 \
+
+MANIFEST="$FLAT_DIR/_origin_map.tsv"           
+: > "$MANIFEST"
+
+find "$IN_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.tif' -o -iname '*.tiff' -o -iname '*.bmp' \) -print0 \
 | while IFS= read -r -d '' f; do
   base="$(basename "$f")"
-  
+  parent="$(basename "$(dirname "$f")")"       
   out="$FLAT_DIR/$base"; i=1
   while [ -e "$out" ]; do
     ext="${base##*.}"; stem="${base%.*}"
     out="$FLAT_DIR/${stem}_$i.$ext"; i=$((i+1))
   done
   cp -p "$f" "$out"
+  printf '%s\t%s\n' "$(basename "$out")" "$parent" >> "$MANIFEST"
 done
 
-echo "[DJ][flat] files in $FLAT_DIR:"
+export ORIGIN_MANIFEST="$MANIFEST"
+echo "[DJ] origin manifest at: $ORIGIN_MANIFEST (lines: $(wc -l < "$MANIFEST")))"
+
 ls -1 "$FLAT_DIR" | sed -n '1,50p'
 export INPUT_DIR_FOR_RUNNER="$FLAT_DIR"
 # === DB bootstrap: ensure required table exists ===
@@ -420,7 +420,7 @@ CREATE TABLE IF NOT EXISTS public.leaf_reports (
     sick BOOLEAN NOT NULL
 );
 
-
+-- אינדקסים קלים לשאילתות/דשבורדים
 CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts ON public.leaf_reports (ts);
 CREATE INDEX IF NOT EXISTS ix_leaf_reports_type ON public.leaf_reports (leaf_disease_type_id);
 CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts ON public.leaf_reports (device_id, ts);
@@ -463,6 +463,7 @@ echo "[DJ] DONE"
         '''
     ],
 )
+
 
 
     disease_monitor = DockerOperator(

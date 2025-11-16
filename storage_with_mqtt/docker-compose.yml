@@ -152,7 +152,7 @@ services:
     volumes:
       - ./storage/monitoring/provisioning:/etc/grafana/provisioning:ro
       - ./storage/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/minio-dashboard.json:ro
-
+    # --NetFree--
       - ./certs/company-ca.crt:/usr/local/share/ca-certificates/company-ca.crt:ro
     command: ["/bin/sh","-c","update-ca-certificates && /run.sh"]
 

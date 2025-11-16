@@ -26,6 +26,28 @@ class Query:
         self._plan._ops.append({"op": "where", "cond": cond.to_ir()})
         return self
     
+    def order_by(self, *columns: str, directions: list[str] | None = None) -> "Query":
+        directions = directions or ["ASC"] * len(columns)
+        self._plan._ops.append({"op": "order_by", "columns": list(columns), "directions": directions})
+        return self
+
+    def limit(self, n: int) -> "Query":
+        self._plan._ops.append({"op": "limit", "limit": n})
+        return self
+
+    def offset(self, n: int) -> "Query":
+        self._plan._ops.append({"op": "offset", "offset": n})
+        return self
+
+    def group_by(self, *columns: str) -> "Query":
+        self._plan._ops.append({"op": "group_by", "columns": list(columns)})
+        return self
+
+    def having(self, cond: Cond) -> "Query":
+        self._plan._ops.append({"op": "having", "cond": cond.to_ir()})
+        return self
+
+    
     def to_plan(self) -> Plan:
         """Return the underlying Plan object (e.g., for transport)."""
         return self._plan

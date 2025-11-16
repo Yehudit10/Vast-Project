@@ -442,3 +442,176 @@ class DashboardApi:
             return {"phi": None, "severity_avg": None, "density": None, "coverage": None, "trend": None}
         image_id = _image_id_from_object_key(key)
         return self.rdb.get_phi_for_image(image_id)
+
+
+    # =====================================================
+    # ===== ADDED: AUDIO ANALYTICS METHODS =====
+    # =====================================================
+    def get_audio_stats(self, time_range: str = 'all') -> Dict:
+        """
+        Get aggregated audio classification statistics.
+        """
+        time_filter = {
+            'all': '',
+            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+        }.get(time_range, '')
+
+        query = f"""
+            SELECT
+                COUNT(*) AS total_files,
+                SUM(CASE WHEN fa.head_is_another = true THEN 1 ELSE 0 END) AS unknown_count,
+                AVG(fa.head_pred_prob) AS avg_confidence,
+                AVG(fa.processing_ms) AS avg_processing_ms
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r
+            ON fa.run_id = r.run_id
+            WHERE 1=1 {time_filter}
+        """
+        results = self.run_query(query)
+        return results[0] if results else {}
+
+    def get_audio_distribution(self, time_range: str = 'all', limit: int = 10) -> List[Dict]:
+        """
+        Get distribution of audio classifications (for pie chart).
+        """
+        time_filter = {
+            'all': '',
+            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+        }.get(time_range, '')
+
+        query = f"""
+            SELECT
+                fa.head_pred_label,
+                COUNT(*) AS count
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r
+            ON fa.run_id = r.run_id
+            WHERE fa.head_pred_label IS NOT NULL
+            {time_filter}
+            GROUP BY fa.head_pred_label
+            ORDER BY count DESC
+            LIMIT {limit}
+        """
+        return self.run_query(query)
+
+    def get_audio_confidence_by_class(self, time_range: str = 'all', limit: int = 10) -> List[Dict]:
+        """
+        Get average confidence levels by classification (for bar chart).
+        """
+        time_filter = {
+            'all': '',
+            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+        }.get(time_range, '')
+
+        query = f"""
+            SELECT
+                fa.head_pred_label,
+                AVG(fa.head_pred_prob) AS avg_confidence
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r
+            ON fa.run_id = r.run_id
+            WHERE fa.head_pred_label IS NOT NULL
+            AND fa.head_pred_prob IS NOT NULL
+            {time_filter}
+            GROUP BY fa.head_pred_label
+            ORDER BY avg_confidence DESC
+            LIMIT {limit}
+        """
+        return self.run_query(query)
+
+    def get_audio_critical_events(self, time_range: str = 'day', limit: int = 100) -> List[Dict]:
+        """
+        Get critical sound events (fire, screaming, shotgun, predatory animals).
+        """
+        time_filter = {
+            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
+            'day':  "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+        }.get(time_range, "AND r.started_at > NOW() - INTERVAL '24 hours'")
+
+        query = f"""
+            SELECT
+                r.run_id,
+                r.started_at,
+                snsc.file_name,
+                snsc.key AS s3_key,
+                sm.device_id,
+                sm.capture_time,
+                fa.head_pred_label AS event_type,
+                fa.head_pred_prob  AS confidence,
+                fa.head_probs_json
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r
+            ON fa.run_id = r.run_id
+            JOIN public.sound_new_sounds_connections snsc
+            ON fa.file_id = snsc.id
+            LEFT JOIN public.sounds_metadata sm
+            ON snsc.file_name = sm.file_name
+            WHERE fa.head_pred_label IN ('fire', 'screaming', 'shotgun', 'predatory_animals')
+            {time_filter}
+            ORDER BY r.started_at DESC, fa.head_pred_prob DESC
+            LIMIT {limit}
+        """
+        return self.run_query(query)
+
+
+
+    # =====================================================
+    # ===== ADDED: HELPER METHODS FOR OTHER VIEWS =====
+    # =====================================================
+    def get_sensors(self) -> List[Dict]:
+        """Get all sensors from the sensors table"""
+        query = "SELECT * FROM sensors ORDER BY sensor_name"
+        return self.run_query(query)
+    def get_sensor_status(self, sensor_name: str) -> Dict:
+        """Get status of a specific sensor"""
+        query = "SELECT * FROM sensors WHERE sensor_name = %s"
+        results = self.run_query(query, (sensor_name,))
+        return results[0] if results else {}
+    def get_alerts(self, limit: int = 50) -> List[Dict]:
+        """Get recent alerts"""
+        query = """
+            SELECT * FROM alerts
+            ORDER BY started_at DESC
+            LIMIT %s
+        """
+        return self.run_query(query, (limit,))
+    
+    def acknowledge_alert(self, alert_id: str) -> bool:
+        """Mark an alert as acknowledged"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            query = "UPDATE alerts SET ack = true WHERE alert_id = %s"
+            cursor.execute(query, (alert_id,))
+            conn.commit()
+            print(f"[DashboardApi] Alert {alert_id} acknowledged", flush=True)
+            return True
+        except Exception as e:
+            print(f"[DashboardApi] Error acknowledging alert: {e}", flush=True)
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+    def get_ripeness_stats(self) -> Dict:
+        """Get ripeness prediction statistics"""
+        query = """
+            SELECT
+                COUNT(*) as total_predictions,
+                SUM(CASE WHEN ripeness_label = 'ripe' THEN 1 ELSE 0 END) as ripe_count,
+                SUM(CASE WHEN ripeness_label = 'unripe' THEN 1 ELSE 0 END) as unripe_count,
+                SUM(CASE WHEN ripeness_label = 'overripe' THEN 1 ELSE 0 END) as overripe_count
+            FROM ripeness_predictions
+        """
+        results = self.run_query(query)
+        return results[0] if results else {}

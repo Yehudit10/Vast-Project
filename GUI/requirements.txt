@@ -1,6 +1,9 @@
 
-PyQt6==6.7.1
-PyQt6-WebEngine==6.7.0
+PyQt6==6.9.1
+PyQt6-WebEngine==6.9.0
+PyQt6-Charts==6.9.0
+PyQt6-Qt6==6.9.1
+PyQt6-sip>=13.6
 python-vlc
 
 
@@ -13,13 +16,6 @@ flask
 prometheus-client>=0.20
 requests>=2.31
 httpx==0.27.0   # only needed when you switch to real Flink REST
-# gRPC & Protobuf
-# grpcio==1.62.2
-# grpcio-tools==1.62.2
-# protobuf==6.31.1
-
-
-# Validation / crypto
 
 # ───── gRPC & Protobuf ─────
 grpcio>=1.56,<2
@@ -37,7 +33,20 @@ shapely
 # ───── Async / misc ─────
 aiohttp
 
+folium
 plotly
 shapely
 PyJWT>=2.9.0
 sip
+
+SQLAlchemy>=2.0
+geoalchemy2>=0.15.0    
+
+tenacity>=8.2
+openai>=1.0.0
+python-dotenv>=1.0.0
+jsonschema>=4.0.0
+psycopg2-binary>=2.9.0
+matplotlib>=3.7.0
+
+

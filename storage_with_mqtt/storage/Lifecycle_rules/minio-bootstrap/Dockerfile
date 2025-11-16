@@ -11,7 +11,6 @@ FROM alpine:3.19
 RUN apk add --no-cache bash curl ca-certificates netcat-openbsd dos2unix && \
   update-ca-certificates
 # ===== Add NetFree CA =====
-
 COPY certs/*.crt /usr/local/share/ca-certificates/
 RUN update-ca-certificates
 # ===== Copy mc from the official image =====
