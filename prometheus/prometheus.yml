@@ -41,5 +41,10 @@ scrape_configs:
     static_configs:
       - targets: ['pushgateway:9091']
  
+  - job_name: 'fruit_metric'
+    static_configs:
+      - targets: ['fruit_metrics:8050']
 
-
+  - job_name: "fruit_ripeness"
+    static_configs:
+      - targets: ["ripeness-exporter:9128"]

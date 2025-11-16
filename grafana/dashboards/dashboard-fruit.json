@@ -1,0 +1,161 @@
+{
+  "uid": "fruit-metric",
+  "title": "Fruit Disease Monitoring — Pro Edition",
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+
+  "panels": [
+
+    {
+      "type": "stat",
+      "title": "Total Disease Alerts — Since System Start",
+      "description": "Total number of fruit disease alerts generated since the monitoring system was activated.",
+      "id": 1,
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "fruit_alerts_total" }
+      ],
+      "options": {
+        "colorMode": "value",
+        "textMode": "value",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 }
+    },
+
+    {
+      "type": "stat",
+      "title": "Active Disease Events — Real Time",
+      "description": "Number of live disease alerts currently active in the orchard.",
+      "id": 2,
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "fruit_alerts_active" }
+      ],
+      "options": {
+        "colorMode": "value",
+        "textMode": "value"
+      },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 }
+    },
+
+    {
+      "type": "stat",
+      "title": "New Cases (Last 24h)",
+      "description": "How many new disease alerts appeared during the last 24 hours.",
+      "id": 3,
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "increase(fruit_alerts_total[24h])" }
+      ],
+      "options": {
+        "colorMode": "value",
+        "textMode": "value"
+      },
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 }
+    },
+
+    {
+      "type": "stat",
+      "title": "Critical Cases (Severity 4)",
+      "description": "Current number of high-severity alerts that require immediate attention.",
+      "id": 4,
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "fruit_alerts_by_severity{severity=\"4\"}" }
+      ],
+      "options": {
+        "colorMode": "value",
+        "textMode": "value"
+      },
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Hourly Alert Growth — How Fast Are New Cases Appearing?",
+      "description": "Tracks the hour-over-hour increase in disease alerts. A spike indicates rapid disease spread.",
+      "id": 5,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "increase(fruit_alerts_total[1h])",
+          "legendFormat": "New Alerts Per Hour"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      },
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Weekly Trend — This Week vs Last Week",
+      "description": "Clear comparison of disease alerts between this week and the same period last week. Helps identify worsening or improving field conditions.",
+      "id": 6,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "fruit_alerts_total",
+          "legendFormat": "This Week — Total Alerts"
+        },
+        {
+          "expr": "fruit_alerts_total offset 7d",
+          "legendFormat": "Last Week — Total Alerts"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 3 }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 }
+    },
+
+    {
+      "type": "piechart",
+      "title": "Disease Severity Breakdown",
+      "description": "Distribution of disease alerts by severity level. Shows the current risk profile of the orchard.",
+      "id": 7,
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "fruit_alerts_by_severity" }
+      ],
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 }
+    },
+
+    {
+      "type": "barchart",
+      "title": "Alerts Per Camera — Identifying Hot Zones",
+      "description": "Which camera detects the most disease activity? Helps locate sick areas in the field.",
+      "id": 8,
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "fruit_alerts_by_device" }
+      ],
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 }
+    }
+
+  ]
+}

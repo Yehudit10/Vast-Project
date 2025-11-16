@@ -1,0 +1,160 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "gauge",
+      "title": "Weekly Ripeness %",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "fruit_ripeness_pct{device=\"$device\"} * 100",
+          "legendFormat": "Ripeness %",
+          "interval": ""
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 60 },
+              { "color": "green", "value": 75 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Ripeness Trend (12 Weeks)",
+      "gridPos": { "x": 8, "y": 0, "w": 16, "h": 6 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "fruit_ripeness_pct{device=\"$device\"} * 100",
+          "legendFormat": "Ripeness %",
+          "interval": ""
+        },
+        {
+          "expr": "fruit_ripeness_threshold * 100",
+          "legendFormat": "Threshold",
+          "interval": ""
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "percent" },
+        "overrides": []
+      }
+    },
+
+    {
+      "type": "bargauge",
+      "title": "Ripeness by Device",
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "fruit_ripeness_pct * 100",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["last"], "values": false }
+      }
+    },
+
+    {
+      "type": "heatmap",
+      "title": "Ripeness Heatmap (Devices × Weeks)",
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "fruit_ripeness_pct * 100",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "options": {
+        "color": { "mode": "scheme", "scheme": "rainbow" }
+      }
+    },
+
+    {
+      "type": "stat",
+      "title": "Weekly Change",
+      "gridPos": { "x": 0, "y": 14, "w": 8, "h": 4 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "fruit_ripeness_pct{device=\"$device\"} * 100",
+          "legendFormat": "Ripeness %"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["last", "first"], "values": false },
+        "orientation": "auto",
+        "layout": "horizontal"
+      }
+    },
+
+    {
+      "type": "table",
+      "title": "Ripeness Alerts Log",
+      "gridPos": { "x": 8, "y": 14, "w": 16, "h": 8 },
+      "datasource": "postgres",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT alert_id, device_id, alert_type, started_at, meta FROM alerts WHERE alert_type LIKE 'ripeness%' ORDER BY started_at DESC;"
+        }
+      ]
+    }
+  ],
+
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["fruit", "ripeness"],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "device",
+        "datasource": "Prometheus",
+        "query": "label_values(fruit_ripeness_pct, device)",
+        "includeAll": false,
+        "multi": false,
+        "refresh": 2
+      }
+    ]
+  },
+  "time": { "from": "now-90d", "to": "now" },
+  "timezone": "",
+  "title": "Fruit Ripeness Dashboard",
+  "version": 1
+}

@@ -298,7 +298,7 @@ CREATE TABLE IF NOT EXISTS sensors (
   description TEXT,
   last_maintenance TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
+CREATE TABLE IF N;OT EXISTS public.sensor_anomalies (
     id BIGSERIAL PRIMARY KEY,
     plant_id INT NOT NULL,
     sensor VARCHAR(64) NOT NULL,
