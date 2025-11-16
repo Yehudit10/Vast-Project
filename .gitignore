@@ -26,8 +26,11 @@ __pycache__/
 *.pyd
 *.pytest_cache/
 .pytest_cache/
+<<<<<<< HEAD
+=======
 
 
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a
 .venv/
 venv/
 .coverage
@@ -58,9 +61,17 @@ runs*/
 
 # ==== Model weights from training (PyTorch checkpoints) ====
 # Keep weights out of Git; publish via Releases/Artifacts instead.
+<<<<<<< HEAD
+!services/inference_http/models/fence_hole_detector/weights/
+!services/inference_http/models/fence_hole_detector/weights/best.onnx
+
+# ==== Model weights from training (PyTorch checkpoints) ====
+# Keep weights out of Git; publish via Releases/Artifacts instead.
+=======
 !services/fence_hole_detector/weights/
 !services/fence_hole_detector/weights/best.onnx
 
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a
 runs_fence/**/weights/*.pt
 
 # ==== Prediction artifacts (images + txt) ====
@@ -84,5 +95,8 @@ runs_fence/y8s_cpu_v1_preds/**
 runs_fence/**/weights/*.onnx
 
 models/*.pt
+<<<<<<< HEAD
+=======
 
 .coverage
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a

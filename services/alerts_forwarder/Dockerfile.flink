@@ -14,12 +14,35 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 # Python & tools
 RUN apt-get update && apt-get install -y --no-install-recommends     python3 python3-venv python3-pip curl ca-certificates     && rm -rf /var/lib/apt/lists/*
 
+# Optional extra CA certs (NetFree, etc.) from ./certs
+# (If no certs exist, this block just prints a message and continues.)
+COPY certs/ /tmp/certs
+
+RUN set -eux; \
+    if [ -d /tmp/certs ] && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
+        echo "Adding extra CA certs from /tmp/certs ..."; \
+        cp /tmp/certs/*.crt /usr/local/share/ca-certificates/; \
+        chmod 644 /usr/local/share/ca-certificates/*.crt; \
+        update-ca-certificates; \
+    else \
+        echo "No extra CA certs found for alerts_forwarder, skipping."; \
+    fi
+
 # Create venv and install pyflink
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install PyFlink (DataStream API) and requests
-RUN pip install --upgrade pip certifi &&     pip install --prefer-binary apache-flink==2.1.0 requests urllib3
+# RUN pip install --upgrade pip certifi &&     pip install --prefer-binary apache-flink==2.1.0 requests urllib3
+# Install PyFlink (DataStream API) and requests stack
+RUN pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org \
+    apache-flink==2.1.0 \
+    requests \
+    urllib3 \
+    certifi
 
 # Kafka connector jar matching Flink 1.20 (connector v3 series)
 # Reference: flink-connector-kafka-3.x for Flink 1.20

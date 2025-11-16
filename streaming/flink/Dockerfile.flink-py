@@ -5,7 +5,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Optional extra CA certs (e.g. NetFree) from ./certs
+COPY certs/ /tmp/certs
+
+RUN set -eux; \
+    if [ -d /tmp/certs ] && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
+        echo "Adding extra CA certs from /tmp/certs ..."; \
+        cp /tmp/certs/*.crt /usr/local/share/ca-certificates/; \
+        chmod 644 /usr/local/share/ca-certificates/*.crt; \
+        update-ca-certificates; \
+    else \
+        echo "No extra CA certs found, skipping."; \
+    fi
+
+# System-wide SSL env (works with or without extra CAs)
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+
+
+# Python deps (with trusted-host for NetFree)
 RUN python3 -m pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host pypi.python.org \
+    --trusted-host files.pythonhosted.org \
     "apache-flink==1.18.1" \
     aiohttp==3.9.5 \
     minio==7.2.7 \
