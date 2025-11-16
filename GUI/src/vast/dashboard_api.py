@@ -500,33 +500,6 @@ class DashboardApi:
 
     def get_audio_confidence_by_class(self, time_range: str = 'all', limit: int = 10) -> List[Dict]:
         """
-        Get average confidence levels by classification (for bar chart)
-        Returns:
-            List of dicts with 'head_pred_label' and 'avg_confidence' keys
-        """
-        time_filter = {
-            'all': '',
-            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
-            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
-            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
-        }.get(time_range, '')
-        query = f"""
-            SELECT
-                head_pred_label,
-                AVG(head_pred_prob) as avg_confidence
-            FROM agcloud_audio.file_aggregates fa
-            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
-            WHERE head_pred_label IS NOT NULL
-              AND head_pred_prob IS NOT NULL
-              {time_filter}
-            GROUP BY head_pred_label
-            ORDER BY avg_confidence DESC
-            LIMIT {limit}
-        """
-        return self.run_query(query)
-    
-    def get_audio_confidence_by_class(self, time_range: str = 'all', limit: int = 10) -> List[Dict]:
-        """
         Get average confidence levels by classification (for bar chart).
         """
         time_filter = {
@@ -552,38 +525,6 @@ class DashboardApi:
         """
         return self.run_query(query)
 
-    def get_audio_critical_events(self, time_range: str = 'day', limit: int = 100) -> List[Dict]:
-        """
-        Get critical sound events (fire, screaming, shotgun, predatory animals)
-        Args:
-            time_range: 'hour', 'day', 'week'
-            limit: Maximum number of events to return
-        Returns:
-            List of critical event detections with timestamps
-        """
-        time_filter = {
-            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
-            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
-            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
-        }.get(time_range, "AND r.started_at > NOW() - INTERVAL '24 hours'")
-        query = f"""
-            SELECT
-                r.run_id,
-                r.started_at,
-                f.path as file_path,
-                fa.head_pred_label as event_type,
-                fa.head_pred_prob as confidence,
-                fa.head_probs_json
-            FROM agcloud_audio.file_aggregates fa
-            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
-            JOIN agcloud_audio.files f ON fa.file_id = f.file_id
-            WHERE fa.head_pred_label IN ('fire', 'screaming', 'shotgun', 'predatory_animals')
-              {time_filter}
-            ORDER BY r.started_at DESC, fa.head_pred_prob DESC
-            LIMIT {limit}
-        """
-        return self.run_query(query)
-    
     def get_audio_critical_events(self, time_range: str = 'day', limit: int = 100) -> List[Dict]:
         """
         Get critical sound events (fire, screaming, shotgun, predatory animals).

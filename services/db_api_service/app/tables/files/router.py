@@ -1,3 +1,4 @@
+# app/tables/files/router.py
 from typing import Optional, Any, Dict
 from urllib.parse import unquote, quote
 import os, json
@@ -7,10 +8,8 @@ from .schemas import FilesCreate, FilesUpdate
 from . import repo
 
 router = APIRouter(prefix="/files", tags=["files"])
+PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE")
 
-# MinIO endpoint - adjust based on your docker-compose
-# From docker-compose: minio-hot is on port 9001 externally
-PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE", "http://localhost:9002")
 
 def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
     """Attach a public URL to access the file from MinIO."""
@@ -29,22 +28,11 @@ def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
             if meta.get(k):
                 row.setdefault("url", meta[k])
                 return row
-
-    # If bucket/object_key directly available, use them
-    bucket = row.get("bucket")
-    object_key = row.get("object_key") or row.get("key")
-
-    # If bucket missing but combined key exists (bucket/path/to/file), try to split it
-    if not bucket and object_key and isinstance(object_key, str) and '/' in object_key:
-        parts = object_key.split('/', 1)
-        if len(parts) == 2:
-            bucket = parts[0]
-            object_key = parts[1]
-
-    if PUBLIC_S3_BASE and bucket and object_key:
-        built = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
+    if PUBLIC_S3_BASE and row.get("bucket") and (row.get("key") or row.get("object_key")):
+        bucket = str(row["bucket"])
+        key = str(row.get("key") or row.get("object_key"))
+        built = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(key, safe='/')}"
         row.setdefault("url", built)
-
     return row
 
 def _is_compressed(filename: str) -> bool:
@@ -53,13 +41,10 @@ def _is_compressed(filename: str) -> bool:
         return False
     return filename.lower().endswith('.opus')
 
-
 @router.post("", status_code=201)
 def create_or_upsert_file(payload: FilesCreate):
-    """Create or update a file record"""
     repo.upsert_file(payload.model_dump(by_alias=True))
     return {"status": "ok"}
-
 @router.get("/audio-aggregates/", summary="List audio file aggregates (environment sounds)")
 def list_audio_aggregates(
     run_id: Optional[str] = None,
@@ -274,10 +259,9 @@ def list_plant_predictions(
 
 @router.get("/{file_id:int}", summary="Get file by ID")
 def get_file_by_id(file_id: int):
-    """Get a single file record by file_id"""
     row = repo.get_file_by_id(file_id)
     if not row:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="not found")
     return _attach_url_if_possible(row)
 
 
@@ -287,7 +271,6 @@ def list_files_in_bucket(
     device_id: Optional[str] = None,
     limit: int = Query(50, ge=1, le=500),
 ):
-    """List all files in a specific MinIO bucket"""
     bucket = unquote(bucket)
     rows = repo.list_files(bucket, device_id, limit)
     return [_attach_url_if_possible(r) for r in rows]
@@ -295,32 +278,29 @@ def list_files_in_bucket(
 
 @router.get("/{bucket}/{object_key:path}", summary="Get file by bucket/key")
 def get_file(bucket: str, object_key: str):
-    """Get a file record by bucket and object_key"""
     bucket = unquote(bucket)
     object_key = unquote(object_key)
     row = repo.get_file(bucket, object_key)
     if not row:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="not found")
     return _attach_url_if_possible(row)
 
 
 @router.put("/{bucket}/{object_key:path}", summary="Update file metadata")
 def update_file(bucket: str, object_key: str, payload: FilesUpdate):
-    """Update file metadata"""
     bucket = unquote(bucket)
     object_key = unquote(object_key)
     ok = repo.update_file(bucket, object_key, payload.model_dump(exclude_unset=True))
     if not ok:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="not found")
     return {"status": "ok"}
 
 
 @router.delete("/{bucket}/{object_key:path}", summary="Delete file")
 def delete_file(bucket: str, object_key: str):
-    """Delete a file record (does not delete from MinIO)"""
     bucket = unquote(bucket)
     object_key = unquote(object_key)
     ok = repo.delete_file(bucket, object_key)
     if not ok:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=404, detail="not found")
     return {"status": "deleted"}
