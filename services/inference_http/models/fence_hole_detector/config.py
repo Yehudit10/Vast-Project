@@ -2,7 +2,7 @@ import os
 
 # --- Model / Inference ---
 ONNX_PATH = os.getenv("FENCE_ONNX_PATH", "runs_fence/y8n_cpu_v1/weights/best.onnx")
-CONF = float(os.getenv("FENCE_CONF", "0.35"))
+CONF = float(os.getenv("FENCE_CONF", "0.30"))
 
 # ROI: "none" or "ymin-ymax" ("0.20-0.85")
 ROI = os.getenv("FENCE_ROI", "none")

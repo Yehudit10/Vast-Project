@@ -20,10 +20,12 @@ services/sounds/sounds_classifier/src/classification/models/panns_data/
 
 # --- Python ---
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
 *.pyd
 *.pytest_cache/
+.pytest_cache/
 .venv/
 venv/
 .coverage
@@ -54,6 +56,11 @@ runs*/
 
 # ==== Model weights from training (PyTorch checkpoints) ====
 # Keep weights out of Git; publish via Releases/Artifacts instead.
+!services/inference_http/models/fence_hole_detector/weights/
+!services/inference_http/models/fence_hole_detector/weights/best.onnx
+
+# ==== Model weights from training (PyTorch checkpoints) ====
+# Keep weights out of Git; publish via Releases/Artifacts instead.
 runs_fence/**/weights/*.pt
 
 # ==== Prediction artifacts (images + txt) ====
@@ -74,4 +81,6 @@ runs_fence/y8s_cpu_v1_preds/**
 
 # ==== Optional: large exported models (keep if you plan to ship them) ====
 # Uncomment to ignore ONNX as well; otherwise keep the single runtime ONNX in repo.
-# runs_fence/**/weights/*.onnx
+runs_fence/**/weights/*.onnx
+
+models/*.pt
