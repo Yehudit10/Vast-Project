@@ -72,8 +72,8 @@ def infer_json(
         latency_ms = int((time.perf_counter() - started) * 1000)
         return {
             "ok": True,
-            "team": TEAM,
-            "result": result,
+            **result,
+            "team": TEAM, 
             "image_uri": s3_uri,
             "latency_ms": latency_ms,
             "idempotency_key": idem_key,

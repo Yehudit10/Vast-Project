@@ -387,6 +387,33 @@ class FruitsView(QWidget):
 
      
         self.btn_open_editor.clicked.connect(self.open_thresholds_dialog)
+                # ─────────────────────────────────────────────
+        # Metrics Section (Grafana panels)
+        # ─────────────────────────────────────────────
+        metrics_title = QLabel("Fruit Alerts Metrics")
+        metrics_title.setStyleSheet("font-size: 18px; font-weight: 600; margin-top: 15px;")
+        root.addWidget(metrics_title)
+
+        grafana_host = os.getenv("GRAFANA_HOST", "grafana")
+        base = f"http://{grafana_host}:3000"
+
+        panel_urls = [
+            QUrl(f"{base}/d-solo/fruit-metrics/fruit-alerts?orgId=1&panelId=1&refresh=10s&theme=light"),
+            QUrl(f"{base}/d-solo/fruit-metrics/fruit-alerts?orgId=1&panelId=2&refresh=10s&theme=light"),
+            QUrl(f"{base}/d-solo/fruit-metrics/fruit-alerts?orgId=1&panelId=3&refresh=10s&theme=light"),
+            QUrl(f"{base}/d-solo/fruit-metrics/fruit-alerts?orgId=1&panelId=4&refresh=10s&theme=light"),
+        ]
+
+        metrics_box = QVBoxLayout()
+        metrics_box.setSpacing(10)
+        root.addLayout(metrics_box)
+
+        for url in panel_urls:
+            view = QWebEngineView(self)
+            view.setMinimumHeight(300)
+            view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            view.setUrl(url)
+            metrics_box.addWidget(view)
 
     def open_thresholds_dialog(self):
         dlg = ThresholdsEditorDialog(self.api, self)

@@ -6,7 +6,7 @@ from adapters.rover_runner import RoverRunner
 
 def get_model_runner(team: str):
     t = (team or "").lower()
-    if t == "fruit_defect":
+    if t == "fruit":
         return FruitDefectRunner()
     if t == "camera":                      
         return FruitSegmentationRunner()

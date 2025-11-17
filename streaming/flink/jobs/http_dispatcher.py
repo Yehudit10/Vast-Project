@@ -85,7 +85,11 @@ class HttpMap(MapFunction):
 
     async def _post_once(self, url: str, payload: Dict[str, Any], headers: Dict[str, str]):
         async with self.session.post(url, json=payload, headers=headers) as resp:
-            return resp.status, await resp.text()
+            try:
+                data = await resp.json()
+            except Exception:
+                data = await resp.text()
+            return resp.status, data
 
     async def _post_with_retry(self, url: str, payload: Dict[str, Any], headers: Dict[str, str]):
         attempt = 0
@@ -111,33 +115,58 @@ class HttpMap(MapFunction):
         # 1) Parse JSON
         try:
             event = json.loads(s)
+            # Handle double-encoded JSON strings (common in Kafka/MinIO)
+            if isinstance(event, str):
+                event = json.loads(event)
         except Exception as e:
             return json.dumps(
                 {"ok": False, "status": 422, "body": f"bad json: {e}", "raw": s, "stage": "parse"},
                 ensure_ascii=False
             )
-
         # 2) Generate idempotency key
         event_id = event.get("event_id") or str(uuid.uuid4())
+        
+        # 3) Extract bucket/key – support both native and MinIO S3-event formats
+        import sys, urllib.parse
 
-        # 3) Validate fields: must have bucket+key; image_uri not allowed
-        if "image_uri" in event:
-            return json.dumps(
-                {"ok": False, "status": 422,
-                 "body": "image_uri not supported; use {bucket,key} only",
-                 "event": event, "stage": "validate"},
-                ensure_ascii=False
-            )
+        def dbg(msg: str):
+            sys.stdout.write(f"[DEBUG] {msg}\n")
+            sys.stdout.flush()
 
         bucket = event.get("bucket")
         key = event.get("key")
-        if not bucket or not key:
-            return json.dumps(
-                {"ok": False, "status": 422,
-                 "body": "missing required fields: bucket and key",
-                 "event": event, "stage": "validate"},
-                ensure_ascii=False
-            )
+
+        # Try to detect MinIO S3 event format
+        if (not bucket or not key):
+            # Case A: nested Records structure
+            records = event.get("Records")
+            if isinstance(records, list) and len(records) > 0:
+                try:
+                    rec = records[0]
+                    s3_block = rec.get("s3", {})
+                    bucket = s3_block.get("bucket", {}).get("name")
+                    raw_key = s3_block.get("object", {}).get("key")
+                    if raw_key:
+                        key = urllib.parse.unquote(raw_key)
+                        # ננקה imagery/ כפול אם מופיע
+                        if key.startswith("imagery/"):
+                            key = key[len("imagery/"):]
+                    dbg(f"Parsed from S3 event: bucket={bucket}, key={key}")
+                except Exception as e:
+                    dbg(f"Error parsing S3 event: {e}")
+            # Case B: flat event with Key field
+            elif "Key" in event and isinstance(event["Key"], str):
+                key = event["Key"]
+                if key.startswith("imagery/"):
+                    key = key[len("imagery/"):]
+                bucket = "imagery"
+                dbg(f"Parsed flat event: bucket={bucket}, key={key}")
+            # Case C: nested body from previous inference
+            if (not bucket or not key) and isinstance(event.get("body"), dict):
+                body = event["body"]
+                bucket = body.get("bucket") or body.get("bucket_out")
+                key = body.get("key")
+                dbg(f"Parsed nested body: bucket={bucket}, key={key}")           
 
         # 4) Prepare headers and payload: send only bucket/key to the inference service
         headers = {
