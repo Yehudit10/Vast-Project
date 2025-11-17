@@ -166,7 +166,7 @@ def parse_topic(topic: str) -> dict:
 
         # --- DEBUG + try to detect device from filename ---
         filename_base = os.path.splitext(result["filename"])[0]
-        if "-" in filename_base:
+        if "_" in filename_base:
             possible_device = filename_base.split("_")[0]
             print(f"[DEBUG] filename_base={filename_base}, possible_device={possible_device}", flush=True)
             if possible_device.lower().startswith("fruit") or possible_device.lower().startswith("camera"):

@@ -8,10 +8,13 @@
   "id": null,
   "links": [],
   "liveNow": false,
+
   "panels": [
+
     {
       "type": "gauge",
       "title": "Weekly Ripeness %",
+      "description": "Shows the latest weekly ripeness score for the selected device.",
       "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 },
       "datasource": "Prometheus",
       "targets": [
@@ -22,7 +25,7 @@
         }
       ],
       "options": {
-        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
+        "reduceOptions": { "calcs": ["last"], "values": false },
         "showThresholdLabels": true,
         "showThresholdMarkers": true
       },
@@ -32,21 +35,21 @@
           "min": 0,
           "max": 100,
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               { "color": "red", "value": 0 },
               { "color": "yellow", "value": 60 },
               { "color": "green", "value": 75 }
             ]
           }
-        },
-        "overrides": []
+        }
       }
     },
 
     {
       "type": "timeseries",
       "title": "Ripeness Trend (12 Weeks)",
+      "description": "Tracks ripeness vs. threshold over time across 12 weeks.",
       "gridPos": { "x": 8, "y": 0, "w": 16, "h": 6 },
       "datasource": "Prometheus",
       "targets": [
@@ -65,14 +68,14 @@
         "legend": { "displayMode": "table", "placement": "right" }
       },
       "fieldConfig": {
-        "defaults": { "unit": "percent" },
-        "overrides": []
+        "defaults": { "unit": "percent" }
       }
     },
 
     {
       "type": "bargauge",
       "title": "Ripeness by Device",
+      "description": "Compares ripeness across devices for the most recent week.",
       "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
       "datasource": "Prometheus",
       "targets": [
@@ -84,13 +87,28 @@
       "options": {
         "displayMode": "gradient",
         "orientation": "horizontal",
-        "reduceOptions": { "calcs": ["last"], "values": false }
+        "reduceOptions": { "calcs": ["last"], "values": false },
+        "thresholdsStyle": { "mode": "line" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0,   "color": "#ff4d4d" },
+              { "value": 60,  "color": "#ffe066" },
+              { "value": 75,  "color": "#4caf50" }
+            ]
+          }
+        }
       }
     },
 
     {
       "type": "heatmap",
       "title": "Ripeness Heatmap (Devices × Weeks)",
+      "description": "Shows ripeness scores across devices and weeks for easy comparison.",
       "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
       "datasource": "Prometheus",
       "targets": [
@@ -100,40 +118,83 @@
         }
       ],
       "options": {
-        "color": { "mode": "scheme", "scheme": "rainbow" }
+        "color": { "mode": "scheme", "scheme": "interpolateRdYlGn" }
       }
     },
 
     {
       "type": "stat",
       "title": "Weekly Change",
+      "description": "Shows the difference between the oldest and latest ripeness values.",
       "gridPos": { "x": 0, "y": 14, "w": 8, "h": 4 },
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "fruit_ripeness_pct{device=\"$device\"} * 100",
-          "legendFormat": "Ripeness %"
+          "expr": "fruit_ripeness_pct{device=\"$device\"} * 100"
         }
       ],
       "options": {
-        "reduceOptions": { "calcs": ["last", "first"], "values": false },
-        "orientation": "auto",
-        "layout": "horizontal"
+        "reduceOptions": { "calcs": ["first", "last"], "values": false }
       }
     },
 
     {
       "type": "table",
       "title": "Ripeness Alerts Log",
+      "description": "Shows the number of alerts, the last alert severity, and active status for each device.",
       "gridPos": { "x": 8, "y": 14, "w": 16, "h": 8 },
-      "datasource": "postgres",
+      "datasource": "Prometheus",
       "targets": [
+        { "expr": "fruit_ripeness_alerts_total" },
+        { "expr": "fruit_ripeness_alert_last_pct" },
+        { "expr": "fruit_ripeness_alert_active" }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
         {
-          "format": "table",
-          "rawSql": "SELECT alert_id, device_id, alert_type, started_at, meta FROM alerts WHERE alert_type LIKE 'ripeness%' ORDER BY started_at DESC;"
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "Value #A": "alerts_total",
+              "Value #B": "last_pct",
+              "Value #C": "active"
+            },
+            "indexByName": {
+              "device": 0,
+              "alerts_total": 1,
+              "last_pct": 2,
+              "active": 3
+            }
+          }
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "active" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text",
+                  "color": "value",
+                  "thresholds": [
+                    { "value": 0, "color": "red" },
+                    { "value": 1, "color": "green" }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
     }
+
   ],
 
   "refresh": "30s",
@@ -153,8 +214,9 @@
       }
     ]
   },
+
   "time": { "from": "now-90d", "to": "now" },
   "timezone": "",
   "title": "Fruit Ripeness Dashboard",
-  "version": 1
+  "version": 2
 }

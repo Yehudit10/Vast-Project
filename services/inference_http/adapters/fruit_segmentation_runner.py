@@ -1,6 +1,8 @@
-import os, io, tempfile, hashlib, cv2, numpy as np, boto3, torch
+import os, tempfile, hashlib, cv2, numpy as np, boto3, torch, json
 import re
 from datetime import datetime
+from kafka import KafkaProducer
+import psycopg2
 
 def allow_unrestricted_torch_load():
     _original_load = torch.load
@@ -14,7 +16,7 @@ allow_unrestricted_torch_load()
 
 import time
 from typing import Any, Dict, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from ultralytics import YOLO
 
 def sha256_hex(path: str) -> str:
@@ -39,6 +41,69 @@ class FruitSegmentationRunner:
             aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
             aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "minioadmin123")
         )
+        self.producer = KafkaProducer(
+            bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP", "kafka:9092"),
+            value_serializer=lambda v: json.dumps(v).encode("utf-8")
+        )
+        self.output_topic = "flink-dispatcher-fruit"
+        self.db = psycopg2.connect(
+            host=os.getenv("PGHOST", "postgres"),
+            port=os.getenv("PGPORT", "5432"),
+            dbname=os.getenv("PGDATABASE", "missions_db"),
+            user=os.getenv("PGUSER", "missions_user"),
+            password=os.getenv("PGPASSWORD", "pg123")
+        )
+        self.db.autocommit = True
+
+
+
+    def publish_event(self, data: dict):
+        """Publish fruit metadata to Kafka topic."""
+        try:
+            self.producer.send(self.output_topic, data)
+            self.producer.flush()
+        except Exception as e:
+            print(f"[ERROR] failed to publish event: {e}", flush=True)
+
+    def write_fruit_record(
+        self,
+        original_key,
+        cropped_key,
+        bucket,
+        device_id,
+        timestamp_str,
+        x1, y1, x2, y2,
+        label,
+        latency
+    ):
+        cur = self.db.cursor()
+        cur.execute(
+            """
+            INSERT INTO fruit_detections (
+                original_key,
+                cropped_key,
+                bucket,
+                device_id,
+                timestamp,
+                x1, y1, x2, y2,
+                label,
+                latency_ms_model
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);
+            """,
+            (
+                original_key,
+                cropped_key,
+                bucket,
+                device_id,
+                timestamp_str,
+                x1, y1, x2, y2,
+                label,
+                latency
+            )
+        )
+        cur.close()
+
+
     def run(self, image_bytes: bytes | None = None, model_tag=None, extra=None) -> Dict[str, Any]:
         """Main inference entrypoint for HTTP"""
         bucket_in = extra.get("bucket") if extra else "imagery"
@@ -86,27 +151,44 @@ class FruitSegmentationRunner:
                         device_id, timestamp_str = match.groups()
                         timestamp = datetime.strptime(timestamp_str, "%Y%m%dT%H%M%SZ")
                         date_part = timestamp.strftime("%Y-%m-%d")
-                        time_part = timestamp_str  
                     else:
                         device_id = "unknown_device"
                         date_part = "unknown_date"
-                        time_part = "unknown_time"
+                    count += 1
                     out_name = f"{base_name}.jpg"
-                    out_key = f"fruit/fruits/{device_id}/{date_part}/{time_part}/{out_name}"
+                    out_key = f"fruit/fruits/{device_id}/{date_part}/{out_name}"
                     out_path = os.path.join(tmpdir, out_name)
                     cv2.imwrite(out_path, crop)
                     
                     self.s3.upload_file(out_path, bucket_in, out_key)
-                    count += 1
-    
-                    return {
-                    "ok": True,
-                    "team": "camera",
-                    "bucket": bucket_in,
-                    "key": out_key,
-                    "label": "fruit",
-                    "device_id": device_id,
-                    "timestamp": timestamp_str,
-                    "latency_ms_model": latency_ms,
-                    "bucket_out": bucket_in
+                    
+                    event = {
+                        "ok": True,
+                        "team": "camera",
+                        "bucket": bucket_in,
+                        "key": out_key,
+                        "label": "fruit",
+                        "device_id": device_id,
+                        "timestamp": timestamp_str,
+                        "latency_ms_model": latency_ms,
+                        "original_key": key,
+                        "bbox": {
+                            "x1": int(x1),
+                            "y1": int(y1),
+                            "x2": int(x2),
+                            "y2": int(y2)
+                        }
                     }
+                    self.publish_event(event)
+                    self.write_fruit_record(
+                        original_key=key,      
+                        cropped_key=out_key,       
+                        bucket=bucket_in,
+                        device_id=device_id,
+                        timestamp_str=timestamp_str,
+                        x1=x1, y1=y1, x2=x2, y2=y2,
+                        label="fruit",
+                        latency=latency_ms
+                    )
+
+    pass

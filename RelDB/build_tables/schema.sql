@@ -594,7 +594,25 @@ CREATE INDEX IF NOT EXISTS idx_aerial_metadata_timestamp
 
 CREATE INDEX IF NOT EXISTS idx_aerial_metadata_gis
     ON public.aerial_images_complete_metadata USING GIST (gis);
+    
+CREATE TABLE fruit_detections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_key TEXT NOT NULL,
+    cropped_key TEXT NOT NULL,
+    bucket TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    x1 INT NOT NULL,
+    y1 INT NOT NULL,
+    x2 INT NOT NULL,
+    y2 INT NOT NULL,
+    latency_ms_model INT,
+    label TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
+CREATE INDEX idx_fruit_original_key ON fruit_detections(original_key);
+CREATE INDEX idx_fruit_device_ts ON fruit_detections(device_id, timestamp);
 
 CREATE TABLE IF NOT EXISTS public.field_polygons (
     id SERIAL PRIMARY KEY,
