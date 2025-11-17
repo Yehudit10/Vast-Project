@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb-randr0 && rm -rf /var/lib/apt/lists/*
 
 # ───────── optional CA certs ─────────
-# COPY certs /app/certs
+COPY certs /app/certs
 RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
     echo "Configuring NetFree certificates..."; \
     cp ./certs/*.crt /usr/local/share/ca-certificates/; \
