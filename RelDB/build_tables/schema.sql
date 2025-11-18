@@ -816,22 +816,6 @@ CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-
-
--- Updated event_logs_sensors referencing devices_sensor
-DROP TABLE IF EXISTS event_logs_sensors CASCADE;
-CREATE TABLE IF NOT EXISTS event_logs_sensors(
-    id         bigserial PRIMARY KEY,
-    device_id  TEXT     NOT NULL REFERENCES devices_sensor(id),
-    issue_type text        NOT NULL,
-    severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
-    start_ts   timestamptz NOT NULL DEFAULT now(),
-    end_ts     timestamptz NULL,
-    details    jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT event_logs_sensors_end_after_start
-        CHECK (end_ts IS NULL OR end_ts >= start_ts)
-);
-
 -- Sensor zone statistics (for per-region summaries)
 CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     id BIGSERIAL PRIMARY KEY,
@@ -848,7 +832,7 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS public.sensors (
-  sensor_id INT PRIMARY KEY,
+    sensor_id INT PRIMARY KEY,
     sid TEXT,
     sensor_name TEXT NOT NULL,
     sensor_type TEXT NOT NULL,
@@ -887,6 +871,7 @@ CREATE TABLE IF NOT EXISTS public.sensors (
     frost_risk DOUBLE PRECISION,
     water_usage_efficiency DOUBLE PRECISION
 );
+
 CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
     id BIGSERIAL PRIMARY KEY,
     sensor_id INT NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
