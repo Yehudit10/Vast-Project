@@ -1,0 +1,61 @@
+# Dockerfile.flink
+FROM flink:1.19.3-scala_2.12-java11
+
+USER root
+
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 python3-venv python3-pip ca-certificates curl libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
+
+
+RUN curl -fSL https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.7.0/kafka-clients-3.7.0.jar \
+    -o /opt/flink/lib/kafka-clients-3.7.0.jar
+
+
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+
+
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gfortran \
+    libatlas-base-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    netcat-openbsd \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --prefer-binary \
+    apache-flink \
+    pandas \
+    scikit-learn \
+    joblib
+
+
+
+RUN curl -fSL \
+  https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.2.0-1.19/flink-connector-kafka-3.2.0-1.19.jar \
+  -o /opt/flink/lib/flink-connector-kafka-3.2.0-1.19.jar
+
+COPY conf/flink-conf.yaml /opt/flink/conf/flink-conf.yaml
+WORKDIR /opt/app
+COPY flink_job.py /opt/app/flink_job.py
+COPY models/iforest_pca_artifacts.joblib /opt/models/iforest_pca_artifacts.joblib
+COPY models/residuals_artifacts.joblib   /opt/models/residuals_artifacts.joblib
+
+
+ENV ART_IFOREST_PCA=/opt/models/iforest_pca_artifacts.joblib \
+    ART_RESIDUALS=/opt/models/residuals_artifacts.joblib \
+    KAFKA_BROKERS=kafka-single:9092 \
+    IN_TOPIC=sensors \
+    OUT_TOPIC=sensors_anomalies_modal \
+    PYTHONPATH=/opt/app \
+    PYFLINK_CLIENT_EXECUTABLE=/opt/venv/bin/python \
+    PYFLINK_PYTHON=/opt/venv/bin/python
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
