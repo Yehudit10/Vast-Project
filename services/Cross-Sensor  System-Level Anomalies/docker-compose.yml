@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  jobmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8085:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensors_anomalies_modal
+    volumes:
+      - ./conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./flink_job.py:/opt/app/flink_job.py
+      - ./models:/opt/models
+    networks:
+      - flink-net
+      - agcloud_ag_cloud
+
+  taskmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-taskmanager
+    command: taskmanager
+    depends_on:
+      - jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensors_anomalies_modal
+    volumes:
+      - ./conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./flink_job.py:/opt/app/flink_job.py
+      - ./models:/opt/models
+    networks:
+      - flink-net
+      - agcloud_ag_cloud
+
+networks:
+  flink-net:
+    driver: bridge
+  agcloud_ag_cloud:
+    external: true
