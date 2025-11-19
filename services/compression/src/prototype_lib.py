@@ -9,7 +9,7 @@ from minio_client import client, BUCKET_NAME
 # Supported audio formats for compression
 AUDIO_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus"}
 
-RAW_PREFIX = "sound/"
+RAW_PREFIX = ""
 
 def is_audio_file(filename: str) -> bool:
     """Check if file is an audio file that should be compressed."""

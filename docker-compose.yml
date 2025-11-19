@@ -871,7 +871,7 @@ services:
       - MINIO_ENDPOINT=minio-hot:9000
       - ACCESS_KEY=minioadmin
       - SECRET_KEY=minioadmin123
-      - BUCKET_NAME=imagery
+      - BUCKET_NAME=sound
     depends_on:
       minio-hot:
         condition: service_healthy
