@@ -281,3 +281,356 @@ leaf_disease_severity_by_device:
     - sick_percentage:
         usage: "GAUGE"
         description: "Percentage of sick reports (0-100)"
+
+
+# ============================================
+# ULTRASONIC PLANT PREDICTIONS METRICS
+# S3 Path format: s3://sound/plants/microphone-MIC-02/2025-11-13/1763018877231/MIC-U-01_20251113T073457Z.wav
+# ============================================
+
+ultrasonic_predictions_total:
+  query: "SELECT COUNT(*)::float as total FROM public.ultrasonic_plant_predictions"
+  master: true
+  metrics:
+    - total:
+        usage: "GAUGE"
+        description: "Total number of ultrasonic predictions"
+
+ultrasonic_predictions_by_class:
+  query: |
+    SELECT 
+      CASE predicted_class
+        WHEN 'Healthy_Tomato' THEN 'Healthy_Plant'
+        WHEN 'Healthy_Tobacco' THEN 'Healthy_Plant'
+        
+        WHEN 'Drought_Tomato' THEN 'Drought_Plant'
+        WHEN 'Drought_Tobacco' THEN 'Drought_Plant' 
+        
+        WHEN 'Pest_Tomato' THEN 'Pest_Plant'
+        WHEN 'Pest_Tobacco' THEN 'Pest_Plant' 
+        
+        ELSE COALESCE(predicted_class, 'unknown')
+      END as predicted_class,
+      COUNT(*)::float as count 
+    FROM public.ultrasonic_plant_predictions 
+    GROUP BY 1 
+  master: true
+  metrics:
+    - predicted_class:
+        usage: "LABEL"
+        description: "Predicted class (Drought_Plant, Healthy_Plant, Pest_Plant, Control, etc.)"
+    - count:
+        usage: "GAUGE"
+        description: "Number of predictions per class"
+
+ultrasonic_predictions_by_watering:
+  query: |
+    SELECT 
+      COALESCE(watering_status, 'unknown') as watering_status, 
+      COUNT(*)::float as count 
+    FROM public.ultrasonic_plant_predictions 
+    GROUP BY watering_status
+  master: true
+  metrics:
+    - watering_status:
+        usage: "LABEL"
+        description: "Watering status (Yes, No, etc.)"
+    - count:
+        usage: "GAUGE"
+        description: "Number of predictions per watering status"
+
+ultrasonic_predictions_by_status:
+  query: |
+    SELECT 
+      COALESCE(status, 'unknown') as status, 
+      COUNT(*)::float as count 
+    FROM public.ultrasonic_plant_predictions 
+    GROUP BY status
+  master: true
+  metrics:
+    - status:
+        usage: "LABEL"
+        description: "Record status (Success, Error, etc.)"
+    - count:
+        usage: "GAUGE"
+        description: "Number of predictions per status"
+
+ultrasonic_predictions_avg_confidence:
+  query: |
+    SELECT 
+      AVG(confidence)::float as avg_confidence 
+    FROM public.ultrasonic_plant_predictions 
+    WHERE confidence IS NOT NULL
+      AND TO_TIMESTAMP(
+        SUBSTRING(
+          REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+          FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+        ), 
+        'YYYYMMDD"T"HH24MISS'
+      ) > NOW() - INTERVAL '7 days' 
+  master: true
+  metrics:
+    - avg_confidence:
+        usage: "GAUGE"
+        description: "Average confidence score of predictions (Last 7 days)"
+
+ultrasonic_predictions_recent:
+  query: |
+    SELECT 
+      COUNT(*)::float as recent_count
+    FROM (
+      SELECT 1 
+      FROM public.ultrasonic_plant_predictions 
+      ORDER BY prediction_time DESC 
+      LIMIT 100
+    ) sub
+  master: true
+  metrics:
+    - recent_count:
+        usage: "GAUGE"
+        description: "Count of recent predictions (last 100)"
+
+ultrasonic_confidence_by_sensor:
+  query: |
+    SELECT 
+      SUBSTRING(REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') FROM '^(MIC-U-\d+)_') as sensor_id,
+      AVG(confidence)::float as avg_confidence,
+      COUNT(*)::float as sample_count,
+      MIN(confidence)::float as min_confidence,
+      MAX(confidence)::float as max_confidence
+    FROM public.ultrasonic_plant_predictions 
+    WHERE status = 'Success'
+      AND confidence IS NOT NULL
+      AND file ~ 'MIC-U-\d+_\d{8}T\d{6}Z\.wav$'
+    GROUP BY SUBSTRING(REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') FROM '^(MIC-U-\d+)_')
+    ORDER BY avg_confidence DESC
+  master: true
+  metrics:
+    - sensor_id:
+        usage: "LABEL"
+        description: "Sensor ID extracted from file (e.g., MIC-U-01, MIC-U-02)"
+    - avg_confidence:
+        usage: "GAUGE"
+        description: "Average confidence level per sensor"
+    - sample_count:
+        usage: "GAUGE"
+        description: "Number of successful samples per sensor"
+    - min_confidence:
+        usage: "GAUGE"
+        description: "Minimum confidence per sensor"
+    - max_confidence:
+        usage: "GAUGE"
+        description: "Maximum confidence per sensor"
+
+ultrasonic_daily_stress_count:
+  query: |
+    SELECT 
+      DATE_TRUNC('hour', 
+        TO_TIMESTAMP(
+          SUBSTRING(
+            REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+            FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+          ), 
+          'YYYYMMDD"T"HH24MISS'
+        )
+      ) as event_time,
+      EXTRACT(EPOCH FROM DATE_TRUNC('hour', 
+        TO_TIMESTAMP(
+          SUBSTRING(
+            REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+            FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+          ), 
+          'YYYYMMDD"T"HH24MISS'
+        )
+      ))::float as date_timestamp,
+      COUNT(*)::float as event_count
+    FROM public.ultrasonic_plant_predictions 
+    WHERE predicted_class IN ('Drought_Tomato', 'Pest_Tomato')
+      AND status = 'Success'
+      AND TO_TIMESTAMP(
+        SUBSTRING(
+          REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+          FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+        ), 
+        'YYYYMMDD"T"HH24MISS'
+      ) >= DATE_TRUNC('day', NOW())
+    GROUP BY DATE_TRUNC('hour', 
+      TO_TIMESTAMP(
+        SUBSTRING(
+          REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+          FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+        ), 
+        'YYYYMMDD"T"HH24MISS'
+      )
+    )
+    ORDER BY date_timestamp DESC
+  master: true
+  metrics:
+    - event_time:
+        usage: "LABEL"
+        description: "Hour of stress event extracted from file name"
+    - date_timestamp:
+        usage: "GAUGE"
+        description: "Hour timestamp (Unix epoch)"
+    - event_count:
+        usage: "GAUGE"
+        description: "Number of stress events per hour (Today)"
+
+ultrasonic_success_rate_by_sensor:
+  query: |
+    SELECT 
+      SUBSTRING(REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') FROM '^(MIC-U-\d+)_') as sensor_id,
+      SUM(CASE WHEN status = 'Success' THEN 1.0 ELSE 0.0 END) / 
+        NULLIF(COUNT(*), 0) * 100.0 as success_rate
+    FROM public.ultrasonic_plant_predictions 
+    WHERE file ~ 'MIC-U-\d+_\d{8}T\d{6}Z\.wav$'
+    GROUP BY SUBSTRING(REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') FROM '^(MIC-U-\d+)_')
+  master: true
+  metrics:
+    - sensor_id:
+        usage: "LABEL"
+        description: "Sensor ID"
+    - success_rate:
+        usage: "GAUGE"
+        description: "Success rate percentage per sensor"
+
+ultrasonic_class_distribution_healthy:
+  query: |
+    SELECT 
+      COUNT(*) as healthy_count,
+      COUNT(*) * 100.0 / 
+        NULLIF((SELECT COUNT(*) FROM public.ultrasonic_plant_predictions WHERE status = 'Success'), 0) 
+        as healthy_percentage
+    FROM public.ultrasonic_plant_predictions 
+    WHERE predicted_class IN ('Healthy_Tomato', 'Healthy_Tobacco', 'Control_Greenhouse', 'Control_Empty') AND status = 'Success'
+  master: true
+  metrics:
+    - healthy_count:
+        usage: "GAUGE"
+        description: "Count of healthy plant predictions"
+    - healthy_percentage:
+        usage: "GAUGE"
+        description: "Percentage of healthy plant predictions"
+
+ultrasonic_class_distribution_stress:
+  query: |
+    SELECT 
+      COUNT(*) as stress_count,
+      COUNT(*) * 100.0 / 
+        NULLIF((SELECT COUNT(*) FROM public.ultrasonic_plant_predictions WHERE status = 'Success'), 0)
+        as stress_percentage
+    FROM public.ultrasonic_plant_predictions 
+    WHERE predicted_class IN ('Drought_Tomato', 'Pest_Tomato') AND status = 'Success'
+  master: true
+  metrics:
+    - stress_count:
+        usage: "GAUGE"
+        description: "Count of stress plant predictions"
+    - stress_percentage:
+        usage: "GAUGE"
+        description: "Percentage of stress plant predictions"
+
+ultrasonic_confidence_distribution:
+  query: |
+    SELECT 
+      CASE 
+        WHEN confidence >= 0.9 THEN '90-100% (High)'
+        WHEN confidence >= 0.75 THEN '75-90% (Good)'
+        WHEN confidence >= 0.6 THEN '60-75% (Medium)'
+        ELSE '< 60% (Low)'
+      END as confidence_range,
+      COUNT(*)::float as count
+    FROM public.ultrasonic_plant_predictions 
+    WHERE status = 'Success'
+    GROUP BY confidence_range
+    ORDER BY confidence_range DESC
+  master: true
+  metrics:
+    - confidence_range:
+        usage: "LABEL"
+        description: "Confidence level range"
+    - count:
+        usage: "GAUGE"
+        description: "Number of predictions in confidence range"
+
+ultrasonic_sensor_activity_timeline:
+  query: |
+    SELECT 
+      SUBSTRING(REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') FROM '^(MIC-U-\d+)_') as sensor_id,
+      TO_CHAR(DATE_TRUNC('day', 
+        TO_TIMESTAMP(
+          SUBSTRING(
+            REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+            FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+          ), 
+          'YYYYMMDD"T"HH24MISS'
+        )
+      ), 'YYYY-MM-DD') as activity_date,
+      COUNT(*)::float as daily_readings
+    FROM public.ultrasonic_plant_predictions 
+    WHERE status = 'Success'
+      AND file ~ 'MIC-U-\d+_\d{8}T\d{6}Z\.wav$'
+    GROUP BY 
+      SUBSTRING(REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') FROM '^(MIC-U-\d+)_'),
+      DATE_TRUNC('day', 
+        TO_TIMESTAMP(
+          SUBSTRING(
+            REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+            FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+          ), 
+          'YYYYMMDD"T"HH24MISS'
+        )
+      )
+    ORDER BY activity_date DESC, sensor_id
+  master: true
+  metrics:
+    - sensor_id:
+        usage: "LABEL"
+        description: "Sensor ID"
+    - activity_date:
+        usage: "LABEL"
+        description: "Activity date extracted from file name"
+    - daily_readings:
+        usage: "GAUGE"
+        description: "Daily reading count per sensor"
+
+ultrasonic_predictions_per_hour:
+  query: |
+    SELECT 
+      EXTRACT(EPOCH FROM DATE_TRUNC('hour', 
+        TO_TIMESTAMP(
+          SUBSTRING(
+            REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+            FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+          ), 
+          'YYYYMMDD"T"HH24MISS'
+        )
+      ))::float as hour_timestamp,
+      COUNT(*)::float as count
+    FROM public.ultrasonic_plant_predictions
+    WHERE TO_TIMESTAMP(
+        SUBSTRING(
+          REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+          FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+        ), 
+        'YYYYMMDD"T"HH24MISS'
+      ) >= DATE_TRUNC('day', NOW())
+      AND file ~ 'MIC-U-\d+_\d{8}T\d{6}Z\.wav$'
+    GROUP BY DATE_TRUNC('hour', 
+      TO_TIMESTAMP(
+        SUBSTRING(
+          REGEXP_REPLACE(file, '^.*/([^/]+)$', '\1') 
+          FROM 'MIC-U-\d+_(\d{8}T\d{6})Z'
+        ), 
+        'YYYYMMDD"T"HH24MISS'
+      )
+    )
+    ORDER BY hour_timestamp DESC
+  master: true
+  metrics:
+    - hour_timestamp:
+        usage: "LABEL"
+        description: "Hour timestamp (Unix epoch) extracted from file name"
+    - count:
+        usage: "GAUGE"
+        description: "Predictions count per hour (Today's Events)"

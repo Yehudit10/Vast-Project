@@ -21,6 +21,11 @@ echo "[bootstrap] Waiting for COLD (${COLD_ENDPOINT})..."
 until mc ls "${MC_ALIAS_COLD}" >/dev/null 2>&1; do sleep 2; done
 
 echo "[bootstrap] Creating buckets..."
+
+# Allow anonymous download on all HOT buckets
+mc anonymous set download "${MC_ALIAS_HOT}/sound" || true
+mc anonymous set download "${MC_ALIAS_HOT}/imagery" || true
+
 mc mb "${MC_ALIAS_HOT}/imagery"   || true
 mc mb "${MC_ALIAS_HOT}/sound" || true
 mc mb "${MC_ALIAS_COLD}/imagery"   || true

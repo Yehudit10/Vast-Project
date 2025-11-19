@@ -6,11 +6,68 @@ import os, json
 from fastapi import APIRouter, HTTPException, Query
 from .schemas import FilesCreate, FilesUpdate
 from . import repo
+import requests
 
 router = APIRouter(prefix="/files", tags=["files"])
-PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE")
+# PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE")
+PUBLIC_S3_BASE = os.getenv("PUBLIC_S3_BASE", "http://localhost:9001")
+MINIO_BASE = "http://minio-hot:9000"
 
-
+def _check_if_compressed_in_minio(bucket: str, object_key: str) -> bool:
+    """
+    Check in MinIO if the file is compressed (OPUS format)
+    Uses direct file path checking via MinIO container
+    """
+    try:
+        # הסר .wav/.opus מהשם
+        base_key = object_key.replace('.wav', '').replace('.opus', '')
+        
+        # נסה את כל האפשרויות
+        possible_extensions = ['.opus', '.wav', '']
+        
+        print(f"[DEBUG] Checking MinIO for bucket={bucket}, base={base_key}")
+        
+        for ext in possible_extensions:
+            test_key = f"{base_key}{ext}"
+            
+            # MinIO S3 API endpoint format
+            url = f"{MINIO_BASE}/{bucket}/{test_key}"
+            
+            try:
+                print(f"[DEBUG] HEAD request to: {url}")
+                
+                # נסה GET במקום HEAD (יותר אמין)
+                response = requests.get(url, timeout=3, stream=True)
+                
+                if response.status_code == 200:
+                    is_opus = test_key.lower().endswith('.opus')
+                    print(f"[DEBUG] ✓ Found: {url} (OPUS={is_opus})")
+                    response.close()
+                    return is_opus
+                elif response.status_code == 404:
+                    print(f"[DEBUG] Not found (404): {url}")
+                else:
+                    print(f"[DEBUG] Status {response.status_code}: {url}")
+                    
+            except requests.exceptions.Timeout:
+                print(f"[DEBUG] Timeout for: {url}")
+                continue
+            except requests.exceptions.ConnectionError as e:
+                print(f"[DEBUG] Connection error for {url}: {e}")
+                continue
+            except Exception as e:
+                print(f"[DEBUG] Error for {url}: {e}")
+                continue
+        
+        print(f"[DEBUG] ✗ No file found for {bucket}/{object_key}")
+        return False
+        
+    except Exception as e:
+        print(f"[ERROR] MinIO check failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    
 def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
     """Attach a public URL to access the file from MinIO."""
     if not row:
@@ -35,16 +92,12 @@ def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
         row.setdefault("url", built)
     return row
 
-def _is_compressed(filename: str) -> bool:
-    """Check if file is compressed (OPUS format)"""
-    if not filename:
-        return False
-    return filename.lower().endswith('.opus')
 
 @router.post("", status_code=201)
 def create_or_upsert_file(payload: FilesCreate):
     repo.upsert_file(payload.model_dump(by_alias=True))
     return {"status": "ok"}
+
 @router.get("/audio-aggregates/", summary="List audio file aggregates (environment sounds)")
 def list_audio_aggregates(
     run_id: Optional[str] = None,
@@ -74,7 +127,7 @@ def list_audio_aggregates(
         conditions.append("snsc.file_name ILIKE :search")
         params["search"] = f"%{search}%"
 
-    # Device filter (based on snsc.file_name prefix)
+    # Device filter
     if device_ids:
         device_list = [d.strip() for d in device_ids.split(",") if d.strip()]
         if device_list:
@@ -83,7 +136,7 @@ def list_audio_aggregates(
             for i, dev in enumerate(device_list):
                 params[f"dev_{i}"] = dev
 
-    # Date filters (use capture_time from sounds_metadata or snsc.linked_time)
+    # Date filters
     if date_from:
         conditions.append("COALESCE(sm.capture_time, snsc.linked_time) >= CAST(:date_from AS timestamptz)")
         params["date_from"] = date_from
@@ -98,7 +151,7 @@ def list_audio_aggregates(
     sort_map = {
         "Date (Newest)": "COALESCE(sm.capture_time, snsc.linked_time) DESC",
         "Date (Oldest)": "COALESCE(sm.capture_time, snsc.linked_time) ASC",
-        "Length": "sm.duration_sec DESC",  # if you prefer duration from sounds_metadata
+        "Length": "sm.duration_sec DESC",
         "Device": "snsc.file_name ASC",
         "processing_ms": "fa.processing_ms DESC",
         "filename": "snsc.file_name ASC",
@@ -131,26 +184,36 @@ def list_audio_aggregates(
     params["limit"] = limit
 
     try:
+        print("===== SQL QUERY =====")
+        print(query)
+        print("===== PARAMS =====")
+        print(params)
+
         rows = repo.db_query(query, params)
         results = []
 
         for r in rows:
-            # build URL server-side
             bucket = r.get("bucket")
             object_key = r.get("object_key")
+            filename = r.get("filename", "")
+            
             url = None
             if bucket and object_key:
-                # PUBLIC_S3_BASE should be like "https://minio.example.com"
                 url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
 
+            is_compressed = False
+            if bucket and object_key:
+                is_compressed = _check_if_compressed_in_minio(bucket, object_key)
+                print(f"[DEBUG] File {filename}: is_compressed={is_compressed}")
 
             results.append({
                 "file_id": r.get("file_id"),
-                "filename": r.get("filename"),
+                "filename": filename,
                 "predicted_label": r.get("head_pred_label"),
                 "probability": r.get("head_pred_prob"),
-                "device_id": (r.get("filename") or "").split("_")[0],
+                "device_id": (filename or "").split("_")[0] if filename else "Unknown",
                 "url": url,
+                "is_compressed": is_compressed,  
             })
 
         return results
@@ -165,29 +228,21 @@ def list_plant_predictions(
     date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
     search: Optional[str] = Query(None, description="Search by filename"),
-    device_ids: Optional[str] = Query(None, description="Comma-separated device IDs (if applicable)"),
+    device_ids: Optional[str] = Query(None, description="Comma-separated device IDs"),
     sort_by: Optional[str] = Query("Date (Newest)", description="Sort field"),
     limit: int = Query(100, ge=1, le=500),
 ):
-    """
-    Returns ultrasonic plant predictions from public.ultrasonic_plant_predictions
-    
-    This endpoint serves plant stress/watering sounds (Tomato Cut, Tobacco Dry, etc.)
-    """
     conditions = []
     params: Dict[str, Any] = {}
 
-    # Filter by predicted class
     if predicted_class and predicted_class.lower() not in ("all signals", "all types"):
         conditions.append("upp.predicted_class ILIKE :pred_class")
         params["pred_class"] = f"%{predicted_class}%"
 
-    # Search by filename
     if search:
         conditions.append("upp.file ILIKE :search")
         params["search"] = f"%{search}%"
 
-    # Date filters
     if date_from:
         conditions.append("upp.prediction_time >= CAST(:date_from AS timestamptz)")
         params["date_from"] = date_from
@@ -197,7 +252,6 @@ def list_plant_predictions(
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
 
-    # Sort mapping
     sort_map = {
         "Date (Newest)": "upp.prediction_time DESC",
         "Date (Oldest)": "upp.prediction_time ASC",
@@ -205,7 +259,6 @@ def list_plant_predictions(
     }
     order_clause = sort_map.get(sort_by, "upp.prediction_time DESC")
 
-    # Join with files table to get bucket/key for URL construction
     query = f"""
     SELECT 
         upp.id,
@@ -236,26 +289,33 @@ def list_plant_predictions(
         results = []
         
         for r in rows:
+            bucket = r.get("bucket")
+            object_key = r.get("object_key")
+            filename = r.get("file", "")
+            
             url = None
-            if r.get("bucket") and r.get("object_key"):
-                bucket = str(r["bucket"])
-                key = str(r["object_key"])
-                url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(key, safe='/')}"
+            if bucket and object_key:
+                url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
+            
+            is_compressed = False
+            if bucket and object_key:
+                is_compressed = _check_if_compressed_in_minio(bucket, object_key)
+            
             results.append({
                 "id": r.get("id"),
-                "file": r.get("file"),
+                "file": filename,
                 "predicted_class": r.get("predicted_class"),
                 "confidence": r.get("confidence"),
                 "watering_status": r.get("watering_status"),
                 "status": r.get("status"),
-                "device_id": ((r.get("file") or "").split("_")[0] or "Unknown"),
-                "url": url
+                "device_id": ((filename or "").split("_")[0] or "Unknown"),
+                "url": url,
+                "is_compressed": is_compressed,
             })
 
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
-
 
 @router.get("/{file_id:int}", summary="Get file by ID")
 def get_file_by_id(file_id: int):
