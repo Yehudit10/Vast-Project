@@ -28,7 +28,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 
 # ---- Install Python deps ----
 COPY requirements.txt .
-# When behind NetFree, trusted-host can help even אם אין צורך זה לא מזיק:
+# When behind NetFree, trusted-host can help even
 RUN python -m pip install --no-cache-dir \
       --trusted-host pypi.org --trusted-host files.pythonhosted.org \
       -r requirements.txt

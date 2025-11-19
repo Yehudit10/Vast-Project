@@ -4,19 +4,26 @@ FROM flink:1.19.3-scala_2.12-java11
 USER root
 
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 python3-venv python3-pip ca-certificates curl libgomp1 \
- && rm -rf /var/lib/apt/lists/*
 
+COPY certs/*.crt /app/certs/
+RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+        echo "Configuring NetFree certificates..."; \
+        cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+        update-ca-certificates; \
+    fi
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
+RUN apt-get update && apt-get install -y python3 python3-venv python3-pip
 RUN curl -fSL https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.7.0/kafka-clients-3.7.0.jar \
     -o /opt/flink/lib/kafka-clients-3.7.0.jar
-
 
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
 
 
+RUN printf "[global]\ntrusted-host = pypi.org\n    files.pythonhosted.org\ncert = /etc/ssl/certs/ca-certificates.crt\n" > /etc/pip.conf
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
 RUN apt-get update && apt-get install -y \

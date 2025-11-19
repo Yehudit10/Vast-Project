@@ -1,6 +1,15 @@
 # Dockerfile
 FROM python:3.11-slim
 
+COPY certs/*.crt /app/certs/
+RUN if [ -d ./certs ] && [ "$(ls ./certs/*.crt 2>/dev/null)" ]; then \
+        echo "Configuring NetFree certificates..."; \
+        cp ./certs/*.crt /usr/local/share/ca-certificates/; \
+        update-ca-certificates; \
+    fi
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

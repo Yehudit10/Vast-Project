@@ -5,6 +5,7 @@ from .types import Event, Alert
 from .rules import corrupted, out_of_range, stuck_sensor
 from datetime import datetime, timezone
 import time
+import os
 
 from api.devices_updater import update_device_last_seen
 from api.devices_client import get_sensors_last_seen
@@ -22,7 +23,7 @@ class Engine:
         self.state = state or StateStore()
 
         # --- API info & persistent token ---
-        self.api_base = "http://host.docker.internal:8001"
+        self.api_base = os.getenv("DB_API_BASE", "http://db_api_service:8001")
         self.token = get_access_token(self.api_base)
         if self.token:
             print("[ENGINE] Access token acquired successfully.")
@@ -71,8 +72,8 @@ class Engine:
         """
         print("[ENGINE] Starting silence sweep (via DB API)...")
 
-        # Fetch sensors via API (single attempt)
-        sensors = get_sensors_last_seen(self.api_base, self.token)
+        # Fetch sensors via API - uses same pattern as PATCH (host.docker.internal)
+        sensors = get_sensors_last_seen()
 
         if not sensors:
             print("[ENGINE][ERROR] No sensors retrieved. Skipping silence sweep.")

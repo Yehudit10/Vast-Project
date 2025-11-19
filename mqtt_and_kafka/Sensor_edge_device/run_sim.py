@@ -6,7 +6,7 @@ from fill_system_with_fake_data import generate_sensor_data
 
 BROKER = "mosquitto" 
 PORT = 1883
-TOPIC = "sensors"
+TOPIC = "mqtt/sensors"
 
 def main():
     print("🚀 Simulation started... publishing sensor data to MQTT")

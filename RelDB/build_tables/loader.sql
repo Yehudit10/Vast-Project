@@ -1,24 +1,49 @@
 -- Extended synthetic data loader for schema_extended_v2.sql
 
 -- Insert devices
-INSERT INTO devices (device_id, model, owner, active) VALUES
-  ('dev-a','drone-x','TeamA',true),
-  ('dev-b','drone-x','TeamA',true),
-  ('dev-c','rover-y','TeamB',true),
-  ('dev-d','rover-y','TeamB',true),
-  ('dev-e','sensor-z','TeamC',true),
-  ('dev-f','sensor-z','TeamC',true),
+INSERT INTO devices (device_id, model, owner, active, location_lat, location_lon) VALUES
+  ('dev-a','drone-x','TeamA',true,NULL,NULL),
+  ('dev-b','drone-x','TeamA',true,NULL,NULL),
+  ('dev-c','rover-y','TeamB',true,NULL,NULL),
+  ('dev-d','rover-y','TeamB',true,NULL,NULL),
+  ('dev-e','sensor-z','TeamC',true,NULL,NULL),
+  ('dev-f','sensor-z','TeamC',true,NULL,NULL),
   ('dev-g','ground-l','TeamD',true,NULL,NULL),
   ('dev-h','ground-l','TeamD',true,NULL,NULL),
   ('dev-i','ground-l','TeamD',true,NULL,NULL),
   ('dev-j','ground-l','TeamD',true,NULL,NULL),
-  ('dev-k','ground-l','TeamD',true,NULL,NULL)
-  ('mic-1','sound-a','TeamD',true),
-  ('mic-2','sound-a','TeamD',true),
-  ('mic-33','sound-a','TeamD',true),
-  ('mic-u-2','sound-ul','TeamD',true)
+  ('dev-k','ground-l','TeamD',true,NULL,NULL),
+  ('mic-1','sound-a','TeamD',true,NULL,NULL),
+  ('mic-2','sound-a','TeamD',true,NULL,NULL),
+  ('mic-33','sound-a','TeamD',true,NULL,NULL),
+  ('mic-u-2','sound-ul','TeamD',true,NULL,NULL)
 ON CONFLICT DO NOTHING;
 
+-- Seed data for devices_sensor table
+-- This file is automatically executed during database initialization
+
+INSERT INTO devices_sensor (id, plant_id, sensor_type, last_seen) VALUES
+  ('1', 101, 'temperature', NOW()),
+  ('2', 101, 'humidity', NOW()),
+  ('3', 101, 'soil_moisture', NOW()),
+  ('4', 102, 'co2', NOW()),
+  ('5', 102, 'light_intensity', NOW()),
+  ('6', 103, 'rainfall', NOW()),
+  ('7', 103, 'ph', NOW()),
+  ('8', 104, 'temperature', NOW()),
+  ('9', 104, 'humidity', NOW()),
+  ('10', 105, 'soil_moisture', NOW()),
+  ('11', 105, 'co2', NOW()),
+  ('12', 106, 'light_intensity', NOW()),
+  ('13', 106, 'wind_speed', NOW()),
+  ('14', 107, 'ph', NOW()),
+  ('15', 107, 'temperature', NOW()),
+  ('16', 107, 'ph', NOW()),
+  ('17', 107, 'temperature', NOW())
+ON CONFLICT (id) DO UPDATE SET
+  plant_id = EXCLUDED.plant_id,
+  sensor_type = EXCLUDED.sensor_type,
+  last_seen = NOW();
 
 -- Insert some regions
 INSERT INTO regions (name, geom)

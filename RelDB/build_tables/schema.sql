@@ -706,7 +706,7 @@ CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_created_brin
   ON public.sounds_ultra_metadata USING BRIN (created_at);
 
 
-CREATE TABLE public.image_new_security_connections (
+CREATE TABLE public.image_new_securixxxxxxxxctions (
   id BIGSERIAL PRIMARY KEY,
   file_name VARCHAR(255),
   key TEXT,
@@ -715,27 +715,6 @@ CREATE TABLE public.image_new_security_connections (
 
 
 -- === Indexes for performance optimization ===
-
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
-    ON public.sensor_anomalies USING BRIN (ts);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
-    ON public.sensor_anomalies (zone);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
-    ON public.sensor_anomalies (sensor);
-
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
-    ON public.sensor_zone_stats (zone, window_start, window_end);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_anomalies
-    ON public.sensor_zone_stats (anomalies);
-CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
-CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
-CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
-CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (location_lat, location_lon);
 
 -- Spatial
 CREATE INDEX IF NOT EXISTS ix_missions_area_geom_gist  ON missions   USING GIST (area_geom);
@@ -785,9 +764,8 @@ CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sens
 -- CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
 
 -- ============================================
--- 🔹 MISSING TABLES AND INDEXES FROM FIRST SCHEMA
+-- 🔹 SENSORS TABLES (zones, sensors, sensors_anomalies_modal)
 -- ============================================
-
 
 -- Zones table (for linking sensors to geographic areas)
 CREATE TABLE IF NOT EXISTS public.zones (
@@ -797,81 +775,48 @@ CREATE TABLE IF NOT EXISTS public.zones (
 );
 
 -- Extended sensors table with all environmental metrics
-DROP TABLE IF EXISTS public.sensors CASCADE;
-
-
--- Sensor anomalies table with full structure and JSONB result
-DROP TABLE IF EXISTS public.sensor_anomalies CASCADE;
-CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
-    id BIGSERIAL PRIMARY KEY,
-    idSensor INT NOT NULL,
-    plant_id INT NOT NULL,
-    sensor VARCHAR(64) NOT NULL,
-    ts TIMESTAMPTZ NOT NULL,
-    value DOUBLE PRECISION,
-    lat DOUBLE PRECISION,
-    lon DOUBLE PRECISION,
-    zone VARCHAR(128),
-    result JSONB NOT NULL,
-    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Sensor zone statistics (for per-region summaries)
-CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
-    id BIGSERIAL PRIMARY KEY,
-    zone VARCHAR(128) NOT NULL,
-    window_start TIMESTAMPTZ NOT NULL,
-    window_end TIMESTAMPTZ NOT NULL,
-    count INT NOT NULL,
-    mean DOUBLE PRECISION,
-    median DOUBLE PRECISION,
-    min DOUBLE PRECISION,
-    max DOUBLE PRECISION,
-    std DOUBLE PRECISION,
-    anomalies INT,
-    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
 CREATE TABLE IF NOT EXISTS public.sensors (
-    sensor_id INT PRIMARY KEY,
-    sid TEXT,
-    sensor_name TEXT NOT NULL,
-    sensor_type TEXT NOT NULL,
-    owner_name TEXT,
-    lat DOUBLE PRECISION,
-    lon DOUBLE PRECISION,
-    install_date TIMESTAMP DEFAULT NOW(),
-    status TEXT DEFAULT 'active',
-    description TEXT,
-    last_maintenance TIMESTAMP,
-    value DOUBLE PRECISION,
-    humidity DOUBLE PRECISION,
-    temperature DOUBLE PRECISION,
-    ph DOUBLE PRECISION,
-    rainfall DOUBLE PRECISION,
-    soil_moisture DOUBLE PRECISION,
-    co2_concentration DOUBLE PRECISION,
-    n DOUBLE PRECISION,
-    p DOUBLE PRECISION,
-    k DOUBLE PRECISION,
-    label TEXT,
-    timestamp TIMESTAMPTZ NOT NULL,
-    msg_type TEXT,
-    plant_id INT,
-    soil_type INT,
-    sunlight_exposure DOUBLE PRECISION,
-    wind_speed DOUBLE PRECISION,
-    organic_matter DOUBLE PRECISION,
-    irrigation_frequency DOUBLE PRECISION,
-    crop_density DOUBLE PRECISION,
-    pest_pressure DOUBLE PRECISION,
-    fertilizer_usage DOUBLE PRECISION,
-    growth_stage INT,
-    urban_area_proximity DOUBLE PRECISION,
-    water_source_type INT,
-    frost_risk DOUBLE PRECISION,
-    water_usage_efficiency DOUBLE PRECISION
+  sensor_id SERIAL PRIMARY KEY,
+  sid TEXT,
+  sensor_name TEXT NOT NULL,
+  sensor_type TEXT NOT NULL,
+  owner_name TEXT,
+  lat DOUBLE PRECISION,
+  lon DOUBLE PRECISION,
+  install_date TIMESTAMP DEFAULT NOW(),
+  status TEXT DEFAULT 'active',
+  description TEXT,
+  last_maintenance TIMESTAMP,
+  value DOUBLE PRECISION,
+  humidity DOUBLE PRECISION,
+  temperature DOUBLE PRECISION,
+  ph DOUBLE PRECISION,
+  rainfall DOUBLE PRECISION,
+  soil_moisture DOUBLE PRECISION,
+  co2_concentration DOUBLE PRECISION,
+  n DOUBLE PRECISION,
+  p DOUBLE PRECISION,
+  k DOUBLE PRECISION,
+  label TEXT,
+  timestamp TIMESTAMPTZ NOT NULL,
+  msg_type TEXT,
+  plant_id INT,
+  soil_type INT,
+  sunlight_exposure DOUBLE PRECISION,
+  wind_speed DOUBLE PRECISION,
+  organic_matter DOUBLE PRECISION,
+  irrigation_frequency DOUBLE PRECISION,
+  crop_density DOUBLE PRECISION,
+  pest_pressure DOUBLE PRECISION,
+  fertilizer_usage DOUBLE PRECISION,
+  growth_stage INT,
+  urban_area_proximity DOUBLE PRECISION,
+  water_source_type INT,
+  frost_risk DOUBLE PRECISION,
+  water_usage_efficiency DOUBLE PRECISION
 );
 
+-- Sensors anomalies modal (aggregated anomaly detection model)
 CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
     id BIGSERIAL PRIMARY KEY,
     sensor_id INT NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
@@ -887,42 +832,7 @@ CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
 CREATE INDEX IF NOT EXISTS ix_sensors_anomalies_modal_sensor_ts
     ON sensors_anomalies_modal (sensor_id, ts);
 
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
-    ON public.sensor_anomalies USING BRIN (ts);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
-    ON public.sensor_anomalies (zone);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
-    ON public.sensor_anomalies (sensor);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
-    ON public.sensor_zone_stats (zone, window_start, window_end);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_anomalies
-    ON public.sensor_zone_stats (anomalies);
-
 CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
 CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
 CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
-CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (location_lat, location_lon);
-
-
-
-
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
-    ON public.sensor_anomalies USING BRIN (ts);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
-    ON public.sensor_anomalies (zone);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
-    ON public.sensor_anomalies (sensor);
-
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
-    ON public.sensor_zone_stats (zone, window_start, window_end);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_anomalies
-    ON public.sensor_zone_stats (anomalies);
+CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (lat, lon);
