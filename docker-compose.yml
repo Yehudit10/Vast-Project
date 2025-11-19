@@ -1420,7 +1420,7 @@ services:
     build:
       context: ./services/sensorAnomalyPro
       dockerfile: Dockerfile.flink
-    container_name: jobmanager
+    container_name: sensoers_jobmanager
     command: >
       bash -c "
       /docker-entrypoint.sh jobmanager &
@@ -1432,13 +1432,13 @@ services:
         sleep 5;
       done &&
       echo '✅ Reports ready, submitting Flink job...' &&
-      flink run -m localhost:8091 -py /opt/app/sensorAnomalyPro/app.py &&
+      flink run -m localhost:8081 -py /opt/app/sensorAnomalyPro/app.py &&
       tail -f /dev/null"
     depends_on:
       - sensor_anomaly_pro
       - kafka
     ports:
-      - "8091:8091"
+      - "8900:8081"
     environment:
       - JOB_MANAGER_RPC_ADDRESS=jobmanager
       - KAFKA_BROKERS=kafka:9092
@@ -1455,7 +1455,7 @@ services:
     build:
       context: ./services/sensorAnomalyPro
       dockerfile: Dockerfile.flink
-    container_name: taskmanager
+    container_name: sensors_taskmanager
     command: taskmanager -D taskmanager.numberOfTaskSlots=4
     depends_on:
       - jobmanager
@@ -1471,7 +1471,6 @@ services:
     restart: unless-stopped
     networks:
       - ag_cloud
-
 
  
   vector_service:
