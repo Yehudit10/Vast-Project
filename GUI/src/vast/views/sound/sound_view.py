@@ -1595,7 +1595,7 @@ class SoundAnalyticsView(QWidget):
                     ha='center', va='bottom', fontsize=8, fontweight='bold')
             
             self.dist_canvas.figure.tight_layout()
-            self.dist_canvas.draw()  # ⭐ זה החסר!
+            self.dist_canvas.draw()
             print("[DEBUG] Distribution chart drawn successfully", flush=True)
             
         except Exception as e:
@@ -1643,7 +1643,7 @@ class SoundAnalyticsView(QWidget):
             
             self.timeline_canvas.figure.autofmt_xdate(rotation=45, ha='right')
             self.timeline_canvas.figure.tight_layout()
-            self.timeline_canvas.draw()  # ⭐ זה החסר!
+            self.timeline_canvas.draw()
             print("[DEBUG] Timeline chart drawn successfully", flush=True)
             
         except Exception as e:
@@ -1768,7 +1768,6 @@ class SoundAnalyticsView(QWidget):
                 count = row['count']
                 heatmap_data[hour, day] += count
             
-            # נקה את הקנבס
             self.heatmap_canvas.figure.clear()
             ax = self.heatmap_canvas.figure.add_subplot(111)
             
@@ -1794,7 +1793,7 @@ class SoundAnalyticsView(QWidget):
                             ha="center", va="center", color=text_color, fontsize=6, fontweight='bold')
             
             self.heatmap_canvas.figure.tight_layout()
-            self.heatmap_canvas.draw()  # ⭐ זה החסר!
+            self.heatmap_canvas.draw()
             print("[DEBUG] Heatmap chart drawn successfully", flush=True)
             
         except Exception as e:
@@ -1839,7 +1838,6 @@ class SoundAnalyticsView(QWidget):
             corr_matrix = np.corrcoef(data_matrix.T)
             corr_matrix = np.nan_to_num(corr_matrix, nan=0.0)
             
-            # נקה את הקנבס
             self.correlation_canvas.figure.clear()
             ax = self.correlation_canvas.figure.add_subplot(111)
             
@@ -1865,7 +1863,7 @@ class SoundAnalyticsView(QWidget):
                         fontsize=9, fontweight='bold', pad=10)
             
             self.correlation_canvas.figure.tight_layout()
-            self.correlation_canvas.draw()  # ⭐ זה החסר!
+            self.correlation_canvas.draw() 
             print("[DEBUG] Correlation chart drawn successfully", flush=True)
             
         except Exception as e:
