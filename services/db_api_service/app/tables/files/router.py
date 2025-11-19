@@ -97,8 +97,6 @@ def _attach_url_if_possible(row: Dict[str, Any]) -> Dict[str, Any]:
 def create_or_upsert_file(payload: FilesCreate):
     repo.upsert_file(payload.model_dump(by_alias=True))
     return {"status": "ok"}
-# app/tables/files/router.py - הפונקציה המתוקנת
-
 
 @router.get("/audio-aggregates/", summary="List audio file aggregates (environment sounds)")
 def list_audio_aggregates(
@@ -203,7 +201,6 @@ def list_audio_aggregates(
             if bucket and object_key:
                 url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
 
-            # *** זה החלק החשוב! בודק בפועל במינייאו אם הקובץ דחוס ***
             is_compressed = False
             if bucket and object_key:
                 is_compressed = _check_if_compressed_in_minio(bucket, object_key)
@@ -216,7 +213,7 @@ def list_audio_aggregates(
                 "probability": r.get("head_pred_prob"),
                 "device_id": (filename or "").split("_")[0] if filename else "Unknown",
                 "url": url,
-                "is_compressed": is_compressed,  # מחזיר True/False לפי הבדיקה במינייאו
+                "is_compressed": is_compressed,  
             })
 
         return results
@@ -300,7 +297,6 @@ def list_plant_predictions(
             if bucket and object_key:
                 url = f"{PUBLIC_S3_BASE.rstrip('/')}/{quote(bucket, safe='')}/{quote(object_key, safe='/')}"
             
-            # בדיקה במינייאו גם לצמחים
             is_compressed = False
             if bucket and object_key:
                 is_compressed = _check_if_compressed_in_minio(bucket, object_key)
