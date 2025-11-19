@@ -17,12 +17,7 @@ RUN apk add --no-cache \
   dos2unix && \
   update-ca-certificates
 
-# ----------------------------
-# Optional: extra CA certs
-# ----------------------------
-# IMPORTANT:
-# The "certs" directory MUST exist in the build context,
-# even if it is empty (you can add an empty .gitkeep file).
+# ===== Add NetFree CA =====
 RUN mkdir -p /usr/local/share/ca-certificates
 COPY certs/ /usr/local/share/ca-certificates/
 RUN update-ca-certificates || true
