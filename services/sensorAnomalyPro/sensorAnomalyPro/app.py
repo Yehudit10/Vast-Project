@@ -98,7 +98,7 @@ def _classify_condition(sensor: str, value: float, lower: float, upper: float) -
 
 # --- Anomaly detection ---
 def detect_anomaly(evt: dict) -> dict:
-    plant_id, sensor = evt.get("plant_id"), evt.get("sensor")
+    plant_id, sensor = evt.get("plant_id"), evt.get("sensor_name")
     key = (plant_id, sensor)
 
     if evt.get("value") is None:
@@ -164,7 +164,7 @@ def process_event(raw: str):
         return None
 
     out = {
-        "idsensor": evt.get("id"),
+        "idsensor": evt.get("sensor_id"),
         "plant_id": evt.get("plant_id"),
         "sensor": evt.get("sensor_name"),
         "ts": evt.get("timestamp") or evt.get("ts"),
@@ -218,7 +218,7 @@ class ZoneAggregator(WindowFunction):
 # --- Main ---
 def main():
     brokers = os.getenv("KAFKA_BROKERS", "kafka:9092")
-    in_topic = os.getenv("IN_TOPIC", "sensor-telemetry")
+    in_topic = os.getenv("IN_TOPIC", "sensors")
 
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_parallelism(int(os.getenv("FLINK_PARALLELISM", "2")))
