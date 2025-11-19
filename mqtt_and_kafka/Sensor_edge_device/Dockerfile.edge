@@ -14,11 +14,15 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
-# ---------- Copy simulation scripts ----------
-COPY ./run_sim.py ./fill_system_with_fake_data.py ./Crop_recommendationV2.csv  ./place.csv ./
 
 # ---------- Install dependencies ----------
-RUN pip install --no-cache-dir paho-mqtt pandas
+RUN pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    paho-mqtt pandas
+
+# ---------- Copy simulation scripts ----------
+COPY ./run_sim.py ./fill_system_with_fake_data.py ./Crop_recommendationV2.csv  ./place.csv ./
 
 # ---------- Default command ----------
 CMD ["python", "run_sim.py"]

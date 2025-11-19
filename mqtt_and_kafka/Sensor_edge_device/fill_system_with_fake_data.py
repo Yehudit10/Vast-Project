@@ -18,7 +18,7 @@ def generate_sensor_data():
 
     data = {
         "sid": f"sensor-{sensor_id}",
-        "id": sensor_id,
+        "sensor_id": sensor_id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "msg_type": "telemetry",
         "value": value,

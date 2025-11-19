@@ -30,7 +30,7 @@ def to_event(obj: dict) -> Event | None:
         return None
 
     ts = datetime.now(timezone.utc)
-    device_id = obj.get("id")
+    device_id = obj.get("sensor_id")
     sensor_type = obj.get("sensor_type") or obj.get("sensor_name", "unknown_sensor")
 
     if not device_id:
@@ -143,7 +143,7 @@ def main():
     cfg_path = base_dir / "config" / "rules.yaml"
 
     # --- Load sensors from API ---
-    api_base = os.getenv("DEVICES_API_BASE", "http://host.docker.internal:8001")
+    api_base = os.getenv("DB_API_BASE", "http://db_api_service:8001")
     print(f"[INIT] Fetching active sensors from {api_base}...")
 
     token = get_access_token(api_base)

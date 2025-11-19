@@ -1,0 +1,15 @@
+blob.server.port: 6124
+taskmanager.memory.process.size: 4096m
+taskmanager.bind-host: 0.0.0.0
+jobmanager.execution.failover-strategy: region
+python.fn-execution.memory.managed: false
+taskmanager.memory.task.off-heap.size: 512m
+taskmanager.memory.jvm-metaspace.size: 256m
+jobmanager.rpc.address: crosssensor-flink-jobmanager
+jobmanager.memory.process.size: 2048m
+jobmanager.rpc.port: 6123
+query.server.port: 6125
+jobmanager.bind-host: 0.0.0.0
+taskmanager.memory.framework.off-heap.size: 256m
+parallelism.default: 4
+taskmanager.numberOfTaskSlots: 4

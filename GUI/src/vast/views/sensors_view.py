@@ -1,14 +1,12 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit,
-    QScrollArea, QGridLayout, QFrame, QDialog, QDialogButtonBox, QFormLayout, QComboBox
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+    QScrollArea, QGridLayout, QFrame, QDialog, QDialogButtonBox,
+    QFormLayout, QComboBox
 )
-from PyQt6.QtCore import Qt, QTimer, QDateTime
+from PyQt6.QtCore import Qt, QTimer
 import traceback
 
 
-# ============================================================
-#   CONSTANTS
-# ============================================================
 SEVERITY_RANK = {
     "info": 0,
     "ok": 0,
@@ -24,7 +22,6 @@ SEVERITY_RANK = {
 #   SENSOR CARD
 # ============================================================
 class SensorCard(QFrame):
-    """Modern compact sensor card"""
     def __init__(self, sensor_data: dict, on_click):
         super().__init__()
         self.data = sensor_data
@@ -44,6 +41,12 @@ class SensorCard(QFrame):
         title = QLabel(self.data.get("sensor_name", "Unknown Sensor"))
         title.setStyleSheet("font-weight:600; font-size:15px; color:#111;")
         layout.addWidget(title)
+
+        # ← NEW: show sensor_id
+        sensor_id = self.data.get("sensor_id", "N/A")
+        id_lbl = QLabel(f"ID: {sensor_id}")
+        id_lbl.setStyleSheet("color:#777; font-size:12px;")
+        layout.addWidget(id_lbl)
 
         stype = QLabel(f"Type: {self.data.get('sensor_type', 'N/A')}")
         stype.setStyleSheet("color:#555; font-size:12px;")
@@ -71,19 +74,7 @@ class SensorCard(QFrame):
 
         layout.addWidget(sev_label)
 
-        self.setFixedSize(230, 110)
-        self.setStyleSheet("""
-            QFrame#card {
-                border-radius: 12px;
-                border: 1px solid #DDD;
-                background-color: #FFFFFF;
-                transition: 200ms;
-            }
-            QFrame#card:hover {
-                border: 1px solid #0078D7;
-                background-color: #F6F9FF;
-            }
-        """)
+        self.setFixedSize(230, 120)
 
 
 # ============================================================
@@ -92,25 +83,23 @@ class SensorCard(QFrame):
 class AlertDialog(QDialog):
     def __init__(self, sensor):
         super().__init__()
-        self.setWindowTitle(f"Alert Details – {sensor.get('sensor_name')}")
-        self.setMinimumSize(480, 360)
-        self.setStyleSheet("""
-            QDialog { background-color: #FAFAFA; border-radius: 10px; }
-            QLabel { font-size: 13px; color: #222; }
-            QPushButton {
-                background-color: #0078D7; color: white; border-radius: 6px;
-                padding: 6px 12px; font-weight: 600;
-            }
-            QPushButton:hover { background-color: #005FA3; }
-        """)
+        self.setWindowTitle(f"Sensor Details – {sensor.get('sensor_name')}")
+        self.setMinimumSize(520, 450)
 
         layout = QVBoxLayout(self)
-        title = QLabel(f"<b>Sensor:</b> {sensor.get('sensor_name')}<br>"
-                       f"<b>Type:</b> {sensor.get('sensor_type')}<br>"
-                       f"<b>Current Issue:</b> {sensor.get('Issue')}<br>"
-                       f"<b>Severity:</b> {sensor.get('Severity')}<br>")
-        title.setWordWrap(True)
-        layout.addWidget(title)
+
+        # ← NEW: richer sensor details
+        sensor_details = f"""
+        <b>Name:</b> {sensor.get('sensor_name')}<br>
+        <b>ID:</b> {sensor.get('sensor_id')}<br>
+        <b>Type:</b> {sensor.get('sensor_type')}<br>
+        <b>Status:</b> {sensor.get('status', 'Unknown')}<br>
+        <b>Latitude:</b> {sensor.get('lat', 'N/A')}<br>
+        <b>Longitude:</b> {sensor.get('lon', 'N/A')}<br>
+        """
+        header = QLabel(sensor_details)
+        header.setWordWrap(True)
+        layout.addWidget(header)
 
         alerts = sensor.get("All Alerts", [])
         layout.addSpacing(10)
@@ -138,21 +127,22 @@ class AlertDialog(QDialog):
                         margin: 2px;
                     }}
                 """)
-                card_layout = QFormLayout(card)
-                start_time = a.get("start_ts", "")[:19] if a.get("start_ts") else ""
-                end_time = a.get("end_ts")
-                end_display = end_time[:19] if end_time else "[ACTIVE]"
-                card_layout.addRow("Start Time:", QLabel(start_time))
-                card_layout.addRow("End Time:", QLabel(end_display))
-                card_layout.addRow("Issue:", QLabel(a.get("issue_type", "")))
-                card_layout.addRow("Severity:", QLabel(a.get("severity", "")))
+
+                form = QFormLayout(card)
+                start = a.get("start_ts", "")[:19]
+                end = a.get("end_ts", "")
+                form.addRow("Start:", QLabel(start))
+                form.addRow("End:", QLabel(end if end else "[ACTIVE]"))
+                form.addRow("Issue:", QLabel(a.get("issue_type", "")))
+                form.addRow("Severity:", QLabel(a.get("severity", "")))
+
                 details = a.get("details", {})
-                if details:
-                    for key, val in details.items():
-                        card_layout.addRow(f"{key.title()}:", QLabel(str(val)))
+                for k, v in details.items():
+                    form.addRow(f"{k.title()}:", QLabel(str(v)))
+
                 body_layout.addWidget(card)
         else:
-            body_layout.addWidget(QLabel("No previous alerts or anomalies."))
+            body_layout.addWidget(QLabel("No alerts."))
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -168,11 +158,11 @@ class AlertDialog(QDialog):
 #   MAIN VIEW
 # ============================================================
 class SensorsView(QWidget):
-    """Unified sensors view merging anomalies + alerts"""
     def __init__(self, api, parent=None):
         super().__init__(parent)
         self.api = api
         self.all_sensors = []
+
         self._build_ui()
         self.load_sensors()
 
@@ -182,11 +172,8 @@ class SensorsView(QWidget):
 
     def _build_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(10)
-
-        # ---------- Header ----------
         header = QHBoxLayout()
+
         title = QLabel("🌡️ Unified Sensor Alerts Dashboard")
         title.setStyleSheet("font-size:22px; font-weight:700; color:#111;")
         header.addWidget(title)
@@ -203,22 +190,10 @@ class SensorsView(QWidget):
         self.search_box.setFixedWidth(220)
         header.addWidget(self.search_box)
 
-        self.refresh_btn = QPushButton("⟳ Refresh")
-        self.refresh_btn.clicked.connect(self.load_sensors)
-        self.refresh_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0078D7;
-                color: white;
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover { background-color: #005FA3; }
-        """)
-        header.addWidget(self.refresh_btn)
+        # ← REMOVED refresh button completely
+
         main_layout.addLayout(header)
 
-        # ---------- Scroll with cards ----------
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.container = QWidget()
@@ -226,27 +201,25 @@ class SensorsView(QWidget):
         self.grid.setSpacing(12)
         self.scroll.setWidget(self.container)
         main_layout.addWidget(self.scroll)
+
         self.setLayout(main_layout)
 
-    # ----------------------------
+    # ------------------------------------------------------------
     def load_sensors(self):
-        self.refresh_btn.setEnabled(False)
-        self.refresh_btn.setText("⟳ Loading...")
-
         try:
-            res_sensors = self.api.http.get(f"{self.api.base}/api/tables/sensors", timeout=10).json()
-            res_anoms = self.api.http.get(f"{self.api.base}/api/tables/sensors_anomalies_modal", timeout=10).json()
-            res_logs = self.api.http.get(f"{self.api.base}/api/tables/event_logs_sensors", timeout=10).json()
+            res_sensors = self.api.http.get(f"{self.api.base}/api/tables/sensors").json()
+            res_anoms = self.api.http.get(f"{self.api.base}/api/tables/sensors_anomalies_modal").json()
+            res_logs = self.api.http.get(f"{self.api.base}/api/tables/event_logs_sensors").json()
+
             sensors = res_sensors.get("rows", [])
             anomalies = res_anoms.get("rows", [])
             alerts = res_logs.get("rows", [])
-        except Exception as e:
+
+        except:
             traceback.print_exc()
-            self.refresh_btn.setEnabled(True)
-            self.refresh_btn.setText("↻ Refresh")
             return
 
-        # map anomalies by sensor
+        # --------------- map anomalies ---------------
         anomaly_latest = {}
         for a in anomalies:
             sid = a.get("sensor_id")
@@ -256,43 +229,42 @@ class SensorsView(QWidget):
             if prev is None or a.get("ts", "") > prev.get("ts", ""):
                 anomaly_latest[sid] = a
 
-        # map alerts (event_logs_sensors)
+        # --------------- map alerts ---------------
         alerts_by_sensor = {}
         for alert in alerts:
-            dev_id = alert.get("device_id")
-            if not dev_id:
+            dev = alert.get("device_id")
+            if not dev:
                 continue
             if alert.get("end_ts"):
-                continue  # closed alert
-            alerts_by_sensor.setdefault(dev_id, []).append(alert)
+                continue
+            alerts_by_sensor.setdefault(dev, []).append(alert)
 
+        # --------------- merge ---------------
         merged = []
         for s in sensors:
-            sid = s.get("sensor_name")
-            s_type = s.get("sensor_type", "Unknown")
+            sensor_id = s.get("sensor_id")
+            name = s.get("sensor_name")
+            s_type = s.get("sensor_type")
 
-            alerts_for_s = alerts_by_sensor.get(sid, [])
-            active_alerts = [a for a in alerts_for_s if not a.get("end_ts")]
+            alerts_for_s = alerts_by_sensor.get(name, [])
+            active = [a for a in alerts_for_s if not a.get("end_ts")]
 
-            # determine severity from alerts
-            if active_alerts:
-                latest_alert = sorted(active_alerts, key=lambda x: x.get("start_ts", ""), reverse=True)[0]
-                sev_alert = latest_alert.get("severity", "info").lower()
-                issue_alert = latest_alert.get("issue_type", "alert")
+            if active:
+                latest = sorted(active, key=lambda x: x.get("start_ts", ""), reverse=True)[0]
+                sev_alert = latest.get("severity", "info").lower()
+                issue_alert = latest.get("issue_type", "")
             else:
                 sev_alert = "info"
                 issue_alert = None
 
-            # determine severity from anomalies
-            anom = anomaly_latest.get(sid)
+            anom = anomaly_latest.get(sensor_id)
             if anom and anom.get("anomaly", 0) > 0:
-                sev_anom = "error"  # you can adjust mapping of numeric to severity
+                sev_anom = "error"
                 issue_anom = "Anomaly detected"
             else:
                 sev_anom = "info"
                 issue_anom = None
 
-            # pick the most severe
             sev_final = sev_alert
             issue_final = issue_alert or "No active alerts"
             if SEVERITY_RANK[sev_anom] > SEVERITY_RANK[sev_alert]:
@@ -302,26 +274,28 @@ class SensorsView(QWidget):
             all_alerts = alerts_for_s.copy()
             if anom:
                 all_alerts.append({
-                    "issue_type": "anomaly_modal",
-                    "severity": sev_anom,
                     "start_ts": anom.get("ts"),
+                    "severity": sev_anom,
+                    "issue_type": "anomaly_modal",
                     "details": {"anomaly": anom.get("anomaly")}
                 })
 
             merged.append({
-                "sensor_name": sid,
+                "sensor_id": sensor_id,
+                "sensor_name": name,
                 "sensor_type": s_type,
                 "Issue": issue_final,
                 "Severity": sev_final,
-                "All Alerts": all_alerts
+                "All Alerts": all_alerts,
+                "status": s.get("status"),
+                "lat": s.get("lat"),
+                "lon": s.get("lon"),
             })
 
         self.all_sensors = merged
         self._apply_filters()
-        self.refresh_btn.setEnabled(True)
-        self.refresh_btn.setText("↻ Refresh")
 
-    # ----------------------------
+    # ------------------------------------------------------------
     def _render_cards(self, sensors):
         for i in reversed(range(self.grid.count())):
             w = self.grid.itemAt(i).widget()
@@ -329,38 +303,37 @@ class SensorsView(QWidget):
                 w.setParent(None)
 
         if not sensors:
-            no_data = QLabel("No sensors found matching your criteria")
-            no_data.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            no_data.setStyleSheet("color:#666; font-size:16px; padding:40px;")
-            self.grid.addWidget(no_data, 0, 0, 1, 3)
+            lbl = QLabel("No sensors found")
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.grid.addWidget(lbl, 0, 0)
             return
 
         cols = 3
-        for idx, s in enumerate(sensors):
+        for i, s in enumerate(sensors):
             card = SensorCard(s, self._show_alert_history)
-            r, c = divmod(idx, cols)
-            self.grid.addWidget(card, r, c, Qt.AlignmentFlag.AlignTop)
+            r, c = divmod(i, cols)
+            self.grid.addWidget(card, r, c)
 
-    # ----------------------------
+    # ------------------------------------------------------------
     def _apply_filters(self):
-        text = self.search_box.text().strip().lower()
-        sev_filter = self.filter_box.currentText().lower()
-        filtered = []
+        text = self.search_box.text().lower().strip()
+        filt = self.filter_box.currentText().lower()
 
+        filtered = []
         for s in self.all_sensors:
-            sid = str(s.get("sensor_name", "")).lower()
-            stype = str(s.get("sensor_type", "")).lower()
+            name = str(s.get("sensor_name", "")).lower()
+            t = str(s.get("sensor_type", "")).lower()
             sev = s.get("Severity", "").lower()
 
-            if text and text not in sid and text not in stype:
+            if text and text not in name and text not in t:
                 continue
-            if sev_filter != "all" and sev_filter not in sev:
+            if filt != "all" and filt not in sev:
                 continue
             filtered.append(s)
 
         self._render_cards(filtered)
 
-    # ----------------------------
+    # ------------------------------------------------------------
     def _show_alert_history(self, sensor):
         dlg = AlertDialog(sensor)
         dlg.exec()

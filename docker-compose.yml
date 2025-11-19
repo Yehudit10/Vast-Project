@@ -1882,4 +1882,65 @@ services:
     restart: unless-stopped
 
 
+  crosssensor-flink-jobmanager:
+    build:
+      context: ./services/Cross-Sensor  System-Level Anomalies
+      dockerfile: Dockerfile.flink
+    container_name: crosssensor-flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8086:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=crosssensor-flink-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensors_anomalies_modal
+    volumes:
+      - ./services/Cross-Sensor  System-Level Anomalies/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./services/Cross-Sensor  System-Level Anomalies/flink_job.py:/opt/app/flink_job.py
+      - ./services/Cross-Sensor  System-Level Anomalies/models:/opt/models
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    restart: unless-stopped
 
+  crosssensor-flink-taskmanager:
+    build:
+      context: ./services/Cross-Sensor  System-Level Anomalies
+      dockerfile: Dockerfile.flink
+    container_name: crosssensor-flink-taskmanager
+    command: taskmanager
+    depends_on:
+      - crosssensor-flink-jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=crosssensor-flink-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensors_anomalies_modal
+    volumes:
+      - ./services/Cross-Sensor  System-Level Anomalies/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./services/Cross-Sensor  System-Level Anomalies/flink_job.py:/opt/app/flink_job.py
+      - ./services/Cross-Sensor  System-Level Anomalies/models:/opt/models
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+  
+  edge-sensors:
+    build:
+      context: ./mqtt_and_kafka/Sensor_edge_device
+      dockerfile: Dockerfile.edge
+    container_name: edge-sensors
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      mqtt-router:
+        condition: service_healthy
+    environment:
+      - BROKER=mosquitto
+      - PORT=1883
+      - TOPIC=sensors
+    networks:
+      - ag_cloud
+    restart: unless-stopped

@@ -6,6 +6,7 @@ and returns their IDs and models.
 """
 import requests
 from typing import Iterable, Tuple
+from api.auth import get_access_token
 
 
 def list_active_sensors(api_base: str, token: str, timeout: float = 10.0) -> Iterable[str]:
@@ -43,19 +44,25 @@ def list_active_sensors(api_base: str, token: str, timeout: float = 10.0) -> Ite
         return
 
 
-def get_sensors_last_seen(api_base: str, token: str, timeout: float = 10.0):
+def get_sensors_last_seen(api_base: str = None, timeout: float = 10.0):
     """
     Fetch all sensors from devices_sensor with their last_seen timestamp.
     Used for silence sweep.
     
     Args:
-        api_base: Base URL of the API.
-        token: Service token.
+        api_base: Base URL of the API. If None, uses host.docker.internal (same as PATCH).
         timeout: Request timeout.
         
     Returns:
         List of dicts like: [{"id": "dev-a", "sensor_type": "temp", "last_seen": "2025-11-11T13:00:00Z"}, ...]
     """
+    # Use same URL pattern as update_device_last_seen (PATCH)
+    if api_base is None:
+        api_base = "http://host.docker.internal:8001"
+    
+    # Get fresh token each time (same pattern as update_device_last_seen)
+    token = get_access_token(api_base)
+    
     url = f"{api_base.rstrip('/')}/api/tables/devices_sensor"
     headers = {"X-Service-Token": token}
 

@@ -1,16 +1,12 @@
--- Extended schema v2 (CLEANED + FIXED)
--- All duplicates removed, no DROP TABLE, correct dependency order
--- sensors = version A (id SERIAL, lat/lon)
--- event_logs_sensors → devices_sensor(id)
--- All duplicates removed
+-- Extended schema v2: adds devices, anomaly catalog, logs, files, and regions.
+-- Order matters: referenced tables first.
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- ======================================
--- === Catalog / Reference Tables =======
--- ======================================
+-- === Catalogs / reference tables ===
 
+-- Devices catalog
 CREATE TABLE IF NOT EXISTS devices (
   device_id text PRIMARY KEY,
   model     text,
@@ -20,26 +16,26 @@ CREATE TABLE IF NOT EXISTS devices (
   location_lon DOUBLE PRECISION
 );
 
+-- Predefined regions (optional: for missions crossing multiple regions)
 CREATE TABLE IF NOT EXISTS regions (
   id    bigserial PRIMARY KEY,
   name  text NOT NULL,
   geom  geometry(Polygon, 4326) NOT NULL
 );
 
+-- Types of anomalies
 CREATE TABLE IF NOT EXISTS anomaly_types (
   anomaly_type_id serial PRIMARY KEY,
   code        text UNIQUE NOT NULL,
   description text NOT NULL
 );
 
+--Types of leaf diseases
 CREATE TABLE IF NOT EXISTS leaf_disease_types (
     id   SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
 );
-
--- ======================================
--- === Core Entities ====================
--- ======================================
+-- === Core entities ===
 
 CREATE TABLE IF NOT EXISTS leaf_reports (
     id                     BIGSERIAL PRIMARY KEY,
@@ -50,6 +46,8 @@ CREATE TABLE IF NOT EXISTS leaf_reports (
     sick                   BOOLEAN NOT NULL
 );
 
+
+-- Missions table
 CREATE TABLE IF NOT EXISTS missions (
   mission_id   BIGSERIAL PRIMARY KEY,
   start_time   timestamptz NOT NULL,
@@ -58,12 +56,14 @@ CREATE TABLE IF NOT EXISTS missions (
   CHECK (end_time IS NULL OR end_time > start_time)
 );
 
+-- Optional link table if you want explicit mission↔region mapping
 CREATE TABLE IF NOT EXISTS mission_regions (
   mission_id bigint NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
   region_id  bigint NOT NULL REFERENCES regions(id)         ON DELETE CASCADE,
   PRIMARY KEY (mission_id, region_id)
 );
 
+-- Telemetry points (raw stream)
 CREATE TABLE IF NOT EXISTS telemetry (
   id          BIGSERIAL PRIMARY KEY,
   mission_id  BIGINT NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
   altitude    real CHECK (altitude >= 0)
 );
 
+-- Per-tile aggregated stats (for heatmaps etc.)
 CREATE TABLE IF NOT EXISTS tile_stats (
   id            BIGSERIAL PRIMARY KEY,
   mission_id    BIGINT NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
@@ -82,6 +83,7 @@ CREATE TABLE IF NOT EXISTS tile_stats (
   UNIQUE (mission_id, tile_id)
 );
 
+-- Individual anomaly events (point-level)
 CREATE TABLE IF NOT EXISTS anomalies (
   anomaly_id       bigserial PRIMARY KEY,
   mission_id       bigint NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
@@ -93,22 +95,24 @@ CREATE TABLE IF NOT EXISTS anomalies (
   geom             geometry(Point,4326)
 );
 
+-- Files stored in MinIO (S3-compatible) and referenced here
 CREATE TABLE IF NOT EXISTS files (
   file_id      bigserial PRIMARY KEY,
-  bucket       text NOT NULL,
-  object_key   text NOT NULL,
-  content_type text,
+  bucket       text NOT NULL,              -- MinIO bucket name
+  object_key   text NOT NULL,              -- path/key inside the bucket
+  content_type text,                       -- MIME type (image/jpeg, application/geo+json, ...)
   size_bytes   bigint CHECK (size_bytes >= 0),
-  etag         text,
+  etag         text,                       -- checksum returned by S3/MinIO (MD5/Etag)
   created_at   timestamptz NOT NULL DEFAULT now(),
   mission_id   bigint REFERENCES missions(mission_id) ON DELETE SET NULL,
   device_id    text   REFERENCES devices(device_id)   ON DELETE SET NULL,
-  tile_id      text,
-  footprint    geometry(Polygon,4326),
-  metadata     jsonb,
+  tile_id      text,                        -- optional link to a tile identifier
+  footprint    geometry(Polygon,4326),      -- spatial footprint if known
+  metadata     jsonb,                       -- arbitrary extra metadata
   UNIQUE (bucket, object_key)
 );
 
+-- System / application logs (partitioned by time)
 CREATE TABLE IF NOT EXISTS event_logs (
   log_id   bigserial,
   ts       timestamptz NOT NULL,
@@ -117,10 +121,12 @@ CREATE TABLE IF NOT EXISTS event_logs (
   message  text NOT NULL,
   details  jsonb,
   trace_id text,
-  user_id  bigint NOT NULL DEFAULT -1,
+  user_id  bigint NOT NULL DEFAULT -1,          -- -1 = not triggered by a user
   PRIMARY KEY (log_id, ts)
 ) PARTITION BY RANGE (ts);
 
+
+-- === Partitioned parent for telemetry (daily range) ===
 CREATE TABLE IF NOT EXISTS telemetry_new (
   mission_id  BIGINT NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
   ts          timestamptz NOT NULL,
@@ -148,6 +154,13 @@ CREATE TABLE IF NOT EXISTS clients (
   last_updated TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     predicted_class TEXT NOT NULL,
+--     confidence FLOAT NOT NULL,
+--     -- status TEXT NOT NULL,
+--     prediction_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
 CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
   id               BIGSERIAL PRIMARY KEY,
   file             TEXT,
@@ -158,12 +171,14 @@ CREATE TABLE IF NOT EXISTS ultrasonic_plant_predictions (
   prediction_time  TIMESTAMPTZ DEFAULT now()
 );
 
+-- service_accounts
 CREATE TABLE IF NOT EXISTS public.service_accounts (
     id          integer GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     name        varchar(150) NOT NULL,
     created_at  timestamptz NOT NULL DEFAULT now(),
     token_hash  text NOT NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id         SERIAL PRIMARY KEY,
@@ -173,11 +188,13 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+
+
+--- === Embeddings table for vector data (e.g. image embeddings) ===
 CREATE TABLE IF NOT EXISTS embeddings (
   id BIGSERIAL PRIMARY KEY,
   vec vector(784)
 );
-
 CREATE TABLE IF NOT EXISTS training_runs (
     id BIGSERIAL PRIMARY KEY,
     run_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -196,6 +213,7 @@ CREATE TABLE IF NOT EXISTS training_runs (
     seed INT NOT NULL
 );
 
+-- Inferenceevent_logs_sensors, instead of Inference logs:
 CREATE TABLE IF NOT EXISTS inference_logs (
     id BIGSERIAL PRIMARY KEY,
     ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -209,10 +227,7 @@ CREATE TABLE IF NOT EXISTS inference_logs (
     image_url TEXT
 );
 
--- ======================================
--- === Ripeness Predictions =============
--- ======================================
-
+-- Ripeness predictions table
 CREATE TABLE IF NOT EXISTS ripeness_predictions (
     id BIGSERIAL PRIMARY KEY,
     inference_log_id BIGINT NOT NULL REFERENCES inference_logs(id) ON DELETE CASCADE,
@@ -225,26 +240,16 @@ CREATE TABLE IF NOT EXISTS ripeness_predictions (
     UNIQUE (inference_log_id)
 );
 
+-- Create indexes for ripeness_predictions
 CREATE INDEX IF NOT EXISTS ix_ripeness_inflog ON ripeness_predictions(inference_log_id);
 CREATE INDEX IF NOT EXISTS ix_ripeness_ts ON ripeness_predictions(ts);
 CREATE INDEX IF NOT EXISTS ix_ripeness_device ON ripeness_predictions(device_id);
 CREATE INDEX IF NOT EXISTS ix_ripeness_run ON ripeness_predictions(run_id);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts_brin ON leaf_reports USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts ON leaf_reports (device_id, ts);
+CREATE INDEX IF NOT EXISTS ix_leaf_reports_type_ts ON leaf_reports (leaf_disease_type_id, ts);
 
--- Leaf anomalies indexes
-CREATE INDEX IF NOT EXISTS ix_leaf_reports_ts_brin
-    ON leaf_reports USING BRIN (ts);
-
-CREATE INDEX IF NOT EXISTS ix_leaf_reports_device_ts
-    ON leaf_reports (device_id, ts);
-
-CREATE INDEX IF NOT EXISTS ix_leaf_reports_type_ts
-    ON leaf_reports (leaf_disease_type_id, ts);
-
-
--- ======================================
--- === Weekly rollups ===================
--- ======================================
-
+-- Weekly ripeness rollups table
 CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (
     id BIGSERIAL PRIMARY KEY,
     ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -260,40 +265,34 @@ CREATE TABLE IF NOT EXISTS ripeness_weekly_rollups_ts (
     pct_ripe DOUBLE PRECISION NOT NULL
 );
 
+-- Create indexes for ripeness_weekly_rollups_ts
 CREATE INDEX IF NOT EXISTS ix_rwrt_ts ON ripeness_weekly_rollups_ts(ts);
 CREATE INDEX IF NOT EXISTS ix_rwrt_fruit_ts ON ripeness_weekly_rollups_ts(fruit_type, ts);
 CREATE INDEX IF NOT EXISTS ix_rwrt_device ON ripeness_weekly_rollups_ts(device_id);
 CREATE INDEX IF NOT EXISTS ix_rwrt_run ON ripeness_weekly_rollups_ts(run_id);
 
-
--- ======================================
--- === Sensor base tables ================
--- ======================================
-
+-- Sensor event logs table.
 CREATE TABLE IF NOT EXISTS devices_sensor (
   id           TEXT UNIQUE NOT NULL,
   plant_id     INT,
   sensor_type  TEXT,
-  last_seen    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (id)
 );
-
+-- Sensor event logs table.
 CREATE TABLE IF NOT EXISTS event_logs_sensors(
     id         bigserial PRIMARY KEY,
-    device_id  TEXT NOT NULL REFERENCES devices_sensor(id),
-    issue_type text NOT NULL,
-    severity   text NOT NULL CHECK (severity IN ('info','warn','error','critical')),
+    device_id  TEXT     NOT NULL REFERENCES devices_sensor(id),
+    issue_type text        NOT NULL,
+    severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
     start_ts   timestamptz NOT NULL DEFAULT now(),
     end_ts     timestamptz NULL,
-    details    jsonb NOT NULL DEFAULT '{}'::jsonb,
+    details    jsonb       NOT NULL DEFAULT '{}'::jsonb,
     CONSTRAINT event_logs_sensors_end_after_start
         CHECK (end_ts IS NULL OR end_ts >= start_ts)
 );
 
 
--- ======================================
--- === Sensor anomalies raw table =======
--- ======================================
 
 CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     id BIGSERIAL PRIMARY KEY,
@@ -305,23 +304,11 @@ CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     lat DOUBLE PRECISION,
     lon DOUBLE PRECISION,
     zone VARCHAR(128),
-    result JSONB NOT NULL,
+    result JSONB NOT NULL,           
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_ts_brin
-    ON public.sensor_anomalies USING BRIN (ts);
 
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_zone
-    ON public.sensor_anomalies (zone);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_anomalies_sensor
-    ON public.sensor_anomalies (sensor);
-
-
--- ======================================
--- === Sensor zone aggregated stats =====
--- ======================================
 
 CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     id BIGSERIAL PRIMARY KEY,
@@ -338,16 +325,9 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_zone_window
-    ON public.sensor_zone_stats (zone, window_start, window_end);
-
-CREATE INDEX IF NOT EXISTS ix_sensor_zone_stats_anomalies
-    ON public.sensor_zone_stats (anomalies);
 
 
--- ======================================
--- === Alerts_leaves ====================
--- ======================================
+--- Alerts_leaves table
 
 CREATE TABLE IF NOT EXISTS public.alerts_leaves (
   id bigserial PRIMARY KEY,
@@ -362,17 +342,11 @@ CREATE TABLE IF NOT EXISTS public.alerts_leaves (
   meta_json jsonb
 );
 
-CREATE INDEX IF NOT EXISTS ix_alerts_leaves_entity_rule
-  ON public.alerts_leaves(entity_id, rule);
-
-CREATE INDEX IF NOT EXISTS ix_alerts_leaves_status
-  ON public.alerts_leaves(status);
+CREATE INDEX IF NOT EXISTS ix_alerts_leaves_entity_rule ON public.alerts_leaves(entity_id, rule);
+CREATE INDEX IF NOT EXISTS ix_alerts_leaves_status ON public.alerts_leaves(status);
 
 
-
--- ======================================
--- === Soil Moisture Events =============
--- ======================================
+--- === Soil moisture irrigation tables ===
 
 CREATE TABLE IF NOT EXISTS soil_moisture_events (
   id SERIAL PRIMARY KEY,
@@ -386,16 +360,11 @@ CREATE TABLE IF NOT EXISTS soil_moisture_events (
   extra JSONB DEFAULT '{}'::jsonb
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idem
-  ON soil_moisture_events (idempotency_key);
-
-
--- ======================================
--- === Irrigation schedule ==============
--- ======================================
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_idem ON soil_moisture_events (idempotency_key);
 
 CREATE TABLE IF NOT EXISTS irrigation_schedule (
   device_id TEXT PRIMARY KEY REFERENCES devices(device_id),
+
   next_run_at TIMESTAMPTZ NOT NULL,
   duration_min INT NOT NULL,
   updated_by TEXT NOT NULL,
@@ -415,8 +384,7 @@ CREATE TABLE IF NOT EXISTS irrigation_schedule_audit (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-
-CREATE TABLE IF NOT EXISTS irrigation_policies (
+CREATE TABLE irrigation_policies (
     device_id TEXT NOT NULL,
     prev_state TEXT,
     dry_ratio_high REAL,
@@ -425,21 +393,21 @@ CREATE TABLE IF NOT EXISTS irrigation_policies (
     duration_min INT,
     updated_at TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (device_id),
-    FOREIGN KEY (device_id)
-        REFERENCES devices(device_id)
+    CONSTRAINT fk_device
+        FOREIGN KEY (device_id) REFERENCES devices(device_id)
         ON DELETE CASCADE
 );
 
 
--- ======================================
--- === Alert table (root alert system) ==
--- ======================================
-
 CREATE TABLE IF NOT EXISTS alerts (
+
+    -- Required fields
     alert_id TEXT PRIMARY KEY,
     alert_type TEXT,
     device_id TEXT,
     started_at TIMESTAMPTZ,
+
+    -- Optional / dynamic fields
     ended_at TIMESTAMPTZ,
     confidence DOUBLE PRECISION,
     area TEXT,
@@ -449,117 +417,80 @@ CREATE TABLE IF NOT EXISTS alerts (
     image_url TEXT,
     vod TEXT,
     hls TEXT,
-    ack BOOLEAN DEFAULT FALSE,
+
+    -- Acknowledgment field
+    ack BOOLEAN DEFAULT FALSE,  -- TRUE when the alert was acknowledged
+
+    -- Flexible metadata for anything else
     meta JSONB,
+
+    -- System fields
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
--- ======================================
--- === Zones table =======================
--- ======================================
 
-CREATE TABLE IF NOT EXISTS public.zones (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL,
-    geom geometry(POLYGON, 4326) NOT NULL
+-- === Task thresholds (enum + table) ===
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_type_enum') THEN
+        CREATE TYPE task_type_enum AS ENUM (
+            'ripeness',    
+            'disease',    
+            'size',        
+            'color',       
+            'quality'      
+        );
+    END IF;
+END$$;
+
+CREATE TABLE IF NOT EXISTS task_thresholds (
+    threshold_id SERIAL PRIMARY KEY,                 
+    task       task_type_enum NOT NULL,           
+    label      TEXT NOT NULL DEFAULT '',         
+    threshold  NUMERIC(6,4) NOT NULL CHECK (threshold >= 0 AND threshold <= 1),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by TEXT,
+    CONSTRAINT ux_task_thresholds_task_label UNIQUE (task, label)
 );
 
-
--- ======================================
--- === Sensors (FINAL VERSION) ==========
--- ======================================
-
-DROP TABLE IF EXISTS public.sensors CASCADE;
-
-CREATE TABLE IF NOT EXISTS public.sensors (
-  id PRIMARY KEY,
-  sid TEXT,
-  sensor_name TEXT UNIQUE NOT NULL,
-  sensor_type TEXT NOT NULL,
-  owner_name TEXT,
-  lat DOUBLE PRECISION,
-  lon DOUBLE PRECISION,
-  install_date TIMESTAMP DEFAULT NOW(),
-  status TEXT DEFAULT 'active',
-  description TEXT,
-  last_maintenance TIMESTAMP,
-  value DOUBLE PRECISION,
-  humidity DOUBLE PRECISION,
-  temperature DOUBLE PRECISION,
-  ph DOUBLE PRECISION,
-  rainfall DOUBLE PRECISION,
-  soil_moisture DOUBLE PRECISION,
-  co2_concentration DOUBLE PRECISION,
-  n DOUBLE PRECISION,
-  p DOUBLE PRECISION,
-  k DOUBLE PRECISION,
-  label TEXT,
-  timestamp TIMESTAMPTZ NOT NULL,
-  msg_type TEXT,
-  plant_id INT,
-  soil_type INT,
-  sunlight_exposure DOUBLE PRECISION,
-  wind_speed DOUBLE PRECISION,
-  organic_matter DOUBLE PRECISION,
-  irrigation_frequency DOUBLE PRECISION,
-  crop_density DOUBLE PRECISION,
-  pest_pressure DOUBLE PRECISION,
-  fertilizer_usage DOUBLE PRECISION,
-  growth_stage INT,
-  urban_area_proximity DOUBLE PRECISION,
-  water_source_type INT,
-  frost_risk DOUBLE PRECISION,
-  water_usage_efficiency DOUBLE PRECISION
+CREATE TABLE public.image_new_aerial_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
 );
-
-CREATE INDEX IF NOT EXISTS ix_sensors_name ON public.sensors (sensor_name);
-CREATE INDEX IF NOT EXISTS ix_sensors_type ON public.sensors (sensor_type);
-CREATE INDEX IF NOT EXISTS ix_sensors_status ON public.sensors (status);
-CREATE INDEX IF NOT EXISTS ix_sensors_location ON public.sensors (lat, lon);
-
-
--- ======================================
--- === Sensors Anomalies Model ==========
--- ======================================
-
-CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
-    id BIGSERIAL PRIMARY KEY,
-    sensor_id INT NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
-    ts TIMESTAMPTZ NOT NULL,
-    anomaly REAL NOT NULL CHECK (anomaly >= 0),
-    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS ix_sensors_anomalies_modal_sensor_ts
-    ON sensors_anomalies_modal (sensor_id, ts);
-
-
--- ======================================
--- === Aerial metadata ===================
--- ======================================
 
 CREATE TABLE IF NOT EXISTS public.aerial_images_metadata (
     id SERIAL PRIMARY KEY,
+
+    -- File and drone metadata
     file_name TEXT NOT NULL,
     drone_id TEXT NOT NULL,
-    capture_time TIMESTAMPTZ NOT NULL,
+    capture_time TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    -- Raw JSON as received (latitude/longitude)
     gis_origin JSONB NOT NULL,
+
+    -- Geometry point auto-generated from JSON
     geom_point geometry(Point, 4326)
         GENERATED ALWAYS AS (
             ST_SetSRID(
                 ST_MakePoint(
                     (gis_origin->>'longitude')::double precision,
                     (gis_origin->>'latitude')::double precision
-                ), 4326
+                ),
+                4326
             )
         ) STORED,
+
+    -- Flight attributes
     altitude_m DOUBLE PRECISION,
     done BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS ix_aerial_geom_point_gist
-    ON public.aerial_images_metadata USING GIST (geom_point);
+ON public.aerial_images_metadata USING GIST (geom_point);
 
 
 CREATE TABLE IF NOT EXISTS public.aerial_image_object_detections (
@@ -605,11 +536,12 @@ CREATE TABLE IF NOT EXISTS public.aerial_images_complete_metadata (
                 ST_MakePoint(
                     (gis_origin->>'longitude')::double precision,
                     (gis_origin->>'latitude')::double precision
-                ), 4326
+                ),
+                4326
             )
         ) STORED,
     img_key TEXT NOT NULL UNIQUE,
-    timestamp_utc TIMESTAMPTZ,
+    timestamp_utc TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -621,11 +553,25 @@ CREATE INDEX IF NOT EXISTS idx_aerial_metadata_timestamp
 
 CREATE INDEX IF NOT EXISTS idx_aerial_metadata_gis
     ON public.aerial_images_complete_metadata USING GIST (gis);
+    
+CREATE TABLE fruit_detections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_key TEXT NOT NULL,
+    cropped_key TEXT NOT NULL,
+    bucket TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    x1 INT NOT NULL,
+    y1 INT NOT NULL,
+    x2 INT NOT NULL,
+    y2 INT NOT NULL,
+    latency_ms_model INT,
+    label TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-
--- ======================================
--- === Field polygons ====================
--- ======================================
+CREATE INDEX idx_fruit_original_key ON fruit_detections(original_key);
+CREATE INDEX idx_fruit_device_ts ON fruit_detections(device_id, timestamp);
 
 CREATE TABLE IF NOT EXISTS public.field_polygons (
     id SERIAL PRIMARY KEY,
@@ -641,10 +587,6 @@ CREATE INDEX IF NOT EXISTS idx_field_polygons_gis
     ON public.field_polygons USING GIST (gis);
 
 
--- ======================================
--- === Aerial segmentation ===============
--- ======================================
-
 CREATE TABLE IF NOT EXISTS public.aerial_image_segmentation (
     id SERIAL PRIMARY KEY,
     img_key TEXT NOT NULL,
@@ -658,269 +600,239 @@ CREATE TABLE IF NOT EXISTS public.aerial_image_segmentation (
     water FLOAT DEFAULT 0,
     agriculture FLOAT DEFAULT 0,
     building FLOAT DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_segmentation_img_key
     ON public.aerial_image_segmentation (img_key);
 
 
--- ======================================
--- === Sounds Metadata ==================
--- ======================================
+CREATE TABLE public.sound_new_sounds_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
+
+CREATE TABLE public.sound_new_plants_connections (
+  id BIGSERIAL PRIMARY KEY,
+  file_name VARCHAR(255),
+  key TEXT,
+  linked_time TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS ix_task_thresholds_task ON task_thresholds (task);
+CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at ON task_thresholds (updated_at);
+
 
 CREATE TABLE IF NOT EXISTS public.sounds_metadata (
-  id BIGSERIAL PRIMARY KEY,
-  file_name TEXT NOT NULL,
-  device_id TEXT NOT NULL REFERENCES devices(device_id),
-  capture_time TIMESTAMPTZ NOT NULL,
-  duration_sec DOUBLE PRECISION CHECK (duration_sec >= 0),
-  done BOOLEAN NOT NULL DEFAULT FALSE,
-  sample_rate_hz INTEGER CHECK (sample_rate_hz > 0),
-  channels SMALLINT CHECK (channels > 0),
-  content_type TEXT,
+  id              BIGSERIAL PRIMARY KEY,
+  file_name       TEXT        NOT NULL,
+  device_id       TEXT        NOT NULL REFERENCES public.devices(device_id),
+  capture_time    TIMESTAMPTZ NOT NULL,
+  duration_sec    DOUBLE PRECISION CHECK (duration_sec >= 0),
+  done            BOOLEAN     NOT NULL DEFAULT FALSE,
+  sample_rate_hz  INTEGER     CHECK (sample_rate_hz > 0),
+  channels        SMALLINT    CHECK (channels > 0),
+  content_type    TEXT,
+
   gis_origin JSONB NOT NULL,
+
   geom_point geometry(Point, 4326)
       GENERATED ALWAYS AS (
           ST_SetSRID(
               ST_MakePoint(
                   (gis_origin->>'longitude')::double precision,
                   (gis_origin->>'latitude')::double precision
-              ), 4326
+              ),
+              4326
           )
       ) STORED,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT ux_sounds_dev_time UNIQUE (device_id, capture_time)
 );
 
 CREATE INDEX IF NOT EXISTS ix_sounds_meta_ts_brin
-    ON public.sounds_metadata USING BRIN (capture_time);
-
+  ON public.sounds_metadata USING BRIN (capture_time);
 CREATE INDEX IF NOT EXISTS ix_sounds_meta_device_time
-    ON public.sounds_metadata (device_id, capture_time);
-
+  ON public.sounds_metadata (device_id, capture_time);
 CREATE INDEX IF NOT EXISTS ix_sounds_meta_geom_point_gist
-    ON public.sounds_metadata USING GIST (geom_point);
-
+  ON public.sounds_metadata USING GIST (geom_point);
 CREATE INDEX IF NOT EXISTS ix_sounds_meta_file_name
-    ON public.sounds_metadata (file_name);
-
+  ON public.sounds_metadata (file_name);
 CREATE INDEX IF NOT EXISTS ix_sounds_meta_created_brin
-    ON public.sounds_metadata USING BRIN (created_at);
+  ON public.sounds_metadata USING BRIN (created_at);
 
-
--- ======================================
--- === Ultra Sounds Metadata =============
--- ======================================
 
 CREATE TABLE IF NOT EXISTS public.sounds_ultra_metadata (
-  id BIGSERIAL PRIMARY KEY,
-  file_name TEXT NOT NULL,
-  device_id TEXT NOT NULL REFERENCES devices(device_id),
-  capture_time TIMESTAMPTZ NOT NULL,
-  duration_sec DOUBLE PRECISION CHECK (duration_sec >= 0),
-  done BOOLEAN NOT NULL DEFAULT FALSE,
-  sample_rate_hz INTEGER CHECK (sample_rate_hz > 0),
-  channels SMALLINT CHECK (channels > 0),
-  content_type TEXT,
+  id              BIGSERIAL PRIMARY KEY,
+  file_name       TEXT        NOT NULL,
+  device_id       TEXT        NOT NULL REFERENCES public.devices(device_id),
+  capture_time    TIMESTAMPTZ NOT NULL,
+  duration_sec    DOUBLE PRECISION CHECK (duration_sec >= 0),
+  done            BOOLEAN     NOT NULL DEFAULT FALSE,
+  sample_rate_hz  INTEGER     CHECK (sample_rate_hz > 0),
+  channels        SMALLINT    CHECK (channels > 0),
+  content_type    TEXT,
+
   gis_origin JSONB NOT NULL,
+
   geom_point geometry(Point, 4326)
       GENERATED ALWAYS AS (
           ST_SetSRID(
               ST_MakePoint(
                   (gis_origin->>'longitude')::double precision,
                   (gis_origin->>'latitude')::double precision
-              ), 4326
+              ),
+              4326
           )
       ) STORED,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT ux_ultra_sounds_dev_time UNIQUE (device_id, capture_time)
 );
 
+
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_ts_brin
-    ON public.sounds_ultra_metadata USING BRIN (capture_time);
-
+  ON public.sounds_ultra_metadata USING BRIN (capture_time);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_device_time
-    ON public.sounds_ultra_metadata (device_id, capture_time);
-
+  ON public.sounds_ultra_metadata (device_id, capture_time);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_geom_point_gist
-    ON public.sounds_ultra_metadata USING GIST (geom_point);
-
+  ON public.sounds_ultra_metadata USING GIST (geom_point);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_file_name
-    ON public.sounds_ultra_metadata (file_name);
-
+  ON public.sounds_ultra_metadata (file_name);
 CREATE INDEX IF NOT EXISTS ix_ultra_sounds_meta_created_brin
-    ON public.sounds_ultra_metadata USING BRIN (created_at);
--- ======================================
--- === Global Spatial Indexes ============
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_missions_area_geom_gist
-    ON missions USING GIST (area_geom);
-
-CREATE INDEX IF NOT EXISTS ix_telemetry_geom_gist
-    ON telemetry USING GIST (geom);
-
-CREATE INDEX IF NOT EXISTS ix_tile_stats_geom_gist
-    ON tile_stats USING GIST (geom);
-
-CREATE INDEX IF NOT EXISTS ix_files_footprint_gist
-    ON files USING GIST (footprint);
+  ON public.sounds_ultra_metadata USING BRIN (created_at);
 
 
--- ======================================
--- === Global Time-Series Indexes ========
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_telemetry_ts_brin
-    ON telemetry USING BRIN (ts);
-
-CREATE INDEX IF NOT EXISTS ix_anomalies_ts_brin
-    ON anomalies USING BRIN (ts);
-
-
--- ======================================
--- === Lookup / Filtering Indexes ========
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_telemetry_mission_ts
-    ON telemetry (mission_id, ts);
-
-CREATE INDEX IF NOT EXISTS ix_anomalies_mission_ts
-    ON anomalies (mission_id, ts);
-
-CREATE INDEX IF NOT EXISTS ix_files_mission_created
-    ON files (mission_id, created_at);
-
-
--- ======================================
--- === JSONB indexes =====================
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_anomalies_details_gin
-    ON anomalies USING GIN (details);
-
-CREATE INDEX IF NOT EXISTS ix_files_metadata_gin
-    ON files USING GIN (metadata);
-
-CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin
-    ON event_logs_sensors USING GIN (details jsonb_path_ops);
-
-
--- ======================================
--- === Regions Spatial ===================
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_regions_geom_gist
-    ON regions USING GIST (geom);
-
-
--- ======================================
--- === Vector Index ======================
--- ======================================
-
-CREATE INDEX IF NOT EXISTS idx_embeddings_vec_hnsw
-    ON embeddings USING hnsw (vec vector_l2_ops)
-    WITH (m=4, ef_construction=10);
-
-
--- ======================================
--- === Users & Security ==================
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_users_username
-    ON users (username);
-
-CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id
-    ON refresh_tokens (user_id);
-
-CREATE UNIQUE INDEX IF NOT EXISTS ux_service_accounts_name
-    ON public.service_accounts (name);
-
-CREATE INDEX IF NOT EXISTS ix_service_accounts_id
-    ON public.service_accounts (id);
-
-
--- ======================================
--- === Inference logs ====================
--- ======================================
-
-CREATE INDEX IF NOT EXISTS idx_infer_ts
-    ON inference_logs (ts);
-
-CREATE INDEX IF NOT EXISTS idx_infer_fruit
-    ON inference_logs (fruit_type);
-
-
--- ======================================
--- === Event logs sensors =================
--- ======================================
-
-CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start
-    ON event_logs_sensors (device_id, start_ts);
-
-CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin
-    ON event_logs_sensors USING BRIN (start_ts);
-
-
--- ======================================
--- === Connections tables (simple) =======
--- ======================================
-
-CREATE TABLE IF NOT EXISTS public.image_new_aerial_connections (
+CREATE TABLE public.image_new_securixxxxxxxxctions (
   id BIGSERIAL PRIMARY KEY,
   file_name VARCHAR(255),
   key TEXT,
   linked_time TIMESTAMPTZ
 );
 
-CREATE TABLE IF NOT EXISTS public.image_new_security_connections (
-  id BIGSERIAL PRIMARY KEY,
-  file_name VARCHAR(255),
-  key TEXT,
-  linked_time TIMESTAMPTZ
+
+-- === Indexes for performance optimization ===
+
+-- Spatial
+CREATE INDEX IF NOT EXISTS ix_missions_area_geom_gist  ON missions   USING GIST (area_geom);
+CREATE INDEX IF NOT EXISTS ix_telemetry_geom_gist      ON telemetry  USING GIST (geom);
+CREATE INDEX IF NOT EXISTS ix_tile_stats_geom_gist     ON tile_stats USING GIST (geom);
+CREATE INDEX IF NOT EXISTS ix_files_footprint_gist     ON files      USING GIST (footprint);
+
+-- Time-series
+CREATE INDEX IF NOT EXISTS ix_telemetry_ts_brin        ON telemetry  USING BRIN (ts);
+CREATE INDEX IF NOT EXISTS ix_anomalies_ts_brin        ON anomalies  USING BRIN (ts);
+
+-- Lookup / filtering
+CREATE INDEX IF NOT EXISTS ix_telemetry_mission_ts     ON telemetry (mission_id, ts);
+CREATE INDEX IF NOT EXISTS ix_anomalies_mission_ts     ON anomalies (mission_id, ts);
+CREATE INDEX IF NOT EXISTS ix_files_mission_created    ON files (mission_id, created_at);
+
+-- JSONB for flexible search
+CREATE INDEX IF NOT EXISTS ix_anomalies_details_gin    ON anomalies USING GIN (details);
+CREATE INDEX IF NOT EXISTS ix_files_metadata_gin       ON files     USING GIN (metadata);
+
+-- Regions spatial index
+CREATE INDEX IF NOT EXISTS ix_regions_geom_gist        ON regions USING GIST (geom);
+
+
+-- Vector index for embeddings (using HNSW)
+CREATE INDEX IF NOT EXISTS idx_embeddings_vec_hnsw    ON embeddings USING hnsw (vec vector_l2_ops)  WITH (m=4, ef_construction=10);
+
+CREATE INDEX IF NOT EXISTS ix_users_username ON users (username);
+CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens (user_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_service_accounts_name ON public.service_accounts (name);
+CREATE INDEX IF NOT EXISTS ix_service_accounts_id ON public.service_accounts (id);
+
+CREATE INDEX IF NOT EXISTS idx_infer_ts ON inference_logs (ts);
+CREATE INDEX IF NOT EXISTS idx_infer_fruit ON inference_logs (fruit_type);
+
+-- Sensors logs
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_device_start ON event_logs_sensors (device_id, start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_start_brin   ON event_logs_sensors USING BRIN (start_ts);
+CREATE INDEX IF NOT EXISTS ix_event_logs_sensors_details_gin  ON event_logs_sensors USING GIN (details jsonb_path_ops);
+
+
+
+
+
+-- CREATE INDEX IF NOT EXISTS ix_alerts_entity_rule ON public.alerts(entity_id, rule);
+-- CREATE INDEX IF NOT EXISTS ix_alerts_status ON public.alerts(status);
+
+-- ============================================
+-- 🔹 SENSORS TABLES (zones, sensors, sensors_anomalies_modal)
+-- ============================================
+
+-- Zones table (for linking sensors to geographic areas)
+CREATE TABLE IF NOT EXISTS public.zones (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    geom geometry(POLYGON, 4326) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.sound_new_sounds_connections (
-  id BIGSERIAL PRIMARY KEY,
-  file_name VARCHAR(255),
-  key TEXT,
-  linked_time TIMESTAMPTZ
+-- Extended sensors table with all environmental metrics
+CREATE TABLE IF NOT EXISTS public.sensors (
+  sensor_id SERIAL PRIMARY KEY,
+  sid TEXT,
+  sensor_name TEXT NOT NULL,
+  sensor_type TEXT NOT NULL,
+  owner_name TEXT,
+  lat DOUBLE PRECISION,
+  lon DOUBLE PRECISION,
+  install_date TIMESTAMP DEFAULT NOW(),
+  status TEXT DEFAULT 'active',
+  description TEXT,
+  last_maintenance TIMESTAMP,
+  value DOUBLE PRECISION,
+  humidity DOUBLE PRECISION,
+  temperature DOUBLE PRECISION,
+  ph DOUBLE PRECISION,
+  rainfall DOUBLE PRECISION,
+  soil_moisture DOUBLE PRECISION,
+  co2_concentration DOUBLE PRECISION,
+  n DOUBLE PRECISION,
+  p DOUBLE PRECISION,
+  k DOUBLE PRECISION,
+  label TEXT,
+  timestamp TIMESTAMPTZ NOT NULL,
+  msg_type TEXT,
+  plant_id INT,
+  soil_type INT,
+  sunlight_exposure DOUBLE PRECISION,
+  wind_speed DOUBLE PRECISION,
+  organic_matter DOUBLE PRECISION,
+  irrigation_frequency DOUBLE PRECISION,
+  crop_density DOUBLE PRECISION,
+  pest_pressure DOUBLE PRECISION,
+  fertilizer_usage DOUBLE PRECISION,
+  growth_stage INT,
+  urban_area_proximity DOUBLE PRECISION,
+  water_source_type INT,
+  frost_risk DOUBLE PRECISION,
+  water_usage_efficiency DOUBLE PRECISION
 );
 
-CREATE TABLE IF NOT EXISTS public.sound_new_plants_connections (
-  id BIGSERIAL PRIMARY KEY,
-  file_name VARCHAR(255),
-  key TEXT,
-  linked_time TIMESTAMPTZ
+-- Sensors anomalies modal (aggregated anomaly detection model)
+CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
+    id BIGSERIAL PRIMARY KEY,
+    sensor_id INT NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
+    ts TIMESTAMPTZ NOT NULL,
+    anomaly REAL NOT NULL CHECK (anomaly >= 0),
+    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- === Task thresholds (enum + table) ===
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_type_enum') THEN
-        CREATE TYPE task_type_enum AS ENUM (
-            'ripeness',    
-            'disease',    
-            'size',        
-            'color',       
-            'quality'      
-        );
-    END IF;
-END$$;
+-- ============================================
+-- 🔹 INDEXES FOR SENSOR TABLES
+-- ============================================
 
-CREATE TABLE IF NOT EXISTS task_thresholds (
-    threshold_id SERIAL PRIMARY KEY,                 
-    task       task_type_enum NOT NULL,           
-    label      TEXT NOT NULL DEFAULT '',         
-    threshold  NUMERIC(6,4) NOT NULL CHECK (threshold >= 0 AND threshold <= 1),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_by TEXT,
-    CONSTRAINT ux_task_thresholds_task_label UNIQUE (task, label)
-);
+CREATE INDEX IF NOT EXISTS ix_sensors_anomalies_modal_sensor_ts
+    ON sensors_anomalies_modal (sensor_id, ts);
 
-CREATE INDEX IF NOT EXISTS ix_task_thresholds_task 
-    ON task_thresholds (task);
-
-CREATE INDEX IF NOT EXISTS ix_task_thresholds_updated_at 
-    ON task_thresholds (updated_at);
+CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
+CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
+CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
+CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (lat, lon);
