@@ -72,6 +72,8 @@ TOPICS=(
   sound_new_sounds_connections
 
   inference.dispatched.sounds
+  inference.dispatched.camera
+  inference.dispatched.fruit
   dlq.inference.http
   event_logs_sensors
   sensors

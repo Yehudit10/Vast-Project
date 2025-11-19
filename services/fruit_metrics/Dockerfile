@@ -1,0 +1,11 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY fruit_metrics.py .
+
+EXPOSE 8050
+CMD ["uvicorn", "fruit_metrics:app", "--host", "0.0.0.0", "--port", "8050"]

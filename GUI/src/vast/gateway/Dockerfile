@@ -19,16 +19,16 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Conditionally load extra CA certs from build context ./certs (if exists)
-# - With BuildKit, the mount is optional (required=false).
-# - If USE_NETFREE=false or no *.crt files exist, nothing happens.
-RUN --mount=type=bind,source=certs,target=/tmp/certs,required=false \
-    set -eux; \
+# Optional extra CA certs (e.g. NetFree) from ./certs
+COPY certs/ /tmp/certs
+
+RUN set -eux; \
     if [ "${USE_NETFREE}" = "true" ] \
        && [ -d /tmp/certs ] \
        && ls /tmp/certs/*.crt >/dev/null 2>&1; then \
         echo "Adding extra CA certs from /tmp/certs ..."; \
         cp /tmp/certs/*.crt /usr/local/share/ca-certificates/; \
+        chmod 644 /usr/local/share/ca-certificates/*.crt; \
         update-ca-certificates; \
     else \
         echo "No extra CA certs configured (USE_NETFREE=${USE_NETFREE})."; \
@@ -39,16 +39,16 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
-# Python dependencies
+ENV PIP_DEFAULT_TIMEOUT=600
 
 
-# # System CA + add NetFree certs
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY certs/*.crt /usr/local/share/ca-certificates/
-RUN update-ca-certificates || true
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+# # # System CA + add NetFree certs
+# RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+# COPY certs/*.crt /usr/local/share/ca-certificates/
+# RUN update-ca-certificates || true
+# ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+#     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+#     PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # Python deps
 COPY requirements.txt /app/requirements.txt

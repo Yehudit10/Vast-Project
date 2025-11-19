@@ -176,7 +176,7 @@ mc event add "${MC_ALIAS_HOT}/imagery" \
 mc event add "${MC_ALIAS_HOT}/imagery" \
   arn:minio:sqs::fruits:kafka \
   --event put \
-  --prefix "fruits/"
+  --prefix "fruit/tree"
 
 mc event add "${MC_ALIAS_HOT}/imagery" \
   arn:minio:sqs::leaves:kafka \

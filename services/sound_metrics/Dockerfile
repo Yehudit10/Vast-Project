@@ -7,6 +7,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+<<<<<<< HEAD
+
+# COPY certs/ /app/certs/
+# RUN if [ -d /app/certs ] && ls /app/certs/*.crt >/dev/null 2>&1; then \
+#       cp /app/certs/*.crt /usr/local/share/ca-certificates/ && update-ca-certificates; \
+=======
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a
 # Bring in app files (including optional ./certs)
 COPY . .
 
@@ -18,9 +25,12 @@ RUN if [ -d /app/certs ] && [ -n "$(find /app/certs -type f -name '*.crt' -print
       echo "No extra CA certs found. Skipping CA update."; \
     fi
 
+
+COPY requirements.txt .
 # Ensure pip/requests use the system CA bundle (includes optional NetFree certs)
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    # CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 

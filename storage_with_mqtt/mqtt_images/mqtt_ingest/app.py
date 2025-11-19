@@ -142,21 +142,41 @@ def parse_topic(topic: str) -> dict:
         ns, idx = "sounds", parts_lower.index("sounds")
         
     if ns == "imagery":
-        # format: MQTT/imagery/<device>/<ts>/<ctype>/<filename>
-        if len(parts) > idx + 1 and parts[idx + 1]:
-            result["camera"] = parts[idx + 1]
-        if len(parts) > idx + 2 and parts[idx + 2]:
-            try:
-                ts = int(parts[idx + 2])
-                if ts > 0:
-                    result["publish_ts_ms"] = ts
-            except ValueError:
-                pass
-        if len(parts) > idx + 3 and parts[idx + 3]:
-            result["content_type"] = parts[idx + 3].replace("_", "/")
-        if len(parts) > idx + 4 and parts[idx + 4]:
-            result["filename"] = parts[idx + 4]
+        tail = parts[-3:] if len(parts) >= 3 else parts
+        head = parts[idx + 1 : len(parts) - 3] if len(parts) > idx + 4 else parts[idx + 1 : idx + 2]
+        if head:
+            if FORCE_DEVICE_ID:
+                result["camera"] = FORCE_DEVICE_ID
+                prefix = "/".join(head)
+            else:
+                result["camera"] = head[-1]
+                prefix = "/".join(head[:-1])
+        else:
+            prefix = ""
+        print(f"[DEBUG] result['camera']={result['camera']}, prefix={prefix}, FORCE_DEVICE_ID={FORCE_DEVICE_ID}", flush=True)
 
+        try:
+            result["publish_ts_ms"] = int(tail[0])
+        except Exception:
+            pass
+        if len(tail) >= 2:
+            result["content_type"] = tail[1].replace("_", "/")
+        if len(tail) >= 3:
+            result["filename"] = tail[2]
+
+        # --- DEBUG + try to detect device from filename ---
+        filename_base = os.path.splitext(result["filename"])[0]
+        if "_" in filename_base:
+            possible_device = filename_base.split("_")[0]
+            print(f"[DEBUG] filename_base={filename_base}, possible_device={possible_device}", flush=True)
+            if possible_device.lower().startswith("fruit") or possible_device.lower().startswith("camera"):
+                result["camera"] = possible_device
+                print(f"[DEBUG] DETECTED device from filename -> {result['camera']}", flush=True)
+            else:
+                print(f"[DEBUG] filename does not match expected pattern", flush=True)
+        else:
+            print(f"[DEBUG] filename_base has no '-': {filename_base}", flush=True)
+        result["extra_prefix"] = prefix
     elif ns in ("sounds", "sounds_ultra"):
         if len(parts) > idx + 1 and parts[idx + 1]:
             try:
@@ -190,6 +210,8 @@ def parse_topic(topic: str) -> dict:
 
     date_part = datetime.fromtimestamp(result["publish_ts_ms"] / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
     device_id = result["camera"]
+    if FORCE_DEVICE_ID:
+      device_id = FORCE_DEVICE_ID
 
     if result["media_type"] == "sounds":
         if device_id.startswith(f"{CAMERA_PREFIX}-"):
@@ -206,11 +228,16 @@ def parse_topic(topic: str) -> dict:
         else:
             device_name = f"{CAMERA_PREFIX}-{device_id}"
 
-    # key = f"{result['media_type']}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
     is_ultra = ns == "sounds_ultra" 
-    topdir = ULTRA_DIR_PREFIX if is_ultra else result["media_type"]  
-    key = f"{topdir}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
-
+    topdir = ULTRA_DIR_PREFIX if is_ultra else result["media_type"]
+    if ns == "imagery":
+      subpath = "/".join(parts[idx + 1 : -3])
+      if subpath:  
+        key = f"{subpath}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+      else:
+        key = f"{topdir}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"
+    else:
+      key = f"{topdir}/{device_name}/{date_part}/{result['publish_ts_ms']}/{result['filename']}"    
     result["key"] = key
     result["device_id"] = device_name
     result["image_id"] = stem(result["filename"]) or uuid.uuid4().hex

@@ -294,47 +294,6 @@ CREATE TABLE IF NOT EXISTS event_logs_sensors(
 
 
 
-CREATE TABLE IF NOT EXISTS public.sensors (
-  id  SERIAL PRIMARY KEY,
-  sid TEXT,
-  sensor_name TEXT  NOT NULL,
-  sensor_type TEXT NOT NULL,
-  owner_name TEXT,
-  lat DOUBLE PRECISION,
-  lon DOUBLE PRECISION,
-  install_date TIMESTAMP DEFAULT NOW(),
-  status TEXT DEFAULT 'active',
-  description TEXT,
-  last_maintenance TIMESTAMP,
-  value DOUBLE PRECISION,
-  humidity DOUBLE PRECISION,
-  temperature DOUBLE PRECISION,
-  ph DOUBLE PRECISION,
-  rainfall DOUBLE PRECISION,
-  soil_moisture DOUBLE PRECISION,
-  co2_concentration DOUBLE PRECISION,
-  n DOUBLE PRECISION,
-  p DOUBLE PRECISION,
-  k DOUBLE PRECISION,
-  label TEXT,
-  timestamp TIMESTAMPTZ NOT NULL,
-  msg_type TEXT,
-  plant_id INT,
-  soil_type INT,
-  sunlight_exposure DOUBLE PRECISION,
-  wind_speed DOUBLE PRECISION,
-  organic_matter DOUBLE PRECISION,
-  irrigation_frequency DOUBLE PRECISION,
-  crop_density DOUBLE PRECISION,
-  pest_pressure DOUBLE PRECISION,
-  fertilizer_usage DOUBLE PRECISION,
-  growth_stage INT,
-  urban_area_proximity DOUBLE PRECISION,
-  water_source_type INT,
-  frost_risk DOUBLE PRECISION,
-  water_usage_efficiency DOUBLE PRECISION
-);
-
 CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     id BIGSERIAL PRIMARY KEY,
     idSensor INT NOT NULL,
@@ -594,7 +553,25 @@ CREATE INDEX IF NOT EXISTS idx_aerial_metadata_timestamp
 
 CREATE INDEX IF NOT EXISTS idx_aerial_metadata_gis
     ON public.aerial_images_complete_metadata USING GIST (gis);
+    
+CREATE TABLE fruit_detections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    original_key TEXT NOT NULL,
+    cropped_key TEXT NOT NULL,
+    bucket TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    x1 INT NOT NULL,
+    y1 INT NOT NULL,
+    x2 INT NOT NULL,
+    y2 INT NOT NULL,
+    latency_ms_model INT,
+    label TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
+CREATE INDEX idx_fruit_original_key ON fruit_detections(original_key);
+CREATE INDEX idx_fruit_device_ts ON fruit_detections(device_id, timestamp);
 
 CREATE TABLE IF NOT EXISTS public.field_polygons (
     id SERIAL PRIMARY KEY,
@@ -821,45 +798,7 @@ CREATE TABLE IF NOT EXISTS public.zones (
 
 -- Extended sensors table with all environmental metrics
 DROP TABLE IF EXISTS public.sensors CASCADE;
-CREATE TABLE IF NOT EXISTS public.sensors (
-  id SERIAL PRIMARY KEY,
-  sensor_name TEXT UNIQUE NOT NULL,
-  sensor_type TEXT NOT NULL,
-  owner_name TEXT,
-  location_lat DOUBLE PRECISION,
-  location_lon DOUBLE PRECISION,
-  install_date TIMESTAMP DEFAULT NOW(),
-  status TEXT DEFAULT 'active',
-  description TEXT,
-  last_maintenance TIMESTAMP,
-  value DOUBLE PRECISION,
-  humidity DOUBLE PRECISION,
-  temperature DOUBLE PRECISION,
-  ph DOUBLE PRECISION,
-  rainfall DOUBLE PRECISION,
-  soil_moisture DOUBLE PRECISION,
-  co2_concentration DOUBLE PRECISION,
-  n DOUBLE PRECISION,
-  p DOUBLE PRECISION,
-  k DOUBLE PRECISION,
-  label TEXT,
-  timestamp TIMESTAMPTZ NOT NULL,
-  msg_type TEXT,
-  plant_id INT,
-  soil_type INT,
-  sunlight_exposure DOUBLE PRECISION,
-  wind_speed DOUBLE PRECISION,
-  organic_matter DOUBLE PRECISION,
-  irrigation_frequency DOUBLE PRECISION,
-  crop_density DOUBLE PRECISION,
-  pest_pressure DOUBLE PRECISION,
-  fertilizer_usage DOUBLE PRECISION,
-  growth_stage INT,
-  urban_area_proximity DOUBLE PRECISION,
-  water_source_type INT,
-  frost_risk DOUBLE PRECISION,
-  water_usage_efficiency DOUBLE PRECISION
-);
+
 
 -- Sensor anomalies table with full structure and JSONB result
 DROP TABLE IF EXISTS public.sensor_anomalies CASCADE;
@@ -877,29 +816,6 @@ CREATE TABLE IF NOT EXISTS public.sensor_anomalies (
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Sensors anomalies modal (aggregated anomaly detection model)
-CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
-    id           BIGSERIAL PRIMARY KEY,
-    sensor_id    INT NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
-    ts           TIMESTAMPTZ NOT NULL,
-    anomaly      REAL NOT NULL CHECK (anomaly >= 0),
-    inserted_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Updated event_logs_sensors referencing devices_sensor
-DROP TABLE IF EXISTS event_logs_sensors CASCADE;
-CREATE TABLE IF NOT EXISTS event_logs_sensors(
-    id         bigserial PRIMARY KEY,
-    device_id  TEXT     NOT NULL REFERENCES devices_sensor(id),
-    issue_type text        NOT NULL,
-    severity   text        NOT NULL CHECK (severity IN ('info','warn','error','critical')),
-    start_ts   timestamptz NOT NULL DEFAULT now(),
-    end_ts     timestamptz NULL,
-    details    jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT event_logs_sensors_end_after_start
-        CHECK (end_ts IS NULL OR end_ts >= start_ts)
-);
-
 -- Sensor zone statistics (for per-region summaries)
 CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     id BIGSERIAL PRIMARY KEY,
@@ -913,6 +829,54 @@ CREATE TABLE IF NOT EXISTS public.sensor_zone_stats (
     max DOUBLE PRECISION,
     std DOUBLE PRECISION,
     anomalies INT,
+    inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public.sensors (
+    sensor_id INT PRIMARY KEY,
+    sid TEXT,
+    sensor_name TEXT NOT NULL,
+    sensor_type TEXT NOT NULL,
+    owner_name TEXT,
+    lat DOUBLE PRECISION,
+    lon DOUBLE PRECISION,
+    install_date TIMESTAMP DEFAULT NOW(),
+    status TEXT DEFAULT 'active',
+    description TEXT,
+    last_maintenance TIMESTAMP,
+    value DOUBLE PRECISION,
+    humidity DOUBLE PRECISION,
+    temperature DOUBLE PRECISION,
+    ph DOUBLE PRECISION,
+    rainfall DOUBLE PRECISION,
+    soil_moisture DOUBLE PRECISION,
+    co2_concentration DOUBLE PRECISION,
+    n DOUBLE PRECISION,
+    p DOUBLE PRECISION,
+    k DOUBLE PRECISION,
+    label TEXT,
+    timestamp TIMESTAMPTZ NOT NULL,
+    msg_type TEXT,
+    plant_id INT,
+    soil_type INT,
+    sunlight_exposure DOUBLE PRECISION,
+    wind_speed DOUBLE PRECISION,
+    organic_matter DOUBLE PRECISION,
+    irrigation_frequency DOUBLE PRECISION,
+    crop_density DOUBLE PRECISION,
+    pest_pressure DOUBLE PRECISION,
+    fertilizer_usage DOUBLE PRECISION,
+    growth_stage INT,
+    urban_area_proximity DOUBLE PRECISION,
+    water_source_type INT,
+    frost_risk DOUBLE PRECISION,
+    water_usage_efficiency DOUBLE PRECISION
+);
+
+CREATE TABLE IF NOT EXISTS public.sensors_anomalies_modal (
+    id BIGSERIAL PRIMARY KEY,
+    sensor_id INT NOT NULL REFERENCES sensors(sensor_id) ON DELETE CASCADE,
+    ts TIMESTAMPTZ NOT NULL,
+    anomaly REAL NOT NULL CHECK (anomaly >= 0),
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

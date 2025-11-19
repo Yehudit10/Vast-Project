@@ -32,6 +32,7 @@ shapely
 
 # ───── Async / misc ─────
 aiohttp
+
 folium
 plotly
 shapely

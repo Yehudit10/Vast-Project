@@ -1,8 +1,6 @@
 # ==========================
 # Docker Compose - AG Cloud
 # ==========================
-
-# version: "3.9"
 # --------------------------
 # Networks
 # --------------------------
@@ -697,7 +695,7 @@ services:
       - MINIO_SECURE=false
 
       # Request validation
-      - ALLOWED_BUCKETS=sound
+      - ALLOWED_BUCKETS=imagery
       - ALLOWED_CONTENT_TYPES=audio/wav,audio/x-wav,audio/mpeg,audio/flac,audio/ogg,audio/mp4
       - MAX_BYTES=104857600
 
@@ -851,7 +849,7 @@ services:
         python.executable: /usr/bin/python3
       - HTTP_INFER_URL=http://fruit-inference-http:8004/infer_json
     volumes:
-      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/jobs:/opt/flink/jobs
       - ./streaming/flink/connectors/flink-json-1.18.1.jar:/opt/flink/lib/flink-json-1.18.1.jar:ro
       - ./streaming/flink/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar:ro
       - ./streaming/flink/connectors/flink-connector-kafka-3.2.0-1.18.jar:/opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar:ro
@@ -918,9 +916,9 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flink-jobmanager
         parallelism.default: 2
-        taskmanager.numberOfTaskSlots: 2
+        taskmanager.numberOfTaskSlots: 4
         jobmanager.memory.process.size: 1600m
-        taskmanager.memory.process.size: 1728m
+        taskmanager.memory.process.size: 2048m
         s3.endpoint: http://minio-hot:9000
         s3.path.style.access: true
         s3.access.key: minioadmin
@@ -937,48 +935,6 @@ services:
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
     restart: unless-stopped
-
-  # --------------------------
-  # Fence Hole Detector (FastAPI + ONNX)
-  # --------------------------
-  fence-hole-detector:
-    build:
-      context: ./services/fence_hole_detector
-      dockerfile: Dockerfile
-    container_name: fence-hole-detector
-    env_file:
-      - ./services/fence_hole_detector/.env
-    environment:
-      # Override anything needed for in-Docker networking
-      MINIO_ENDPOINT: minio-hot:9000
-      MINIO_SECURE: "false"
-      # Use internal base URL so other containers can fetch the image
-      MINIO_PUBLIC_BASE_URL: http://minio-hot:9000/imagery
-
-      # Kafka inside docker network
-      ALERT_ENABLED: "1"
-      KAFKA_BOOTSTRAP: kafka:9092
-      ALERTS_TOPIC: alerts
-      ALERT_TYPE: fence_hole
-    depends_on:
-      kafka:
-        condition: service_healthy
-      minio-hot:
-        condition: service_healthy
-    networks:
-      - ag_cloud
-    ports:
-      - "8088:8088"   # expose API to host (optional)
-    volumes:
-    - ./services/fence_hole_detector/weights:/app/services/fence_hole_detector/weights:ro
-    command:
-      [
-        "uvicorn",
-        "services.fence_hole_detector.app:app",
-        "--host", "0.0.0.0",
-        "--port", "8088",
-        "--log-level", "info"
-      ]
 
   # --------------------------
   # Inference HTTP Service
@@ -1050,6 +1006,30 @@ services:
     networks: [ag_cloud]
     restart: unless-stopped
 
+  rover-inference-http:
+    image: rover-inference-http:latest
+    container_name: rover-inference-http
+    environment:
+      - TEAM=rover
+      # MinIO
+      - MINIO_ENDPOINT=minio-hot:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_SECURE=0
+      # Model runtime
+      - FENCE_ONNX_PATH=/app/models/fence_hole_detector/weights/best.onnx
+      - FENCE_CONF=0.30
+      - FENCE_ROI=none
+      - FENCE_VOTE_N=1
+      - FENCE_VOTE_M=1
+      - FENCE_VOTE_COOLDOWN=0
+    networks: [ag_cloud]
+    # Expose internally on 8004; map to 8019 on host (for curl from host)
+    ports:
+      - "8019:8004"
+    restart: unless-stopped
+
+
   # --------------------------
   # Flink Jobs
   # --------------------------
@@ -1063,7 +1043,7 @@ services:
     networks: [ ag_cloud ]
     environment:
       - KAFKA_BOOTSTRAP=kafka:9092
-      - INPUT_TOPIC=imagery.new.fruit
+      - INPUT_TOPIC=inference.dispatched.camera
       - TEAM=fruit
       - HTTP_URL=http://fruit-inference-http:8004/infer_json
       - DLQ_TOPIC=dlq.inference.http
@@ -1078,7 +1058,7 @@ services:
       - ./streaming/flink/connectors/kafka-clients-3.2.3.jar:/opt/flink/lib/kafka-clients-3.2.3.jar:ro
       - ./streaming/flink/connectors/lz4-java-1.8.0.jar:/opt/flink/lib/lz4-java-1.8.0.jar:ro
       - ./streaming/flink/connectors/snappy-java-1.1.10.5.jar:/opt/flink/lib/snappy-java-1.1.10.5.jar:ro
-    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.fruit --team fruit --http-url http://fruit-inference-http:8004/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic inference.dispatched.camera --team fruit --http-url http://fruit-inference-http:8004/infer_json --group-id http-dispatcher-fruit --dlq-topic dlq.inference.http; tail -f /dev/null" ]
     restart: always
   
   flink-dispatcher-camera:
@@ -1091,7 +1071,7 @@ services:
     networks: [ag_cloud]
     environment:
       - KAFKA_BOOTSTRAP=kafka:9092
-      - INPUT_TOPIC=imagery.new.camera
+      - INPUT_TOPIC=image.new.fruits
       - TEAM=camera
       - HTTP_URL=http://camera-inference-http:8004/infer_json
       - DLQ_TOPIC=dlq.inference.http
@@ -1101,7 +1081,7 @@ services:
     volumes:
       - ./streaming/flink/jobs:/opt/flink/jobs:ro
       - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
-    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic imagery.new.camera --team camera --http-url http://camera-inference-http:8004/infer_json --group-id http-dispatcher-camera --dlq-topic dlq.inference.http; tail -f /dev/null" ]
+    command: [ "bash", "-lc", "set -e; echo 'Waiting for JobManager to accept commands...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic image.new.fruits --team camera --http-url http://camera-inference-http:8004/infer_json --group-id http-dispatcher-camera --dlq-topic dlq.inference.http; tail -f /dev/null" ]
     restart: always
 
   flink-dispatcher-soil:
@@ -1125,6 +1105,49 @@ services:
       - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
     command: [ "bash", "-lc", "set -e; echo 'Waiting...'; until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do echo 'still waiting...'; sleep 3; done; echo 'JobManager is ready!'; /opt/flink/bin/flink run -Dpython.client.executable=/usr/bin/python3 -Dpython.executable=/usr/bin/python3 -Dpipeline.jars=file:///opt/flink/lib/connectors/... --jobmanager flink-jobmanager:8081 --detached --python /opt/flink/jobs/http_dispatcher.py -- --bootstrap kafka:9092 --input-topic image.new.ground --team soil_moisture --http-url http://soil-inference-http:8004/infer_json --group-id http-dispatcher-soil --dlq-topic dlq.inference.http; tail -f /dev/null" ]
   
+  flink-dispatcher-rover:
+    image: agcloud-flink-py:1.18
+    container_name: flink-dispatcher-rover
+    depends_on:
+      flink-jobmanager: { condition: service_started }
+      flink-taskmanager: { condition: service_started }
+      rover-inference-http: { condition: service_started }
+    networks: [ag_cloud]
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - INPUT_TOPIC=imagery.new.rover
+      - TEAM=rover
+      - HTTP_URL=http://rover-inference-http:8004/infer_json
+      - DLQ_TOPIC=dlq.inference.http
+      - GROUP_ID=http-dispatcher-rover
+      - PARALLELISM=2
+      - PYFLINK_CLIENT_EXECUTABLE=/usr/bin/python3
+    volumes:
+      - ./streaming/flink/jobs:/opt/flink/jobs:ro
+      - ./streaming/flink/connectors:/opt/flink/lib/connectors:ro
+    command: [
+      "bash","-lc",
+      "set -e; echo 'Waiting for JobManager...'; \
+       until /opt/flink/bin/flink list --jobmanager flink-jobmanager:8081 >/dev/null 2>&1; do \
+         echo 'still waiting...'; sleep 3; \
+       done; echo 'JobManager ready!'; \
+       /opt/flink/bin/flink run \
+         -Dpython.client.executable=/usr/bin/python3 \
+         -Dpython.executable=/usr/bin/python3 \
+         -Dpipeline.jars=file:///opt/flink/lib/connectors/flink-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-sql-connector-kafka-3.2.0-1.18.jar,file:///opt/flink/lib/connectors/flink-json-1.18.1.jar \
+         --jobmanager flink-jobmanager:8081 \
+         --detached \
+         --python /opt/flink/jobs/http_dispatcher.py \
+         -- \
+           --bootstrap $$KAFKA_BOOTSTRAP \
+           --input-topic $$INPUT_TOPIC \
+           --team $$TEAM \
+           --http-url $$HTTP_URL \
+           --group-id $$GROUP_ID \
+           --dlq-topic $$DLQ_TOPIC; \
+       tail -f /dev/null"
+    ]
+    restart: always
 
   flink-alerts-job:
     build:
@@ -1312,6 +1335,68 @@ services:
       FLINK_PYTHON: /opt/venv/bin/python
     networks:
       - ag_cloud
+
+  fruit-defect-sink:
+      build:
+        context: ./services/fruit_defect_sink
+        dockerfile: Dockerfile
+      environment:
+        - KAFKA_BOOTSTRAP=kafka:9092
+        - INPUT_TOPIC=inference.dispatched.fruit
+        - ALERTS_TOPIC=alerts
+        - GROUP_ID=fruit-defect-sink
+        - AUTO_OFFSET_RESET=earliest
+        - MAX_POLL_INTERVAL_MS=900000
+        - SESSION_TIMEOUT_MS=45000
+        - HEARTBEAT_INTERVAL_MS=3000
+        - PGHOST=postgres
+        - PGPORT=5432
+        - PGDATABASE=missions_db
+        - PGUSER=missions_user
+        - PGPASSWORD=pg123
+      depends_on:
+        kafka: { condition: service_healthy }
+        postgres: { condition: service_healthy }
+      networks: [ ag_cloud ]
+      restart: unless-stopped
+
+  fruit_metrics:
+    build:
+      context: ./services/fruit_metrics
+    container_name: fruit_metrics
+    networks: [ ag_cloud ]
+    ports:
+      - "8050:8050"
+    restart: unless-stopped
+
+
+  fruit_alert_generator:
+    build:
+      context: ./services/fruit_alert_generator
+      dockerfile: Dockerfile
+    container_name: fruit_alert_generator
+    networks: [ ag_cloud ]
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: missions_user
+      PGPASSWORD: pg123
+      PGDATABASE: missions_db
+    restart: unless-stopped
+    
+
+  ripeness-exporter:
+    build:
+      context: ./services/ripeness_exporter
+    container_name: ripeness-exporter
+    restart: unless-stopped
+    networks: [ ag_cloud ]
+    depends_on:
+      - postgres
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "9128:9128"
 
   # --------------------------
   # Sensor Anomaly Pro + Flink
@@ -1657,7 +1742,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-      connect:
+      mqtt-router:
         condition: service_healthy
     networks:
       - ag_cloud
@@ -1779,3 +1864,65 @@ services:
         - ag_cloud
 
 
+  crosssensor-flink-jobmanager:
+    build:
+      context: ./services/Cross-Sensor  System-Level Anomalies
+      dockerfile: Dockerfile.flink
+    container_name: crosssensor-flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8086:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=crosssensor-flink-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensors_anomalies_modal
+    volumes:
+      - ./services/Cross-Sensor  System-Level Anomalies/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./services/Cross-Sensor  System-Level Anomalies/flink_job.py:/opt/app/flink_job.py
+      - ./services/Cross-Sensor  System-Level Anomalies/models:/opt/models
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+
+  crosssensor-flink-taskmanager:
+    build:
+      context: ./services/Cross-Sensor  System-Level Anomalies
+      dockerfile: Dockerfile.flink
+    container_name: crosssensor-flink-taskmanager
+    command: taskmanager
+    depends_on:
+      - crosssensor-flink-jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=crosssensor-flink-jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - IN_TOPIC=sensors
+      - OUT_TOPIC=sensors_anomalies_modal
+    volumes:
+      - ./services/Cross-Sensor  System-Level Anomalies/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./services/Cross-Sensor  System-Level Anomalies/flink_job.py:/opt/app/flink_job.py
+      - ./services/Cross-Sensor  System-Level Anomalies/models:/opt/models
+    networks:
+      - ag_cloud
+    restart: unless-stopped
+  
+  edge-sensors:
+    build:
+      context: ./mqtt_and_kafka/Sensor_edge_device
+      dockerfile: Dockerfile.edge
+    container_name: edge-sensors
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      mqtt-router:
+        condition: service_healthy
+    environment:
+      - BROKER=mosquitto
+      - PORT=1883
+      - TOPIC=sensors
+    networks:
+      - ag_cloud
+    restart: unless-stopped

@@ -15,7 +15,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 # --- Config (env-first) ---
 ONNX_PATH = os.getenv("FENCE_ONNX_PATH", "best.onnx")
-CONF = float(os.getenv("FENCE_CONF", "0.35"))
+CONF = float(os.getenv("FENCE_CONF", "0.30"))
 
 MINIO_ENDPOINT   = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "")
@@ -66,6 +66,41 @@ class ProcessResp(BaseModel):
     max_conf: float
     alert_id: Optional[str] = None
     image_url: Optional[str] = None
+
+# ---------------------------------------------------------------------------
+# Compatibility wrapper for the generic Flink HTTP dispatcher:
+# Exposes /infer_json to match the expected contract in the README.
+# It simply converts the input to ProcessReq and delegates to /process_minio.
+# ---------------------------------------------------------------------------
+
+class InferJsonReq(BaseModel):
+    """Generic request schema expected by Flink HTTP dispatcher (/infer_json)."""
+    bucket: str
+    key: str
+    # Optional metadata (passthrough to alerts, if enabled)
+    captured_at: Optional[datetime] = None
+    device_id: Optional[str] = None
+    area: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+
+@app.post("/infer_json", response_model=ProcessResp)
+def infer_json(req: InferJsonReq):
+    """
+    Thin wrapper to keep a stable endpoint name for the Flink dispatcher.
+    Internally it reuses the exact same inference flow as /process_minio.
+    """
+    # Convert to the internal request model and call the existing logic.
+    internal = ProcessReq(
+        bucket=req.bucket,
+        key=req.key,
+        captured_at=req.captured_at,
+        device_id=req.device_id,
+        area=req.area,
+        lat=req.lat,
+        lon=req.lon,
+    )
+    return process_minio(internal)
 
 # --- Helpers ---
 def read_minio_image(bucket: str, key: str):
