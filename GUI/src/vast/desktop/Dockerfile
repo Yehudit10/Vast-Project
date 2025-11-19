@@ -55,7 +55,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     "PyQt6==6.9.0" \
     "PyQt6-WebEngine==6.9.0" \
+    "argon2-cffi" \
+    "requests" \
+    "numpy" \
     argon2-cffi requests numpy \
+    --extra-index-url https://pypi.org/simple \
+    --prefer-binary \
+    --break-system-packages \
+    && pip show PyQt6 PyQt6-WebEngine argon2-cffi
     --prefer-binary --break-system-packages
 RUN pip install plotly PyJWT
 
