@@ -871,7 +871,7 @@ services:
       - MINIO_ENDPOINT=minio-hot:9000
       - ACCESS_KEY=minioadmin
       - SECRET_KEY=minioadmin123
-      - BUCKET_NAME=imagery
+      - BUCKET_NAME=sound
     depends_on:
       minio-hot:
         condition: service_healthy
@@ -1862,24 +1862,6 @@ services:
       - "50061"
     networks:
         - ag_cloud
-
-  edge-sensors:
-    build:
-      context: ./mqtt_and_kafka/Sensor_edge_device
-      dockerfile: Dockerfile.edge
-    container_name: edge-sensors
-    depends_on:
-      mosquitto:
-        condition: service_healthy
-      mqtt-router:
-        condition: service_healthy
-    environment:
-      - BROKER=mosquitto
-      - PORT=1883
-      - TOPIC=sensors
-    networks:
-      - ag_cloud
-    restart: unless-stopped
 
 
   crosssensor-flink-jobmanager:

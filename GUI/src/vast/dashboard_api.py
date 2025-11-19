@@ -445,121 +445,318 @@ class DashboardApi:
 
 
     # =====================================================
-    # ===== ADDED: AUDIO ANALYTICS METHODS =====
+    # ===== AUDIO ANALYTICS METHODS WITH SOUND FILTER =====
     # =====================================================
-    def get_audio_stats(self, time_range: str = 'all') -> Dict:
-        """
-        Get aggregated audio classification statistics.
-        """
+
+    def get_audio_stats(self, time_range: str = 'all', sound_types: List[str] = None) -> Dict:
+        """Get aggregated audio classification statistics"""
         time_filter = {
             'all': '',
             'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
             'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
-            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
         }.get(time_range, '')
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
 
         query = f"""
             SELECT
-                COUNT(*) AS total_files,
-                SUM(CASE WHEN fa.head_is_another = true THEN 1 ELSE 0 END) AS unknown_count,
-                AVG(fa.head_pred_prob) AS avg_confidence,
-                AVG(fa.processing_ms) AS avg_processing_ms
+                COUNT(*) as total_files,
+                SUM(CASE WHEN head_is_another = true THEN 1 ELSE 0 END) as unknown_count,
+                AVG(head_pred_prob) as avg_confidence,
+                AVG(processing_ms) as avg_processing_ms
             FROM agcloud_audio.file_aggregates fa
-            JOIN agcloud_audio.runs r
-            ON fa.run_id = r.run_id
-            WHERE 1=1 {time_filter}
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE 1=1 {time_filter} {sound_filter}
         """
+
         results = self.run_query(query)
         return results[0] if results else {}
 
-    def get_audio_distribution(self, time_range: str = 'all', limit: int = 10) -> List[Dict]:
-        """
-        Get distribution of audio classifications (for pie chart).
-        """
+    def get_audio_distribution(self, time_range: str = 'all', limit: int = 10, sound_types: List[str] = None) -> List[Dict]:
+        """Get distribution of audio classifications"""
         time_filter = {
             'all': '',
             'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
             'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
-            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
         }.get(time_range, '')
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
 
         query = f"""
             SELECT
-                fa.head_pred_label,
-                COUNT(*) AS count
+                head_pred_label,
+                COUNT(*) as count
             FROM agcloud_audio.file_aggregates fa
-            JOIN agcloud_audio.runs r
-            ON fa.run_id = r.run_id
-            WHERE fa.head_pred_label IS NOT NULL
-            {time_filter}
-            GROUP BY fa.head_pred_label
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE head_pred_label IS NOT NULL {time_filter} {sound_filter}
+            GROUP BY head_pred_label
             ORDER BY count DESC
             LIMIT {limit}
         """
+
         return self.run_query(query)
 
-    def get_audio_confidence_by_class(self, time_range: str = 'all', limit: int = 10) -> List[Dict]:
-        """
-        Get average confidence levels by classification (for bar chart).
-        """
+    def get_audio_confidence_by_class(self, time_range: str = 'all', limit: int = 10, sound_types: List[str] = None) -> List[Dict]:
+        """Get average confidence levels by classification"""
         time_filter = {
             'all': '',
             'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
             'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
-            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
         }.get(time_range, '')
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
 
         query = f"""
             SELECT
-                fa.head_pred_label,
-                AVG(fa.head_pred_prob) AS avg_confidence
+                head_pred_label,
+                AVG(head_pred_prob) as avg_confidence
             FROM agcloud_audio.file_aggregates fa
-            JOIN agcloud_audio.runs r
-            ON fa.run_id = r.run_id
-            WHERE fa.head_pred_label IS NOT NULL
-            AND fa.head_pred_prob IS NOT NULL
-            {time_filter}
-            GROUP BY fa.head_pred_label
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE head_pred_label IS NOT NULL
+              AND head_pred_prob IS NOT NULL
+              {time_filter}
+              {sound_filter}
+            GROUP BY head_pred_label
             ORDER BY avg_confidence DESC
             LIMIT {limit}
         """
+
         return self.run_query(query)
 
-    def get_audio_critical_events(self, time_range: str = 'day', limit: int = 100) -> List[Dict]:
+    def get_audio_detailed_table(self, time_range: str = 'all', limit: int = 20, sound_types: List[str] = None) -> List[Dict]:
+        """Get detailed table data with class probabilities"""
+        time_filter = {
+            'all': '',
+            'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
+        }.get(time_range, '')
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
+
+        query = f"""
+            SELECT
+                head_pred_label,
+                COUNT(*) as count,
+                AVG(head_pred_prob) as avg_prob,
+                AVG((head_probs_json->>'predatory_animals')::float) as p_predatory,
+                AVG((head_probs_json->>'birds')::float) as p_birds,
+                AVG((head_probs_json->>'fire')::float) as p_fire,
+                AVG((head_probs_json->>'screaming')::float) as p_screaming,
+                AVG((head_probs_json->>'shotgun')::float) as p_shotgun
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE head_pred_label IS NOT NULL {time_filter} {sound_filter}
+            GROUP BY head_pred_label
+            ORDER BY count DESC
+            LIMIT {limit}
         """
-        Get critical sound events (fire, screaming, shotgun, predatory animals).
-        """
+
+        return self.run_query(query)
+
+    def get_audio_critical_events(self, time_range: str = 'day', limit: int = 100, sound_types: List[str] = None) -> List[Dict]:
+        """Get critical sound events"""
         time_filter = {
             'hour': "AND r.started_at > NOW() - INTERVAL '1 hour'",
-            'day':  "AND r.started_at > NOW() - INTERVAL '24 hours'",
-            'week': "AND r.started_at > NOW() - INTERVAL '7 days'"
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
         }.get(time_range, "AND r.started_at > NOW() - INTERVAL '24 hours'")
+
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
+        else:
+            sound_filter = "AND fa.head_pred_label IN ('fire', 'screaming', 'shotgun', 'predatory_animals')"
 
         query = f"""
             SELECT
                 r.run_id,
                 r.started_at,
-                snsc.file_name,
-                snsc.key AS s3_key,
-                sm.device_id,
-                sm.capture_time,
-                fa.head_pred_label AS event_type,
-                fa.head_pred_prob  AS confidence,
+                f.path as file_path,
+                fa.head_pred_label as event_type,
+                fa.head_pred_prob as confidence,
                 fa.head_probs_json
             FROM agcloud_audio.file_aggregates fa
-            JOIN agcloud_audio.runs r
-            ON fa.run_id = r.run_id
-            JOIN public.sound_new_sounds_connections snsc
-            ON fa.file_id = snsc.id
-            LEFT JOIN public.sounds_metadata sm
-            ON snsc.file_name = sm.file_name
-            WHERE fa.head_pred_label IN ('fire', 'screaming', 'shotgun', 'predatory_animals')
-            {time_filter}
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            JOIN agcloud_audio.files f ON fa.file_id = f.file_id
+            WHERE 1=1
+              {time_filter}
+              {sound_filter}
             ORDER BY r.started_at DESC, fa.head_pred_prob DESC
             LIMIT {limit}
         """
+
         return self.run_query(query)
 
+    def get_audio_timeline(self, time_range: str = 'day', sound_types: List[str] = None) -> List[Dict]:
+        """Get audio alert timeline data grouped by time buckets"""
+        bucket_interval = {
+            'day': 1,
+            'week': 6,
+            'month': 24
+        }.get(time_range, 1)
+
+        time_filter_map = {
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
+        }
+        time_filter = time_filter_map.get(time_range, "AND r.started_at > NOW() - INTERVAL '24 hours'")
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
+
+        query = f"""
+            SELECT
+                date_trunc('hour', r.started_at) +
+                INTERVAL '{bucket_interval} hours' *
+                (EXTRACT(hour FROM r.started_at)::int / {bucket_interval}) as time_bucket,
+                fa.head_pred_label,
+                COUNT(*) as count
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE fa.head_pred_label IS NOT NULL
+              {time_filter}
+              {sound_filter}
+            GROUP BY time_bucket, fa.head_pred_label
+            ORDER BY time_bucket ASC, count DESC
+        """
+
+        return self.run_query(query)
+
+    def get_audio_heatmap(self, time_range: str = 'week', sound_types: List[str] = None) -> List[Dict]:
+        """Get audio detection heatmap data - hour of day vs day of week"""
+        time_filter_map = {
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
+        }
+        time_filter = time_filter_map.get(time_range, "AND r.started_at > NOW() - INTERVAL '7 days'")
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
+
+        query = f"""
+            SELECT
+                EXTRACT(HOUR FROM r.started_at) as hour_of_day,
+                EXTRACT(DOW FROM r.started_at) as day_of_week,
+                fa.head_pred_label as sound_type,
+                COUNT(*) as count
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE fa.head_pred_label IS NOT NULL
+            {time_filter}
+            {sound_filter}
+            GROUP BY hour_of_day, day_of_week, fa.head_pred_label
+            ORDER BY day_of_week, hour_of_day
+        """
+
+        return self.run_query(query)
+
+    def get_audio_correlations(self, time_range: str = 'day', sound_types: List[str] = None) -> List[Dict]:
+        """Get sound detection data for correlation analysis using linked_time from sound_new_sounds_connections"""
+        bucket_interval = {
+            'day': 1,
+            'week': 6,
+            'month': 24
+        }.get(time_range, 1)
+
+        time_filter_map = {
+            'day': "AND c.linked_time > NOW() - INTERVAL '24 hours'",
+            'week': "AND c.linked_time > NOW() - INTERVAL '7 days'",
+            'month': "AND c.linked_time > NOW() - INTERVAL '30 days'"
+        }
+        time_filter = time_filter_map.get(time_range, "AND c.linked_time > NOW() - INTERVAL '24 hours'")
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_list})"
+
+        query = f"""
+            SELECT
+                (date_trunc('hour', c.linked_time)
+                    - (INTERVAL '1 hour' * (EXTRACT(hour FROM c.linked_time)::int % {bucket_interval}))
+                ) AS time_bucket,
+                fa.head_pred_label AS sound_type,
+                COUNT(*) AS detection_count
+            FROM agcloud_audio.file_aggregates fa
+            JOIN public.sound_new_sounds_connections c
+            ON c.id = fa.file_id
+            WHERE fa.head_pred_label IS NOT NULL
+            {time_filter}
+            {sound_filter}
+            GROUP BY time_bucket, fa.head_pred_label
+            ORDER BY time_bucket ASC
+        """
+
+        return self.run_query(query)
+
+    def get_model_health_metrics(self, time_range: str = 'day', sound_types: List[str] = None) -> List[Dict]:
+        """Get model health metrics over time"""
+        bucket_interval = {
+            'day': 1,
+            'week': 6,
+            'month': 24
+        }.get(time_range, 1)
+
+        time_filter_map = {
+            'day': "AND r.started_at > NOW() - INTERVAL '24 hours'",
+            'week': "AND r.started_at > NOW() - INTERVAL '7 days'",
+            'month': "AND r.started_at > NOW() - INTERVAL '30 days'"
+        }
+        time_filter = time_filter_map.get(time_range, "AND r.started_at > NOW() - INTERVAL '24 hours'")
+
+        sound_filter = ""
+        if sound_types and len(sound_types) > 0:
+            sound_list = "'" + "','".join(sound_types) + "'"
+            sound_filter = f"AND fa.head_pred_label IN ({sound_filter})"
+
+        query = f"""
+            SELECT
+                date_trunc('hour', r.started_at) +
+                INTERVAL '{bucket_interval} hours' *
+                (EXTRACT(hour FROM r.started_at)::int / {bucket_interval}) as time_bucket,
+                AVG(fa.head_pred_prob) as avg_confidence,
+                AVG(fa.processing_ms) as avg_processing_ms,
+                COUNT(*) as total_predictions,
+                SUM(CASE WHEN fa.head_is_another = true THEN 1 ELSE 0 END) as unknown_count,
+                (SUM(CASE WHEN fa.head_is_another = true THEN 1 ELSE 0 END)::float /
+                 NULLIF(COUNT(*), 0)) * 100 as error_rate_pct
+            FROM agcloud_audio.file_aggregates fa
+            JOIN agcloud_audio.runs r ON fa.run_id = r.run_id
+            WHERE fa.head_pred_label IS NOT NULL
+              {time_filter}
+              {sound_filter}
+            GROUP BY time_bucket
+            ORDER BY time_bucket ASC
+        """
+
+        return self.run_query(query)
 
 
     # =====================================================
