@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QDate, QUrl, QTimer, pyqtSignal, QSize
 from PyQt6.QtGui import QPixmap, QColor, QCursor, QPainter, QFont
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 from dashboard_api import DashboardApi
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -18,6 +19,19 @@ from vast.dashboard_api import DashboardApi
 import requests
 import os
 import math
+import tempfile
+
+MINIO_BASE = os.getenv("MINIO_PUBLIC_BASE", "http://minio-hot:9000")
+
+def normalize_minio_url(url: str) -> str:
+    if not url:
+        return ""
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    url = url.lstrip("/")
+    if url.startswith("sounds/"):
+        url = "sound/" + url
+    return f"{MINIO_BASE.rstrip('/')}/{url}"
 
 
 # ==========================================================
@@ -38,9 +52,8 @@ class AudioWaveform(QWidget):
         self.setStyleSheet("""
             background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
                 stop:0 #0f0c29, stop:0.5 #302b63, stop:1 #24243e);
+            border: none;
             border-radius: 12px;
-            border: 3px solid qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #667eea, stop:1 #764ba2);
         """)
         
         self.default_text = "🎵 Press Play to Visualize Audio 🎵"
@@ -144,7 +157,7 @@ class MicrophoneButton(QPushButton):
         if mic_type == "audio":
             self.setFixedSize(70, 70)
             self.shape_style = "border-radius: 35px;"  
-        else:  # ultrasound
+        else:
             self.setFixedSize(70, 70)
             self.shape_style = "border-radius: 8px;" 
 
@@ -156,7 +169,6 @@ class MicrophoneButton(QPushButton):
         self.disabled_color = "#888888"
 
         self.update_style()
-
         self.setText(f"{mic_id.upper()}")
         self.setToolTip(f"<b>{mic_name}</b><br>Type: {mic_type}<br>Click to select")
 
@@ -199,9 +211,9 @@ class MicrophoneButton(QPushButton):
 #                 Interactive Map with Image
 # ==========================================================
 class ImageMapView(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, api=None):
         super().__init__(parent)
-
+        self.api = api  
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(15)
@@ -212,13 +224,11 @@ class ImageMapView(QWidget):
 
         self.stacked_widget = QStackedWidget()
         
-        # Map view page
         self.map_page = QWidget()
         layout = QVBoxLayout(self.map_page)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(15)
 
-        # Control panel
         control_panel = QFrame()
         control_panel.setStyleSheet("""
             QFrame {
@@ -294,13 +304,8 @@ class ImageMapView(QWidget):
         self.background_label.setGeometry(0, 0, 800, 600)
         self.background_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Load map image
         self._load_map_image()
 
-        # Microphone definitions
-        # Map to actual device_ids from docker-compose:
-        # MIC-01 = environment sounds (sounds/)
-        # MIC-02 = ultrasound plants (plants/)
         self.microphones = [
             {"id": "MIC-01", "name": "Environment Mic", "type": "audio", "position": (200, 150)},
             {"id": "MIC-02", "name": "Plant Ultrasound", "type": "ultrasound", "position": (500, 300)},
@@ -336,7 +341,6 @@ class ImageMapView(QWidget):
         self.main_layout.addWidget(self.stacked_widget)
 
     def _load_map_image(self):
-        """Load the map background image"""
         possible_paths = [
             "map_background.png",
             "./map_background.png",
@@ -430,7 +434,6 @@ class ImageMapView(QWidget):
         recordings_layout.setContentsMargins(0, 0, 0, 0)
         recordings_layout.setSpacing(0)
         
-        # Header
         header_container = QWidget()
         color = "#4A90E2" if self.selected_type == "audio" else "#50C878"
         header_container.setStyleSheet(f"background-color: {color};")
@@ -477,10 +480,11 @@ class ImageMapView(QWidget):
         sound_tab = RecordingsTab(
             mic_ids=mic_ids_list,
             recording_type=self.selected_type,
-            parent=self
+            parent=self,
+            api=self.api, 
         )
         recordings_layout.addWidget(sound_tab)
-        
+
         self.stacked_widget.addWidget(self.recordings_page)
         self.stacked_widget.setCurrentWidget(self.recordings_page)
     
@@ -491,7 +495,6 @@ class ImageMapView(QWidget):
 # ==========================================================
 #                      Recordings Tab
 # ==========================================================
-
 class RecordingsTab(QWidget):
     def __init__(self, mic_ids=None, recording_type="audio", parent=None, api=None):
         super().__init__(parent)
@@ -499,8 +502,6 @@ class RecordingsTab(QWidget):
         self.recording_type = recording_type
         self.api = api
 
-        
-        # API endpoints
         if recording_type == "ultrasound":
             self.api_url = "http://db_api_service:8001/api/files/plant-predictions/"
         else:
@@ -510,19 +511,15 @@ class RecordingsTab(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # Filters Frame
         filter_frame = self._create_filter_frame()
         
         list_label = QLabel("Available Recordings")
         list_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #333; padding: 5px;")
 
-        # Table setup
         self.file_table = self._create_table()
         
-        # Waveform
         waveform_container = self._create_waveform_container()
 
-        # Status
         self.status_label = QLabel("Ready")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
@@ -530,16 +527,22 @@ class RecordingsTab(QWidget):
             background-color: #f6f8fa; border-radius: 6px; border: 1px solid #d1d5da;
         """)
 
-        # Media player
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
+        self.audio_output.setVolume(1.0)
         self.player.setAudioOutput(self.audio_output)
         self.player.playbackStateChanged.connect(self.on_playback_state_changed)
+        self._current_temp_file = None
+        self._current_play_btn = None
+        self._current_stop_btn = None
 
         layout.addWidget(filter_frame)
         layout.addWidget(list_label)
         layout.addWidget(self.file_table, 1)
-        layout.addWidget(waveform_container)
+
+        if self.recording_type == "audio":
+            layout.addWidget(waveform_container)
+
         layout.addWidget(self.status_label)
 
         self.refresh_button.clicked.connect(self.update_list)
@@ -548,96 +551,125 @@ class RecordingsTab(QWidget):
     def _create_filter_frame(self):
         filter_frame = QFrame()
         filter_frame.setStyleSheet("""
-            QFrame { background-color: #ffffff; border: 2px solid #e1e4e8;
-                     border-radius: 12px; padding: 15px; }
+            QFrame { background-color: #ffffff; border-radius: 12px; padding: 15px; }
         """)
         filters_layout = QVBoxLayout(filter_frame)
         filters_layout.setSpacing(12)
 
-        # Row 1
-        row1 = QHBoxLayout()
-        row1.setSpacing(10)
+        filter_row = QHBoxLayout()
+        filter_row.setSpacing(8)
+        filter_row.setContentsMargins(0, 0, 0, 0)
 
-        type_label = QLabel("Filter by Type:")
-        type_label.setStyleSheet("font-weight: bold; color: #333;")
+        type_label = QLabel("Type:")
+        type_label.setStyleSheet("font-weight: bold; color: #333; font-size: 11px;")
+        filter_row.addWidget(type_label)
 
         self.noise_filter = QComboBox()
+        self.noise_filter.setMaximumWidth(180)
         self.noise_filter.setStyleSheet("""
-            QComboBox { padding: 8px; border: 2px solid #d1d5da; border-radius: 6px;
-                       background: white; min-width: 150px; }
-            QComboBox:hover { border: 2px solid #4A90E2; }
+            QComboBox { 
+                padding: 6px 10px; 
+                border: 1px solid #d1d5da; 
+                border-radius: 4px;
+                background: white; 
+                font-size: 12px;
+            }
+            QComboBox:hover { border: 1px solid #4A90E2; }
         """)
 
         if self.recording_type == "ultrasound":
             self.noise_filter.addItems([
-                "All signals", "Empty Pot", "Greenhouse Noises",
-                "Tobacco Cut", "Tobacco Dry", "Tomato Cut", "Tomato Dry"
+                "All signals", "Drought-stressed plant", 
+                "Empty Pot", "Greenhouse Noises"
             ])
         else:
             self.noise_filter.addItems([
                 "All types", "predatory_animals", "non_predatory_animals",
-                "birds", "fire", "footsteps", "insects",
-                "screaming", "shotgun", "stormy_weather",
-                "streaming_water", "vehicle", "Other"
+                "birds", "fire", "footsteps", "insects", "screaming", 
+                "shotgun", "stormy_weather", "streaming_water", "vehicle", "Other"
             ])
 
-        date_label = QLabel("Date Range:")
-        date_label.setStyleSheet("font-weight: bold; color: #333;")
+        filter_row.addWidget(self.noise_filter)
+
+        date_label = QLabel("  From:")
+        date_label.setStyleSheet("font-weight: bold; color: #333; font-size: 11px;")
+        filter_row.addWidget(date_label)
+
+        today = QDate.currentDate()
+        first_day = QDate(today.year(), today.month(), 1)
 
         self.date_from = QDateEdit()
         self.date_from.setCalendarPopup(True)
-        self.date_from.setDate(QDate.currentDate().addDays(-7))
+        self.date_from.setDate(first_day)
+        self.date_from.setMaximumWidth(120)
         self.date_from.setStyleSheet("""
-            QDateEdit { padding: 8px; border: 2px solid #d1d5da;
-                       border-radius: 6px; background: white; }
+            QDateEdit { 
+                padding: 6px 8px; 
+                border: 1px solid #d1d5da;
+                border-radius: 4px; 
+                background: white;
+                font-size: 12px;
+            }
         """)
+        filter_row.addWidget(self.date_from)
+
+        filter_row.addWidget(QLabel("→"))
 
         self.date_to = QDateEdit()
         self.date_to.setCalendarPopup(True)
-        self.date_to.setDate(QDate.currentDate())
+        self.date_to.setDate(today)
+        self.date_to.setMaximumWidth(120)
         self.date_to.setStyleSheet(self.date_from.styleSheet())
-
-        row1.addWidget(type_label)
-        row1.addWidget(self.noise_filter)
-        row1.addWidget(date_label)
-        row1.addWidget(self.date_from)
-        row1.addWidget(QLabel("→"))
-        row1.addWidget(self.date_to)
-
-        # Row 2
-        row2 = QHBoxLayout()
-        row2.setSpacing(10)
-
-        sort_label = QLabel("Sort by:")
-        sort_label.setStyleSheet("font-weight: bold; color: #333;")
-
-        self.sort_by = QComboBox()
-        self.sort_by.addItems(["Date (Newest)", "Date (Oldest)", "Length", "Device"])
-        self.sort_by.setStyleSheet(self.noise_filter.styleSheet())
+        filter_row.addWidget(self.date_to)
 
         self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("Search by filename...")
+        self.search_box.setPlaceholderText("Search filename...")
+        self.search_box.setMaximumWidth(200)
         self.search_box.setStyleSheet("""
-            QLineEdit { padding: 8px; border: 2px solid #d1d5da; border-radius: 6px;
-                       background: white; font-size: 14px; }
-            QLineEdit:focus { border: 2px solid #4A90E2; }
+            QLineEdit { 
+                padding: 6px 10px; 
+                border: 1px solid #d1d5da; 
+                border-radius: 4px;
+                background: white; 
+                font-size: 12px;
+            }
+            QLineEdit:focus { border: 1px solid #4A90E2; }
         """)
+        filter_row.addWidget(self.search_box)
+
+        filter_row.addStretch()
+
+        filter_row.addWidget(QLabel("sort by:"))
+        self.sort_by = QComboBox()
+        self.sort_by.addItems(["date", "name", "device"])
+        self.sort_by.setMaximumWidth(130)
+        self.sort_by.setStyleSheet("""
+            QComboBox {
+                padding: 6px 10px;
+                border: 1px solid #d1d5da;
+                border-radius: 4px;
+                background: white;
+                font-size: 12px;
+            }
+        """)
+        filter_row.addWidget(self.sort_by)
 
         self.refresh_button = QPushButton("🔄 Refresh")
         self.refresh_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.refresh_button.setStyleSheet("""
-            QPushButton { background-color: #4A90E2; color: white; border-radius: 8px;
-                         padding: 10px 20px; font-weight: bold; font-size: 14px; }
+            QPushButton { 
+                background-color: #4A90E2; 
+                color: white; 
+                border-radius: 6px;
+                padding: 8px 16px; 
+                font-weight: bold; 
+                font-size: 12px;
+            }
             QPushButton:hover { background-color: #357ABD; }
         """)
+        filter_row.addWidget(self.refresh_button)
 
-        row2.addWidget(sort_label)
-        row2.addWidget(self.sort_by)
-        row2.addWidget(self.search_box, 2)
-        row2.addWidget(self.refresh_button)
-
-        filters_layout.addLayout(row1)
-        filters_layout.addLayout(row2)
+        filters_layout.addLayout(filter_row)
         
         return filter_frame
 
@@ -647,12 +679,12 @@ class RecordingsTab(QWidget):
         if self.recording_type == "ultrasound":
             table.setColumnCount(6)
             table.setHorizontalHeaderLabels([
-                "File", "Device", "Predicted Class", "Confidence", "Watering Status", "Actions"
+                "File", "Device", "Predicted Label", "Confidence", "Watering Status", "Format"
             ])
         else:
             table.setColumnCount(6)
             table.setHorizontalHeaderLabels([
-                "Filename", "Device", "Predicted Label", "Probability", "Format", "Actions"
+                "File", "Device", "Predicted Label", "Probability", "Format", "Actions"
             ])
 
         header = table.horizontalHeader()
@@ -690,34 +722,43 @@ class RecordingsTab(QWidget):
     def _create_waveform_container(self):
         waveform_container = QFrame()
         waveform_container.setStyleSheet("""
-            QFrame { background-color: #ffffff; border: 2px solid #4A90E2;
-                    border-radius: 10px; padding: 10px; }
+            QFrame {
+                background-color: transparent;
+                border: none;
+                padding: 0px;
+            }
         """)
+
         waveform_layout = QVBoxLayout(waveform_container)
         waveform_layout.setSpacing(5)
         
-        waveform_label = QLabel("🎵 Audio Visualizer")
-        waveform_label.setStyleSheet("""
-            font-size: 16px; font-weight: bold; color: #4A90E2; padding: 5px;
-        """)
-        waveform_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
         self.waveform = AudioWaveform()
-        self.waveform.setMinimumHeight(150)
+        self.waveform.setMinimumHeight(100)
+        self.waveform.setMaximumHeight(120)
         
-        waveform_layout.addWidget(waveform_label)
         waveform_layout.addWidget(self.waveform)
         
         return waveform_container
     
     def on_playback_state_changed(self, state):
-        print("[DEBUG] Playback state:", state)
         if state == QMediaPlayer.PlaybackState.PlayingState:
             self.waveform.start_animation()
         elif state == QMediaPlayer.PlaybackState.StoppedState:
             self.waveform.stop_animation()
             if self.status_label.text().startswith("Playing:"):
                 self.status_label.setText("Finished")
+            if hasattr(self, '_current_play_btn') and self._current_play_btn:
+                self._reset_button_pair(self._current_play_btn, self._current_stop_btn)
+                self._current_play_btn = None
+                self._current_stop_btn = None
+
+    def _map_ultrasound_label(self, raw: str) -> str:
+        if not raw:
+            return "Unknown"
+        lower = raw.lower()
+        if "tomato" in lower or "tobacco" in lower:
+            return "Drought-stressed plant"
+        return raw
 
     def update_list(self):
         self.file_table.setRowCount(0)
@@ -732,47 +773,53 @@ class RecordingsTab(QWidget):
             "limit": 100
         }
         
-        # Add type filter
         filter_value = self.noise_filter.currentText()
         if self.recording_type == "ultrasound":
-            if filter_value not in ("All signals", "All types"):
+            if filter_value in ("Empty Pot", "Greenhouse Noises"):
                 params["predicted_class"] = filter_value
         else:
             if filter_value not in ("All types", "All signals"):
                 params["type"] = filter_value
         
-        # Add device IDs if provided
         if self.mic_ids:
             params["device_ids"] = ",".join(self.mic_ids)
         
         try:
-            # response = requests.get(self.api_url, params=params, timeout=10)
+            # Check if API is available and authenticated
+            if not self.api or not hasattr(self.api, 'http'):
+                self.status_label.setText("⚠ API connection not available")
+                QMessageBox.warning(
+                    self, 
+                    "Authentication Required",
+                    "Please login first to access recordings."
+                )
+                return
+            
+            # Use the authenticated session
             response = self.api.http.get(self.api_url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
-
-            print(f"[DEBUG] Fetched {len(data)} records from {self.api_url}")
-
-            # Populate table
+            
+            print(f"[DEBUG] Successfully fetched {len(data)} records from {self.api_url}")
             for f in data:
                 row = self.file_table.rowCount()
                 self.file_table.insertRow(row)
                 self.file_table.setRowHeight(row, 60)
 
-                # Check if compressed
+                filename = f.get("filename") or f.get("file", "")
                 is_compressed = f.get("is_compressed", False)
                 
-                # Set text color based on compression
                 text_color = QColor("#888888") if is_compressed else QColor("#000000")
 
                 if self.recording_type == "ultrasound":
-                    # Ultrasonic plant predictions
-                    filename = f.get("file", "N/A")
                     device_id = f.get("device_id", "N/A")
-                    pred_class = f.get("predicted_class", "Unknown")
+                    pred_class_raw = f.get("predicted_class", "Unknown")
+                    pred_class = self._map_ultrasound_label(pred_class_raw)
                     confidence = f.get("confidence", 0)
                     watering_status = f.get("watering_status", "N/A")
-                    url = f.get("url", "")
+                    url = normalize_minio_url(f.get("url", ""))
+
+                    format_str = "OPUS (Compressed)" if is_compressed else "WAV (Original)"
 
                     item0 = QTableWidgetItem(filename)
                     item0.setForeground(text_color)
@@ -793,13 +840,16 @@ class RecordingsTab(QWidget):
                     item4 = QTableWidgetItem(watering_status)
                     item4.setForeground(text_color)
                     self.file_table.setItem(row, 4, item4)
+                    
+                    item5 = QTableWidgetItem(format_str)
+                    item5.setForeground(text_color)
+                    self.file_table.setItem(row, 5, item5)
                 else:
-                    # Audio aggregates
-                    filename = f.get("filename", "N/A")
                     device_id = f.get("device_id", "N/A")
                     label = f.get("predicted_label", "Unknown")
                     prob = f.get("probability", 0)
-                    url = f.get("url", "")
+                    url = normalize_minio_url(f.get("url", ""))
+
                     format_str = "OPUS (Compressed)" if is_compressed else "WAV (Original)"
 
                     item0 = QTableWidgetItem(filename)
@@ -822,74 +872,71 @@ class RecordingsTab(QWidget):
                     item4.setForeground(text_color)
                     self.file_table.setItem(row, 4, item4)
 
-                # Actions column with Play/Stop buttons
-                control_widget = QWidget()
-                control_layout = QHBoxLayout(control_widget)
-                control_layout.setContentsMargins(2, 2, 2, 2)
-                control_layout.setSpacing(6)
+                if self.recording_type == "audio":
+                    control_widget = QWidget()
+                    control_layout = QHBoxLayout(control_widget)
+                    control_layout.setContentsMargins(2, 2, 2, 2)
+                    control_layout.setSpacing(6)
 
-                play_btn = QPushButton("▶")
-                play_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                play_btn.setFixedSize(35, 30)
+                    play_btn = QPushButton("▶")
+                    play_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    play_btn.setFixedSize(35, 30)
 
-                # Adjust button style for compressed files
-                if is_compressed:
-                    play_btn.setStyleSheet("""
+                    if is_compressed:
+                        play_btn.setStyleSheet("""
+                            QPushButton {
+                                background-color: #888888;
+                                color: white;
+                                border-radius: 4px;
+                                font-weight: bold;
+                            }
+                            QPushButton:hover:enabled { background-color: #666666; }
+                            QPushButton:disabled { background-color: #cccccc; color: #888888; }
+                        """)
+                        play_btn.setToolTip("Compressed OPUS file - may have compatibility issues")
+                    else:
+                        play_btn.setStyleSheet("""
+                            QPushButton {
+                                background-color: #0078d4;
+                                color: white;
+                                border-radius: 4px;
+                                font-weight: bold;
+                            }
+                            QPushButton:hover:enabled { background-color: #005fa3; }
+                            QPushButton:disabled { background-color: #cccccc; color: #888888; }
+                        """)
+
+                    stop_btn = QPushButton("⏹")
+                    stop_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    stop_btn.setFixedSize(35, 30)
+                    stop_btn.setEnabled(False)
+                    stop_btn.setStyleSheet("""
                         QPushButton {
-                            background-color: #888888;
+                            background-color: #6c757d;
                             color: white;
                             border-radius: 4px;
                             font-weight: bold;
                         }
-                        QPushButton:hover:enabled { background-color: #666666; }
-                        QPushButton:disabled { background-color: #cccccc; color: #888888; }
-                    """)
-                    play_btn.setToolTip("Compressed OPUS file - may have compatibility issues")
-                else:
-                    play_btn.setStyleSheet("""
-                        QPushButton {
-                            background-color: #0078d4;
-                            color: white;
-                            border-radius: 4px;
-                            font-weight: bold;
-                        }
-                        QPushButton:hover:enabled { background-color: #005fa3; }
-                        QPushButton:disabled { background-color: #cccccc; color: #888888; }
+                        QPushButton:disabled { background-color: #b0b0b0; }
+                        QPushButton:hover:enabled { background-color: #c82333; }
                     """)
 
-                stop_btn = QPushButton("⏹")
-                stop_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                stop_btn.setFixedSize(35, 30)
-                stop_btn.setEnabled(False)
-                stop_btn.setStyleSheet("""
-                    QPushButton {
-                        background-color: #6c757d;
-                        color: white;
-                        border-radius: 4px;
-                        font-weight: bold;
-                    }
-                    QPushButton:disabled { background-color: #b0b0b0; }
-                    QPushButton:hover:enabled { background-color: #c82333; }
-                """)
+                    play_btn.setProperty("row", row)
+                    stop_btn.setProperty("row", row)
 
-                # Store current row buttons for state management
-                play_btn.setProperty("row", row)
-                stop_btn.setProperty("row", row)
+                    play_btn.clicked.connect(
+                        lambda checked=False, u=url, fname=filename, pb=play_btn, sb=stop_btn, compressed=is_compressed: 
+                        self.play_row_audio(u, fname, pb, sb, compressed)
+                    )
+                    stop_btn.clicked.connect(
+                        lambda checked=False, pb=play_btn, sb=stop_btn: 
+                        self.stop_row_audio(pb, sb)
+                    )
 
-                play_btn.clicked.connect(
-                    lambda checked=False, u=url, fname=filename, pb=play_btn, sb=stop_btn, compressed=is_compressed: 
-                    self.play_row_audio(u, fname, pb, sb, compressed)
-                )
-                stop_btn.clicked.connect(
-                    lambda checked=False, pb=play_btn, sb=stop_btn: 
-                    self.stop_row_audio(pb, sb)
-                )
+                    control_layout.addWidget(play_btn)
+                    control_layout.addWidget(stop_btn)
 
-                control_layout.addWidget(play_btn)
-                control_layout.addWidget(stop_btn)
-
-                # Set correct column index for Actions (column 5 for both types now)
-                self.file_table.setCellWidget(row, 5, control_widget)
+                    self.file_table.setCellWidget(row, 5, control_widget)
 
             if self.file_table.rowCount() == 0:
                 self.file_table.insertRow(0)
@@ -900,155 +947,179 @@ class RecordingsTab(QWidget):
 
             self.status_label.setText(f"✓ Loaded {len(data)} recordings")
 
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                self.status_label.setText("⚠ Authentication required")
+                QMessageBox.warning(self, "Authentication Error", 
+                                "API requires authentication. Please check your credentials.")
+            else:
+                self.status_label.setText(f"⚠ HTTP Error {e.response.status_code}")
+                QMessageBox.warning(self, "HTTP Error", 
+                                f"Server returned error {e.response.status_code}:\n{str(e)}")
         except requests.exceptions.Timeout:
             self.status_label.setText("⚠ Request timeout")
             QMessageBox.warning(self, "Timeout", "Request timed out. Please try again.")
         except requests.exceptions.ConnectionError:
             self.status_label.setText("⚠ Connection error")
             QMessageBox.warning(self, "Connection Error", 
-                              "Could not connect to server. Check your connection.")
+                            "Could not connect to server. Check your connection.")
         except Exception as e:
             self.status_label.setText("⚠ Error loading data")
             QMessageBox.warning(self, "Error", f"Failed to load recordings:\n{str(e)}")
-
+                
     def play_row_audio(self, url, filename, play_btn, stop_btn, is_compressed=False):
-        """Play audio from MinIO URL"""
         if not url:
             QMessageBox.warning(self, "No URL", "Audio file URL not available")
             return
-
-        # Stop any currently playing audio first
+        
         self.player.stop()
+        self.waveform.stop_animation()
         
-        print(f"[DEBUG] Attempting to play: {url}")
+        try:
+            if self._current_temp_file:
+                if os.path.exists(self._current_temp_file):
+                    os.remove(self._current_temp_file)
+        except Exception:
+            pass
+        self._current_temp_file = None
         
-        # Warn about compressed files
+        playback_url = url
+        if url.startswith("http://localhost") or url.startswith("http://127.0.0.1"):
+            parts = url.split("/", 3)
+            if len(parts) > 3:
+                path = parts[3]
+                playback_url = f"http://minio-hot:9000/{path}"
+        
         if is_compressed:
             reply = QMessageBox.question(
-                self, 
-                "Compressed File", 
+                self,
+                "Compressed File",
                 "This is a compressed OPUS file. Playback may not work properly.\n\nContinue anyway?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.No:
                 return
-
-        # Test MinIO connectivity
+        
         try:
-            print(f"[DEBUG] Testing URL accessibility: {url}")
-            check = requests.head(url, timeout=3)
-            print(f"[DEBUG] MinIO response: {check.status_code}")
-            
-            if check.status_code == 403:
-                QMessageBox.warning(self, "Access Denied",
-                    f"MinIO returned 403 Forbidden.\n\nThe bucket may not be public.\n\nURL: {url}")
-                return
-            elif check.status_code == 404:
-                QMessageBox.warning(self, "File Not Found",
-                    f"MinIO returned 404 Not Found.\n\nThe file may have been deleted.\n\nURL: {url}")
-                return
-            elif check.status_code != 200:
-                QMessageBox.warning(self, "MinIO Error",
-                    f"MinIO returned status {check.status_code}\n\nURL: {url}")
-                return
-                
-        except requests.exceptions.ConnectionError as e:
-            QMessageBox.warning(self, "Connection Error",
-                f"Cannot connect to MinIO server.\n\nMake sure MinIO is running.\n\nError: {str(e)[:200]}")
-            return
-        except requests.exceptions.Timeout:
-            QMessageBox.warning(self, "Timeout",
-                "MinIO request timed out.\n\nThe server may be slow or unreachable.")
+            session = self.api.http if (self.api and getattr(self.api, "http", None)) else requests
+            resp = session.get(playback_url, timeout=15)
+            resp.raise_for_status()
+            suffix = ".ogg" if is_compressed else ".wav"
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            tmp.write(resp.content)
+            tmp.flush()
+            tmp_path = tmp.name
+            tmp.close()
+            self._current_temp_file = tmp_path
+        except requests.exceptions.RequestException as e:
+            self.status_label.setText("⚠ Unable to download file")
+            QMessageBox.warning(self, "Download Error", f"Could not download audio file:\n{e}")
             return
         except Exception as e:
-            QMessageBox.warning(self, "Network Error",
-                f"Failed to reach MinIO:\n\n{str(e)[:200]}")
+            self.status_label.setText("⚠ Error downloading file")
+            QMessageBox.warning(self, "Error", f"Failed to download audio file:\n{e}")
             return
+        
+        try:
+            self._reset_all_buttons()
+            
+            play_btn.setEnabled(False)
+            play_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #888888;
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+            """)
+            
+            stop_btn.setEnabled(True)
+            stop_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #dc3545;
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover { background-color: #c82333; }
+            """)
+            
+            self.player.setSource(QUrl.fromLocalFile(self._current_temp_file))
+            self.player.play()
+            self.waveform.start_animation()
+            self.status_label.setText(f"Playing: {filename}")
+            
+            self._current_play_btn = play_btn
+            self._current_stop_btn = stop_btn
+            
+        except Exception as e:
+            self.status_label.setText("⚠ Playback error")
+            QMessageBox.warning(self, "Playback Error", f"Playback failed:\n{e}")
+            self._reset_all_buttons()
 
-        # Update UI
-        self.waveform.start_animation()
-        status_text = f"▶ Playing: {filename}"
-        if is_compressed:
-            status_text += " (Compressed)"
-        self.status_label.setText(status_text)
+    def stop_row_audio(self, play_btn, stop_btn):
+        self.player.stop()
+        self.waveform.stop_animation()
+        self.status_label.setText("⏹ Stopped")
+        self._reset_button_pair(play_btn, stop_btn)
 
-        # Disable all play buttons, enable this stop button
-        self._disable_all_play_buttons()
-        play_btn.setEnabled(False)
-        stop_btn.setEnabled(True)
+    def _reset_button_pair(self, play_btn, stop_btn):
+        if play_btn.toolTip() and "Compressed" in play_btn.toolTip():
+             play_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #888888;
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover:enabled { background-color: #666666; }
+                QPushButton:disabled { background-color: #cccccc; color: #888888; }
+            """)
+        else:
+            play_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078d4;
+                    color: white;
+                    border-radius: 4px;
+                    font-weight: bold;
+                }
+                QPushButton:hover:enabled { background-color: #005fa3; }
+                QPushButton:disabled { background-color: #cccccc; color: #888888; }
+            """)
+        play_btn.setEnabled(True)
+        
+        stop_btn.setEnabled(False)
         stop_btn.setStyleSheet("""
             QPushButton {
-                background-color: #dc3545;
+                background-color: #6c757d;
                 color: white;
                 border-radius: 4px;
                 font-weight: bold;
             }
-            QPushButton:hover { background-color: #c82333; }
+            QPushButton:disabled { background-color: #b0b0b0; }
+            QPushButton:hover:enabled { background-color: #c82333; }
         """)
 
-        try:
-            # Set audio source and play
-            qurl = QUrl(url)
-            print(f"[DEBUG] QUrl created: {qurl.toString()}")
-            self.player.setSource(qurl)
-            self.player.play()
-            print(f"[DEBUG] Player state after play(): {self.player.playbackState()}")
-            
-        except Exception as e:
-            print(f"[ERROR] Playback failed: {e}")
-            self.waveform.stop_animation()
-            self.status_label.setText("⚠ Playback failed")
-            QMessageBox.warning(self, "Playback Error", f"Failed to play audio:\n{str(e)}")
-            self._enable_all_play_buttons()
-            stop_btn.setEnabled(False)
-
-    def stop_row_audio(self, play_btn, stop_btn):
-        """Stop currently playing audio"""
-        self.player.stop()
-        self.waveform.stop_animation()
-        self.status_label.setText("⏹ Stopped")
-
-        # Re-enable all play buttons
-        self._enable_all_play_buttons()
-
-    def _disable_all_play_buttons(self):
-        """Disable all play buttons in the table"""
+    def _reset_all_buttons(self):
+        if self.recording_type != "audio":
+            return
+        
+        actions_col = 5
         for row in range(self.file_table.rowCount()):
-            widget = self.file_table.cellWidget(row, 6)
-            if widget:
-                layout = widget.layout()
-                if layout and layout.count() >= 1:
-                    play_btn = layout.itemAt(0).widget()
-                    if play_btn:
-                        play_btn.setEnabled(False)
-
-    def _enable_all_play_buttons(self):
-        """Enable all play buttons and disable all stop buttons"""
-        for row in range(self.file_table.rowCount()):
-            widget = self.file_table.cellWidget(row, 5)
+            widget = self.file_table.cellWidget(row, actions_col)
             if widget:
                 layout = widget.layout()
                 if layout and layout.count() >= 2:
                     play_btn = layout.itemAt(0).widget()
                     stop_btn = layout.itemAt(1).widget()
-                    if play_btn:
-                        play_btn.setEnabled(True)
-                    if stop_btn:
-                        stop_btn.setEnabled(False)
-                        stop_btn.setStyleSheet("""
-                            QPushButton {
-                                background-color: #6c757d;
-                                color: white;
-                                border-radius: 4px;
-                                font-weight: bold;
-                            }
-                            QPushButton:disabled { background-color: #b0b0b0; }
-                        """)
+                    if play_btn and stop_btn and isinstance(play_btn, QPushButton):
+                        self._reset_button_pair(play_btn, stop_btn)
+
 
 # ==========================================================
-#                 Analytics Dashboard Tab
+# Sound Analytics View - NEW TAB from first document
 # ==========================================================
-class AnalyticsDashboard(QWidget):
+class SoundAnalyticsView(QWidget):
     """Sound detection dashboard with filtering by time range and sound type"""
     
     SOUND_TYPES = [
@@ -1065,28 +1136,22 @@ class AnalyticsDashboard(QWidget):
         "vehicle"
     ]
     
-    # 11 shades of green palette
-    GREEN_PALETTE = [
-        '#004d00',  # Dark green
-        '#006600',
-        '#008000',  # Green
-        '#1a9900',
-        '#33b300',
-        '#4dcc00',
-        '#66e600',
-        '#80ff00',
-        '#99ff33',
-        '#b3ff66',
-        '#ccff99'   # Light green
+    CYAN_PALETTE = [
+        '#003366', '#004d99', '#0066cc', '#1a80e5',
+        '#3399ff', '#53A0E5', '#66b3ff', '#80ccff',
+        '#99e6ff', '#b3f0ff', '#ccf7ff'
     ]
+    
+    PRIMARY_CYAN = '#53A0E5'
+    ACCENT_CYAN = '#3399ff'
     
     LIGHT_THEME = {
         'bg': '#f8f9fa',
         'card': '#ffffff',
         'text': '#333333',
         'border': '#e0e0e0',
-        'primary': '#1976D2',
-        'accent': '#4dcc00'
+        'primary': PRIMARY_CYAN,
+        'accent': ACCENT_CYAN
     }
     
     DARK_THEME = {
@@ -1095,35 +1160,42 @@ class AnalyticsDashboard(QWidget):
         'text': '#e0e0e0',
         'border': '#444444',
         'primary': '#64B5F6',
-        'accent': '#66e600'
+        'accent': ACCENT_CYAN
     }
     
     def __init__(self, api: DashboardApi, parent=None):
         super().__init__(parent)
         self.api = api
+
+        # בדיקה ראשונית
+        print(f"[INIT] API object: {self.api}", flush=True)
+        print(f"[INIT] API has http: {hasattr(self.api, 'http')}", flush=True)
+        
+        # נסה לבדוק connection
+        try:
+            test_query = "SELECT 1 as test"
+            result = self.api.run_query(test_query)
+            print(f"[INIT] DB test result: {result}", flush=True)
+        except Exception as e:
+            print(f"[INIT] DB connection error: {e}", flush=True)
+
         self.current_time_range = 'day'
-        self.current_sound_types = []  # Multi-select list
+        self.current_sound_types = []
         self.is_dark_theme = False
         self.current_theme = self.LIGHT_THEME.copy()
         
+        self.setWindowTitle("Sound Detection Analytics")
         self.setMinimumSize(QSize(1350, 1000))
 
-        # Main layout
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Toolbar
-        toolbar = self._create_control_panel()
-        main_layout.addWidget(toolbar)
-
-        # Content frame
         content_frame = QFrame()
         content_layout = QVBoxLayout()
         content_layout.setContentsMargins(12, 12, 12, 12)
         content_layout.setSpacing(12)
 
-        # Filter frame
         filter_frame = QFrame()
         filter_frame.setStyleSheet("""
             QFrame {
@@ -1137,7 +1209,6 @@ class AnalyticsDashboard(QWidget):
         filter_layout.setContentsMargins(12, 10, 12, 10)
         filter_layout.setSpacing(15)
 
-        # Time range row
         time_row = QHBoxLayout()
         time_label = QLabel("Time Range:")
         time_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
@@ -1151,14 +1222,13 @@ class AnalyticsDashboard(QWidget):
         time_row.addStretch()
         filter_layout.addLayout(time_row)
 
-        # Sound types header
         sound_header_row = QHBoxLayout()
         sound_label = QLabel("Sound Types (select multiple):")
         sound_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         sound_header_row.addWidget(sound_label)
 
         self.selection_label = QLabel("All sounds selected")
-        self.selection_label.setStyleSheet("color: #1976D2; font-weight: bold;")
+        self.selection_label.setStyleSheet(f"color: {self.PRIMARY_CYAN}; font-weight: bold;")
         sound_header_row.addWidget(self.selection_label)
         sound_header_row.addStretch()
 
@@ -1169,30 +1239,29 @@ class AnalyticsDashboard(QWidget):
 
         apply_btn = QPushButton("Apply Filter")
         apply_btn.setMaximumWidth(100)
-        apply_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1976D2;
+        apply_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {self.PRIMARY_CYAN};
                 color: white;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1565C0;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {self.CYAN_PALETTE[2]};
+            }}
         """)
         apply_btn.clicked.connect(self._refresh_data)
         sound_header_row.addWidget(apply_btn)
         filter_layout.addLayout(sound_header_row)
 
-        # Checkbox container
         checkbox_container = QFrame()
         checkbox_container.setObjectName("checkboxContainer")
-        checkbox_container.setStyleSheet("""
-            QFrame#checkboxContainer {
+        checkbox_container.setStyleSheet(f"""
+            QFrame#checkboxContainer {{
                 background-color: white;
-                border: 2px solid #1976D2;
+                border: 2px solid {self.PRIMARY_CYAN};
                 border-radius: 6px;
                 max-height: 350px;
-            }
+            }}
         """)
         checkbox_layout = QGridLayout()
         checkbox_layout.setSpacing(5)
@@ -1212,11 +1281,9 @@ class AnalyticsDashboard(QWidget):
         filter_frame.setLayout(filter_layout)
         content_layout.addWidget(filter_frame)
 
-        # Activity calendar
         calendar_frame = self._create_activity_calendar()
         content_layout.addWidget(calendar_frame)
 
-        # Chart grid
         grid = QGridLayout()
         grid.setSpacing(12)
         grid.setRowStretch(0, 1)
@@ -1225,7 +1292,6 @@ class AnalyticsDashboard(QWidget):
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
 
-        # Helper function for uniform frames
         def make_chart_frame(title, canvas):
             frame = self._create_chart_frame(title, canvas)
             frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -1233,21 +1299,18 @@ class AnalyticsDashboard(QWidget):
             frame.setMaximumHeight(320)
             return frame
 
-        # Row 1
         self.dist_canvas = self._create_canvas(figsize=(6, 5))
         grid.addWidget(make_chart_frame("Sound Distribution (Count)", self.dist_canvas), 0, 0)
 
         self.timeline_canvas = self._create_canvas(figsize=(6, 5))
         grid.addWidget(make_chart_frame("Detection Timeline", self.timeline_canvas), 0, 1)
 
-        # Row 2
         self.heatmap_canvas = self._create_canvas(figsize=(6, 5))
         grid.addWidget(make_chart_frame("Sound Heatmap - Activity Patterns", self.heatmap_canvas), 1, 0)
 
         self.correlation_canvas = self._create_canvas(figsize=(6, 5))
         grid.addWidget(make_chart_frame("Correlation Explorer", self.correlation_canvas), 1, 1)
 
-        # Row 3
         self.confidence_canvas = self._create_canvas(figsize=(6, 5))
         grid.addWidget(make_chart_frame("Model Health Monitor", self.confidence_canvas), 2, 0)
 
@@ -1257,7 +1320,6 @@ class AnalyticsDashboard(QWidget):
         stats_frame.setMaximumHeight(320)
         grid.addWidget(stats_frame, 2, 1)
 
-        # Add grid to content
         content_layout.addLayout(grid, stretch=10)
         content_frame.setLayout(content_layout)
 
@@ -1270,42 +1332,13 @@ class AnalyticsDashboard(QWidget):
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
 
-        # Timer
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self._refresh_data)
-        self.refresh_timer.start(30000)  # 30 seconds
+        self.refresh_timer.start(30000)
 
-        # Initial load
         self._refresh_data()
     
-    def _create_control_panel(self) -> QToolBar:
-        """Create toolbar with control buttons: Refresh, Export CSV, Toggle Theme"""
-        toolbar = QToolBar("Control Panel")
-        toolbar.setMovable(False)
-        toolbar.setIconSize(QSize(16, 16))
-        toolbar.setStyleSheet("""
-            QToolBar {
-                background-color: #f0f0f0;
-                border-bottom: 1px solid #ddd;
-                spacing: 10px;
-                padding: 8px;
-            }
-            QToolButton {
-                padding: 6px 12px;
-                font-weight: bold;
-            }
-        """)
-        
-        toolbar.addAction("🔄 Refresh", self._refresh_data)
-        toolbar.addSeparator()
-        toolbar.addAction("💾 Export CSV", self._export_csv)
-        toolbar.addSeparator()
-        toolbar.addAction("🌓 Toggle Theme", self._toggle_theme)
-        
-        return toolbar
-    
     def _create_activity_calendar(self) -> QFrame:
-        """Create a calendar showing detection activity per day"""
         frame = QFrame()
         frame.setStyleSheet("""
             QFrame {
@@ -1324,7 +1357,6 @@ class AnalyticsDashboard(QWidget):
         title.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         layout.addWidget(title)
         
-        # Create grid for calendar
         calendar_grid = QHBoxLayout()
         calendar_grid.setSpacing(2)
         
@@ -1335,7 +1367,6 @@ class AnalyticsDashboard(QWidget):
             day_box.setMinimumSize(QSize(20, 20))
             day_box.setMaximumSize(QSize(20, 20))
             
-            # Random intensity for demo (replace with real data from API)
             intensity = np.random.rand()
             color = self._get_intensity_color(intensity)
             
@@ -1363,117 +1394,23 @@ class AnalyticsDashboard(QWidget):
         return frame
     
     def _get_intensity_color(self, intensity: float) -> str:
-        """Map intensity (0-1) to green color from palette"""
         if intensity < 0.2:
-            return self.GREEN_PALETTE[0]
+            return self.CYAN_PALETTE[0]
         elif intensity < 0.4:
-            return self.GREEN_PALETTE[2]
+            return self.CYAN_PALETTE[2]
         elif intensity < 0.6:
-            return self.GREEN_PALETTE[4]
+            return self.CYAN_PALETTE[4]
         elif intensity < 0.8:
-            return self.GREEN_PALETTE[7]
+            return self.CYAN_PALETTE[7]
         else:
-            return self.GREEN_PALETTE[10]
-    
-    def _toggle_theme(self):
-        """Toggle between light and dark theme"""
-        self.is_dark_theme = not self.is_dark_theme
-        self.current_theme = self.DARK_THEME.copy() if self.is_dark_theme else self.LIGHT_THEME.copy()
-        self._apply_theme()
-        self._refresh_data()
-    
-    def _apply_theme(self):
-        """Apply current theme to all widgets"""
-        theme = self.current_theme
-        
-        self.setStyleSheet(f"""
-            AnalyticsDashboard {{
-                background-color: {theme['bg']};
-            }}
-            QComboBox {{
-                padding: 8px 12px;
-                border: 2px solid {theme['border']};
-                border-radius: 6px;
-                background-color: {theme['card']};
-                color: {theme['text']};
-                min-width: 200px;
-                font-size: 10pt;
-                font-weight: 500;
-            }}
-            QComboBox:hover {{
-                border: 2px solid {theme['primary']};
-            }}
-            QCheckBox {{
-                padding: 6px 12px;
-                font-size: 10pt;
-                color: {theme['text']};
-            }}
-            QCheckBox:hover {{
-                background-color: {theme['primary']};
-            }}
-            QLabel {{
-                color: {theme['text']};
-            }}
-            QPushButton {{
-                padding: 6px 12px;
-                background-color: {theme['card']};
-                border: 1px solid {theme['border']};
-                border-radius: 4px;
-                font-weight: bold;
-                color: {theme['text']};
-            }}
-            QPushButton:hover {{
-                background-color: {theme['primary']};
-                color: white;
-            }}
-            QFrame {{
-                background-color: {theme['card']};
-                border: 1px solid {theme['border']};
-                border-radius: 8px;
-            }}
-            QToolBar {{
-                background-color: {theme['card']};
-                border-bottom: 1px solid {theme['border']};
-            }}
-        """)
-    
-    def _export_csv(self):
-        """Export current data to CSV"""
-        try:
-            import csv
-            
-            filename = f"sound_detection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            
-            sound_filter = self.current_sound_types if self.current_sound_types else None
-            data = self.api.get_audio_distribution(
-                self.current_time_range,
-                limit=100,
-                sound_types=sound_filter
-            )
-            
-            with open(filename, 'w', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=['sound_type', 'count'])
-                writer.writeheader()
-                for row in data:
-                    writer.writerow({
-                        'sound_type': row.get('head_pred_label'),
-                        'count': row.get('count')
-                    })
-            
-            QMessageBox.information(self, "Success", f"Data exported to {filename}")
-            print(f"[AnalyticsDashboard] Data exported to {filename}", flush=True)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Export failed: {str(e)}")
-            print(f"[AnalyticsDashboard] Export error: {e}", flush=True)
+            return self.CYAN_PALETTE[10]
     
     def _create_canvas(self, figsize=(5.5, 4.5)):
-        """Create matplotlib canvas for chart"""
         canvas = FigureCanvas(Figure(figsize=figsize, dpi=90))
         canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         return canvas
     
     def _create_chart_frame(self, title: str, widget: QWidget) -> QFrame:
-        """Create a framed chart container"""
         frame = QFrame()
         frame.setStyleSheet("""
             QFrame {
@@ -1489,7 +1426,7 @@ class AnalyticsDashboard(QWidget):
         
         title_label = QLabel(title)
         title_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #1976D2; margin-bottom: 4px;")
+        title_label.setStyleSheet(f"color: {self.PRIMARY_CYAN}; margin-bottom: 4px;")
         layout.addWidget(title_label)
         
         layout.addWidget(widget, 1)
@@ -1497,7 +1434,6 @@ class AnalyticsDashboard(QWidget):
         return frame
     
     def _create_stats_frame(self) -> QFrame:
-        """Create frame with 4 stat boxes in 2x2 grid"""
         frame = QFrame()
         frame.setStyleSheet("""
             QFrame {
@@ -1513,7 +1449,7 @@ class AnalyticsDashboard(QWidget):
         
         title_label = QLabel("Statistics")
         title_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #1976D2; margin-bottom: 6px;")
+        title_label.setStyleSheet(f"color: {self.PRIMARY_CYAN}; margin-bottom: 6px;")
         layout.addWidget(title_label)
         
         stats_grid = QGridLayout()
@@ -1523,7 +1459,6 @@ class AnalyticsDashboard(QWidget):
         stats_grid.setColumnStretch(0, 1)
         stats_grid.setColumnStretch(1, 1)
         
-        # Store references for updating
         self.stat_boxes = {}
         
         stat_names = [
@@ -1545,7 +1480,6 @@ class AnalyticsDashboard(QWidget):
         return frame
     
     def _create_stat_box(self, label: str) -> QFrame:
-        """Create a single statistic box"""
         box = QFrame()
         box.setStyleSheet("""
             QFrame {
@@ -1568,7 +1502,7 @@ class AnalyticsDashboard(QWidget):
         
         value_widget = QLabel("--")
         value_widget.setFont(QFont("Arial", 22, QFont.Weight.Bold))
-        value_widget.setStyleSheet("color: #1976D2;")
+        value_widget.setStyleSheet(f"color: {self.PRIMARY_CYAN};")
         value_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(value_widget)
         
@@ -1578,7 +1512,6 @@ class AnalyticsDashboard(QWidget):
         return box
     
     def _on_sound_checkbox_changed(self):
-        """Update selection label when checkboxes change"""
         selected = []
         for sound_name, checkbox in self.sound_checkboxes.items():
             if checkbox.isChecked():
@@ -1586,18 +1519,14 @@ class AnalyticsDashboard(QWidget):
         
         self.current_sound_types = selected
         
-        # Update label
         if not selected:
             self.selection_label.setText("All sounds selected")
         elif len(selected) == 1:
             self.selection_label.setText(f"1 sound type selected: {selected[0]}")
         else:
             self.selection_label.setText(f"{len(selected)} sound types selected")
-        
-        print(f"[AnalyticsDashboard] Selection changed: {self.current_sound_types or 'All'}", flush=True)
     
     def _clear_sound_selection(self):
-        """Clear all sound type selections"""
         for checkbox in self.sound_checkboxes.values():
             checkbox.setChecked(False)
         
@@ -1605,23 +1534,16 @@ class AnalyticsDashboard(QWidget):
         self.selection_label.setText("All sounds selected")
         self.time_filter.setCurrentText('1 Day')
         self.current_time_range = 'day'
-        
-        print(f"[AnalyticsDashboard] Filters cleared", flush=True)
         self._refresh_data()
     
     def _on_filter_changed(self):
-        """Handle time filter changes"""
         time_map = {'1 Day': 'day', '1 Week': 'week', '1 Month': 'month'}
         self.current_time_range = time_map.get(self.time_filter.currentText(), 'day')
-        
-        print(f"[AnalyticsDashboard] Time range changed to: {self.current_time_range}", flush=True)
         self._refresh_data()
     
     def _refresh_data(self):
-        """Refresh all charts with current filters"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
-            print(f"[AnalyticsDashboard] Refreshing - Time: {self.current_time_range}, Sounds: {sound_filter or 'All'}", flush=True)
             
             self._clear_canvas(self.dist_canvas)
             self._clear_canvas(self.timeline_canvas)
@@ -1634,12 +1556,9 @@ class AnalyticsDashboard(QWidget):
             self._update_confidence_chart()
             self._update_stats_boxes()
         except Exception as e:
-            print(f"[AnalyticsDashboard] Refresh error: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
+            print(f"[SoundAnalyticsView] Refresh error: {e}", flush=True)
     
     def _update_distribution_chart(self):
-        """Update bar chart - distribution of sound types by COUNT"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
             data = self.api.get_audio_distribution(
@@ -1648,6 +1567,8 @@ class AnalyticsDashboard(QWidget):
                 sound_types=sound_filter
             )
             
+            print(f"[DEBUG] Distribution data: {len(data) if data else 0} items", flush=True)
+            
             if not data:
                 self._show_no_data(self.dist_canvas)
                 return
@@ -1655,10 +1576,11 @@ class AnalyticsDashboard(QWidget):
             labels = [d['head_pred_label'] for d in data]
             counts = [d['count'] for d in data]
             
+            # נקה את הקנבס
+            self.dist_canvas.figure.clear()
             ax = self.dist_canvas.figure.add_subplot(111)
             
-            # Use green palette
-            colors = [self.GREEN_PALETTE[i % len(self.GREEN_PALETTE)] for i in range(len(labels))]
+            colors = [self.CYAN_PALETTE[i % len(self.CYAN_PALETTE)] for i in range(len(labels))]
             bars = ax.bar(range(len(labels)), counts, color=colors, edgecolor='black', linewidth=0.5)
             
             ax.set_xticks(range(len(labels)))
@@ -1666,21 +1588,23 @@ class AnalyticsDashboard(QWidget):
             ax.set_ylabel('Count', fontsize=9, fontweight='bold')
             ax.grid(True, alpha=0.3, linestyle='--', axis='y')
             
-            # Add value labels on bars
             for bar in bars:
                 height = bar.get_height()
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{int(height)}',
-                       ha='center', va='bottom', fontsize=8, fontweight='bold')
+                    f'{int(height)}',
+                    ha='center', va='bottom', fontsize=8, fontweight='bold')
             
             self.dist_canvas.figure.tight_layout()
-            self.dist_canvas.draw()
+            self.dist_canvas.draw()  # ⭐ זה החסר!
+            print("[DEBUG] Distribution chart drawn successfully", flush=True)
+            
         except Exception as e:
-            print(f"[AnalyticsDashboard] Distribution chart error: {e}", flush=True)
+            print(f"[ERROR] Distribution chart error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             self._show_no_data(self.dist_canvas)
-    
+
     def _update_timeline_chart(self):
-        """Update line chart - timeline of detections"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
             data = self.api.get_audio_timeline(
@@ -1688,11 +1612,12 @@ class AnalyticsDashboard(QWidget):
                 sound_types=sound_filter
             )
             
+            print(f"[DEBUG] Timeline data: {len(data) if data else 0} items", flush=True)
+            
             if not data:
                 self._show_no_data(self.timeline_canvas)
                 return
             
-            # Group by time_bucket and sum counts
             timeline_dict = {}
             for row in data:
                 time_bucket = row['time_bucket']
@@ -1705,10 +1630,12 @@ class AnalyticsDashboard(QWidget):
             times = [str(t)[:16] for t in sorted_times]
             counts = [timeline_dict[t] for t in sorted_times]
             
+            # נקה את הקנבס
+            self.timeline_canvas.figure.clear()
             ax = self.timeline_canvas.figure.add_subplot(111)
             
-            ax.plot(times, counts, marker='o', linewidth=2, markersize=5, color='#1a9900')
-            ax.fill_between(range(len(times)), counts, alpha=0.2, color='#4dcc00')
+            ax.plot(times, counts, marker='o', linewidth=2, markersize=5, color=self.ACCENT_CYAN)
+            ax.fill_between(range(len(times)), counts, alpha=0.2, color=self.PRIMARY_CYAN)
             ax.set_xlabel('Time', fontsize=9, fontweight='bold')
             ax.set_ylabel('Detections', fontsize=9, fontweight='bold')
             ax.grid(True, alpha=0.3, linestyle='--')
@@ -1716,13 +1643,16 @@ class AnalyticsDashboard(QWidget):
             
             self.timeline_canvas.figure.autofmt_xdate(rotation=45, ha='right')
             self.timeline_canvas.figure.tight_layout()
-            self.timeline_canvas.draw()
+            self.timeline_canvas.draw()  # ⭐ זה החסר!
+            print("[DEBUG] Timeline chart drawn successfully", flush=True)
+            
         except Exception as e:
-            print(f"[AnalyticsDashboard] Timeline chart error: {e}", flush=True)
+            print(f"[ERROR] Timeline chart error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             self._show_no_data(self.timeline_canvas)
-    
+
     def _update_confidence_chart(self):
-        """Update Model Health Monitor chart - Avg Confidence % & Processing Time"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
             data = self.api.get_model_health_metrics(
@@ -1742,21 +1672,20 @@ class AnalyticsDashboard(QWidget):
             fig.clear()
 
             ax1 = fig.add_subplot(111)
-            ax1.set_title("Model Performance Trends", fontsize=10, fontweight="bold", color="#1976D2")
-            ax1.plot(times, avg_conf, color="#33b300", marker="o", linewidth=2, label="Avg Confidence %")
-            ax1.fill_between(range(len(avg_conf)), avg_conf, alpha=0.15, color="#66e600")
+            ax1.set_title("Model Performance Trends", fontsize=10, fontweight="bold", color=self.PRIMARY_CYAN) 
+            ax1.plot(times, avg_conf, color=self.ACCENT_CYAN, marker="o", linewidth=2, label="Avg Confidence %")
+            ax1.fill_between(range(len(avg_conf)), avg_conf, alpha=0.15, color=self.PRIMARY_CYAN)
             ax1.set_ylabel("Confidence (%)", fontsize=9, fontweight="bold")
             ax1.set_ylim(0, 100)
             ax1.tick_params(axis='x', rotation=45, labelsize=8)
             ax1.grid(True, alpha=0.3, linestyle="--")
 
-            # Processing time on secondary y-axis
             ax2 = ax1.twinx()
-            ax2.plot(times, avg_proc, color="#99ff33", marker="^", linestyle="--", linewidth=2, label="Avg Processing (ms)")
-            ax2.set_ylabel("Processing Time (ms)", fontsize=9, fontweight="bold", color="#66e600")
-            ax2.tick_params(axis='y', labelcolor="#66e600")
+            proc_color = self.CYAN_PALETTE[7] 
+            ax2.plot(times, avg_proc, color=proc_color, marker="^", linestyle="--", linewidth=2, label="Avg Processing (ms)")
+            ax2.set_ylabel("Processing Time (ms)", fontsize=9, fontweight="bold", color=proc_color)
+            ax2.tick_params(axis='y', labelcolor=proc_color)
 
-            # Combined legend
             lines, labels = ax1.get_legend_handles_labels()
             lines2, labels2 = ax2.get_legend_handles_labels()
             ax1.legend(lines + lines2, labels + labels2, loc="upper left", fontsize=8)
@@ -1765,19 +1694,16 @@ class AnalyticsDashboard(QWidget):
             self.confidence_canvas.draw()
 
         except Exception as e:
-            print(f"[AnalyticsDashboard] Model Health Monitor chart error: {e}", flush=True)
+            print(f"[SoundAnalyticsView] Model Health Monitor chart error: {e}", flush=True)
             self._show_no_data(self.confidence_canvas)
 
     def _update_stats_boxes(self):
-        """Update statistics boxes"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
             stats = self.api.get_audio_stats(
                 self.current_time_range,
                 sound_types=sound_filter
             )
-            
-            print(f"[AnalyticsDashboard] Stats received: {stats}", flush=True)
             
             if stats:
                 total = stats.get('total_files', 0) or 0
@@ -1801,16 +1727,12 @@ class AnalyticsDashboard(QWidget):
                 for key in self.stat_boxes:
                     self.stat_boxes[key]._value.setText("--")
         except Exception as e:
-            print(f"[AnalyticsDashboard] Stats update error: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
+            print(f"[SoundAnalyticsView] Stats update error: {e}", flush=True)
     
     def _clear_canvas(self, canvas):
-        """Clear a matplotlib canvas completely"""
         canvas.figure.clear()
     
     def _show_no_data(self, canvas):
-        """Show 'No Data Available' message on canvas"""
         ax = canvas.figure.add_subplot(111)
         ax.text(0.5, 0.5, 'No Data Available', 
                ha='center', va='center', fontsize=14, fontweight='bold',
@@ -1821,12 +1743,10 @@ class AnalyticsDashboard(QWidget):
         canvas.draw()
     
     def closeEvent(self, event):
-        """Clean up timer when closing"""
         self.refresh_timer.stop()
         super().closeEvent(event)
 
     def _update_heatmap_chart(self):
-        """Update heatmap chart - activity by hour of day and day of week"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
             data = self.api.get_audio_heatmap(
@@ -1834,26 +1754,26 @@ class AnalyticsDashboard(QWidget):
                 sound_types=sound_filter
             )
             
+            print(f"[DEBUG] Heatmap data: {len(data) if data else 0} items", flush=True)
+            
             if not data:
                 self._show_no_data(self.heatmap_canvas)
                 return
             
-            # Create 24 hours x 7 days matrix
             heatmap_data = np.zeros((24, 7))
             
-            # Fill matrix with counts
             for row in data:
                 hour = int(row['hour_of_day'])
                 day = int(row['day_of_week'])
                 count = row['count']
                 heatmap_data[hour, day] += count
             
+            # נקה את הקנבס
+            self.heatmap_canvas.figure.clear()
             ax = self.heatmap_canvas.figure.add_subplot(111)
             
-            # Create heatmap using imshow with green colormap
-            im = ax.imshow(heatmap_data, cmap='Greens', aspect='auto', interpolation='nearest')
+            im = ax.imshow(heatmap_data, cmap='GnBu', aspect='auto', interpolation='nearest')
             
-            # Set ticks
             ax.set_xticks(range(7))
             ax.set_xticklabels(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], fontsize=8)
             ax.set_yticks(range(0, 24, 2))
@@ -1862,29 +1782,28 @@ class AnalyticsDashboard(QWidget):
             ax.set_xlabel('Day of Week', fontsize=9, fontweight='bold')
             ax.set_ylabel('Hour of Day', fontsize=9, fontweight='bold')
             
-            # Add colorbar
             cbar = self.heatmap_canvas.figure.colorbar(im, ax=ax, pad=0.02)
             cbar.set_label('Detections', fontsize=8)
             cbar.ax.tick_params(labelsize=7)
             
-            # Add text annotations for non-zero values
             for i in range(24):
                 for j in range(7):
                     if heatmap_data[i, j] > 0:
                         text_color = 'white' if heatmap_data[i, j] > heatmap_data.max() * 0.5 else 'black'
                         ax.text(j, i, int(heatmap_data[i, j]),
-                               ha="center", va="center", color=text_color, fontsize=6, fontweight='bold')
+                            ha="center", va="center", color=text_color, fontsize=6, fontweight='bold')
             
             self.heatmap_canvas.figure.tight_layout()
-            self.heatmap_canvas.draw()
+            self.heatmap_canvas.draw()  # ⭐ זה החסר!
+            print("[DEBUG] Heatmap chart drawn successfully", flush=True)
+            
         except Exception as e:
-            print(f"[AnalyticsDashboard] Heatmap chart error: {e}", flush=True)
+            print(f"[ERROR] Heatmap chart error: {e}", flush=True)
             import traceback
             traceback.print_exc()
             self._show_no_data(self.heatmap_canvas)
 
     def _update_correlation_chart(self):
-        """Update correlation heatmap - shows relationships between sound types"""
         try:
             sound_filter = self.current_sound_types if self.current_sound_types else None
             data = self.api.get_audio_correlations(
@@ -1892,34 +1811,23 @@ class AnalyticsDashboard(QWidget):
                 sound_types=sound_filter
             )
             
-            print(f"[AnalyticsDashboard] Correlation data received: {len(data) if data else 0} rows", flush=True)
-            if data and len(data) > 0:
-                print(f"[AnalyticsDashboard] Sample data: {data[:3]}", flush=True)
+            print(f"[DEBUG] Correlation data: {len(data) if data else 0} items", flush=True)
             
             if not data or len(data) < 1:
-                print("[AnalyticsDashboard] No correlation data - showing 'No Data'", flush=True)
                 self._show_no_data(self.correlation_canvas)
                 return
             
-            # Build data structure without pandas
-            # Find all time buckets and sound types
             time_buckets = sorted(list(set(row['time_bucket'] for row in data)))
             sound_types = sorted(list(set(row['sound_type'] for row in data)))
             
-            print(f"[AnalyticsDashboard] Found {len(time_buckets)} time buckets, {len(sound_types)} sound types", flush=True)
-            print(f"[AnalyticsDashboard] Sound types: {sound_types}", flush=True)
-            
             if len(time_buckets) < 2 or len(sound_types) < 2:
-                print(f"[AnalyticsDashboard] Not enough data for correlation: {len(time_buckets)} buckets, {len(sound_types)} types", flush=True)
                 self._show_no_data(self.correlation_canvas)
                 return
             
-            # Create matrix: rows=time_buckets, cols=sound_types
             n_times = len(time_buckets)
             n_sounds = len(sound_types)
             data_matrix = np.zeros((n_times, n_sounds))
             
-            # Fill the matrix
             time_idx = {t: i for i, t in enumerate(time_buckets)}
             sound_idx = {s: i for i, s in enumerate(sound_types)}
             
@@ -1928,39 +1836,28 @@ class AnalyticsDashboard(QWidget):
                 s_idx = sound_idx[row['sound_type']]
                 data_matrix[t_idx, s_idx] = row['detection_count']
             
-            print(f"[AnalyticsDashboard] Data matrix shape: {data_matrix.shape}", flush=True)
-            
-            # Calculate correlation matrix using numpy
             corr_matrix = np.corrcoef(data_matrix.T)
-            
-            # Handle NaN values (if columns have zero standard deviation)
             corr_matrix = np.nan_to_num(corr_matrix, nan=0.0)
             
-            print(f"[AnalyticsDashboard] Correlation matrix shape: {corr_matrix.shape}", flush=True)
-            
-            # Create the plot
+            # נקה את הקנבס
+            self.correlation_canvas.figure.clear()
             ax = self.correlation_canvas.figure.add_subplot(111)
             
-            # Create heatmap with green colormap only
-            im = ax.imshow(corr_matrix, cmap='Greens', aspect='auto', vmin=-1, vmax=1)
+            im = ax.imshow(corr_matrix, cmap='Blues', aspect='auto', vmin=-1, vmax=1)
             
-            # Set labels
             ax.set_xticks(range(len(sound_types)))
             ax.set_yticks(range(len(sound_types)))
             ax.set_xticklabels(sound_types, rotation=45, ha='right', fontsize=7)
             ax.set_yticklabels(sound_types, fontsize=7)
             
-            # Add correlation values inside cells
             for i in range(len(sound_types)):
                 for j in range(len(sound_types)):
                     value = corr_matrix[i, j]
-                    # Use white text for dark backgrounds (high correlation)
                     text_color = 'white' if value > 0.5 else 'black'
                     ax.text(j, i, f'{value:.2f}',
-                           ha='center', va='center',
-                           color=text_color, fontsize=6, fontweight='bold')
+                        ha='center', va='center',
+                        color=text_color, fontsize=6, fontweight='bold')
             
-            # Add colorbar
             cbar = self.correlation_canvas.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label('Correlation Strength', rotation=270, labelpad=15, fontsize=8)
             
@@ -1968,15 +1865,93 @@ class AnalyticsDashboard(QWidget):
                         fontsize=9, fontweight='bold', pad=10)
             
             self.correlation_canvas.figure.tight_layout()
-            self.correlation_canvas.draw()
-            
-            print("[AnalyticsDashboard] Correlation chart updated successfully", flush=True)
+            self.correlation_canvas.draw()  # ⭐ זה החסר!
+            print("[DEBUG] Correlation chart drawn successfully", flush=True)
             
         except Exception as e:
-            print(f"[AnalyticsDashboard] Correlation chart error: {e}", flush=True)
+            print(f"[ERROR] Correlation chart error: {e}", flush=True)
             import traceback
             traceback.print_exc()
             self._show_no_data(self.correlation_canvas)
+    
+# ==========================================================
+# Sound2 View - Displays Grafana dashboard
+# ==========================================================
+class Sound2View(QWidget):
+    def __init__(self, api: DashboardApi, parent=None):
+        super().__init__(parent)
+        self.api = api
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        header = QHBoxLayout()
+
+        title = QLabel("🌿 Ultrasonic Plant Predictions Dashboard")
+        title.setStyleSheet("""
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            color: #2C3E50;
+        """)
+        header.addWidget(title)
+
+        header.addStretch()
+
+        refresh_btn = QPushButton("🔄 Refresh")
+        refresh_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498DB;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980B9;
+            }
+        """)
+        refresh_btn.clicked.connect(self.refresh_dashboard)
+        header.addWidget(refresh_btn)
+
+        layout.addLayout(header)
+
+        self.web_view = QWebEngineView()
+
+        grafana_url = (
+            "http://grafana:3000/d/ultrasonic-predictions/"
+            "ultrasonic-plant-predictions"
+            "?orgId=1&refresh=5s&kiosk=tv&theme=light"
+        )
+
+        self.web_view.setUrl(QUrl(grafana_url))
+        layout.addWidget(self.web_view)
+
+        self.status_label = QLabel("📊 Loading dashboard...")
+        self.status_label.setStyleSheet("""
+            height: 24px;
+            padding: 5px;
+            color: #7F8C8D;
+            font-size: 12px;
+        """)
+        layout.addWidget(self.status_label)
+
+        self.web_view.loadFinished.connect(self.on_load_finished)
+
+    def refresh_dashboard(self):
+        self.status_label.setText("🔄 Refreshing dashboard...")
+        self.web_view.reload()
+
+    def on_load_finished(self, success: bool):
+        if success:
+            self.status_label.setText("✓ Dashboard loaded successfully | Refreshes every 5s")
+        else:
+            self.status_label.setText(
+                "⚠ Failed to load dashboard. Please check Grafana server."
+            )
 
 
 # ==========================================================
@@ -2013,18 +1988,16 @@ class SoundView(QWidget):
             QTabBar::tab:hover { background: #e1e4e8; }
         """)
 
-        self.map_tab = ImageMapView()
+        self.map_tab = ImageMapView(api=self.api)
         self.env_tab = RecordingsTab(recording_type="audio", api=self.api)
         self.plant_tab = RecordingsTab(recording_type="ultrasound", api=self.api)
-
+        self.dashboard_tab = Sound2View(api=self.api)
+        self.analytics_tab = SoundAnalyticsView(api=self.api)
         
-        # Add Analytics Dashboard tab if API is provided
-        if self.api:
-            self.analytics_tab = AnalyticsDashboard(self.api)
-            self.tabs.addTab(self.analytics_tab, "📊 Analytics Dashboard")
-
         self.tabs.addTab(self.map_tab, "🗺️ Interactive Map")
         self.tabs.addTab(self.env_tab, "🎵 Environment Sounds")
         self.tabs.addTab(self.plant_tab, "🌿 Plant Ultrasounds")
+        self.tabs.addTab(self.dashboard_tab, "📊 Ultrasonic Dashboard")
+        self.tabs.addTab(self.analytics_tab, "📈 Sound Analytics")
 
         layout.addWidget(self.tabs)

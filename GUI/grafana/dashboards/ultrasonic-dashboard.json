@@ -1,0 +1,857 @@
+{
+    "id": null,
+    "uid": "ultrasonic-plant-dashboard-bw-01",
+    "title": "Plant Health Monitoring - Professional Dashboard",
+    "tags": [
+        "postgres",
+        "ultrasonic",
+        "plants",
+        "agriculture"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 6,
+    "refresh": "10s",
+    "time": {
+        "from": "now-30d",
+        "to": "now"
+    },
+    "panels": [
+        {
+            "id": 1,
+            "type": "stat",
+            "title": "Total Predictions",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "last_over_time(ultrasonic_predictions_total_total[5m])",
+                    "refId": "A",
+                    "legendFormat": "Total"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "orientation": "auto",
+                "textMode": "auto"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#000000"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#000000",
+                                "value": null
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 2,
+            "type": "stat",
+            "title": "Success Rate",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 6,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "avg(last_over_time(ultrasonic_success_rate_by_sensor_success_rate[5m]))",
+                    "refId": "A",
+                    "legendFormat": "Success Rate"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "orientation": "auto",
+                "textMode": "auto"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "unit": "percent",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#DC2626",
+                                "value": null
+                            },
+                            {
+                                "color": "#000000",
+                                "value": 60
+                            },
+                            {
+                                "color": "#15803d",
+                                "value": 90
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 3,
+            "type": "stat",
+            "title": "Healthy Status",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 12,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "last_over_time(ultrasonic_class_distribution_healthy_healthy_percentage[5m])",
+                    "refId": "A",
+                    "legendFormat": "Healthy %"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "orientation": "auto",
+                "textMode": "auto"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#000000"
+                    },
+                    "unit": "percent",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#000000",
+                                "value": null
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 4,
+            "type": "stat",
+            "title": "Stress Status",
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "last_over_time(ultrasonic_class_distribution_stress_stress_percentage[5m])",
+                    "refId": "A",
+                    "legendFormat": "Stress %"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "orientation": "auto",
+                "textMode": "auto"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#000000"
+                    },
+                    "unit": "percent",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#000000",
+                                "value": null
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 5,
+            "type": "piechart",
+            "title": "Plant Health Classification",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_predictions_by_class_count",
+                    "refId": "A",
+                    "legendFormat": "{{predicted_class}}",
+                    "instant": true
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi"
+                },
+                "pieType": "pie",
+                "displayLabels": [
+                    "name",
+                    "percent"
+                ]
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Drought_Plant"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#FBBF24"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Pest_Plant"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#EF4444"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Control_Greenhouse"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#10B981"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Control_Empty"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#3B82F6"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 6,
+            "type": "gauge",
+            "title": "Average Confidence Score",
+            "gridPos": {
+                "h": 9,
+                "w": 6,
+                "x": 12,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "last_over_time(ultrasonic_predictions_avg_confidence_avg_confidence[5m])",
+                    "refId": "A",
+                    "legendFormat": "Avg Confidence"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "showThresholdLabels": true,
+                "showThresholdMarkers": true
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "min": 0,
+                    "max": 1,
+                    "unit": "percentunit",
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#DC2626",
+                                "value": null
+                            },
+                            {
+                                "color": "#6B7280",
+                                "value": 0.5
+                            },
+                            {
+                                "color": "#15803d",
+                                "value": 0.85
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 7,
+            "type": "barchart",
+            "title": "Sensor Confidence by ID",
+            "gridPos": {
+                "h": 9,
+                "w": 6,
+                "x": 18,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_confidence_by_sensor_avg_confidence",
+                    "refId": "A",
+                    "legendFormat": "{{sensor_id}}",
+                    "instant": true
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "hidden",
+                    "placement": "bottom",
+                    "showLegend": false
+                },
+                "orientation": "horizontal",
+                "xTickLabelRotation": 0,
+                "xTickLabelSpacing": 0,
+                "showValue": "always"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "fillOpacity": 90,
+                        "lineWidth": 1
+                    },
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#374151"
+                    },
+                    "unit": "percentunit",
+                    "decimals": 2
+                }
+            },
+            "transformations": [
+                {
+                    "id": "reduce",
+                    "options": {
+                        "calcs": [
+                            "last"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Predictions per Hour (Last 24h)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 17
+            },
+            "timeFrom": "now-24h",
+            "targets": [
+                {
+                    "expr": "ultrasonic_predictions_per_hour_count",
+                    "refId": "A",
+                    "legendFormat": "Predictions"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": false
+                },
+                "tooltip": {
+                    "mode": "multi"
+                }
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "drawStyle": "bars",
+                        "lineInterpolation": "linear",
+                        "fillOpacity": 80,
+                        "lineWidth": 0
+                    },
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#6B7280"
+                    }
+                }
+            }
+        },
+        {
+            "id": 9,
+            "type": "barchart",
+            "title": "Daily Stress Events",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 17
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_daily_stress_count_event_count",
+                    "refId": "A",
+                    "legendFormat": "{{event_date}}",
+                    "format": "time_series"
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "hidden",
+                    "placement": "bottom",
+                    "showLegend": false
+                },
+                "orientation": "auto",
+                "xTickLabelRotation": -45,
+                "xTickLabelSpacing": 50,
+                "showValue": "auto"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "fillOpacity": 85,
+                        "lineWidth": 1
+                    },
+                    "color": {
+                        "mode": "fixed",
+                        "fixedColor": "#6B7280"
+                    }
+                }
+            }
+        },
+        {
+            "id": 10,
+            "type": "piechart",
+            "title": "Reading Status Distribution",
+            "gridPos": {
+                "h": 9,
+                "w": 8,
+                "x": 0,
+                "y": 26
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_predictions_by_status_count",
+                    "refId": "A",
+                    "legendFormat": "{{status}}",
+                    "instant": true
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "showLegend": true
+                },
+                "displayLabels": [
+                    "name",
+                    "percent"
+                ]
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Success"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#9CA3AF"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Error"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#DC2626"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 11,
+            "type": "barchart",
+            "title": "Sensor Success Rates",
+            "gridPos": {
+                "h": 9,
+                "w": 8,
+                "x": 8,
+                "y": 26
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_success_rate_by_sensor_success_rate",
+                    "refId": "A",
+                    "legendFormat": "{{sensor_id}}",
+                    "instant": true
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "hidden",
+                    "showLegend": false
+                },
+                "orientation": "auto",
+                "xTickLabelRotation": -45,
+                "showValue": "always"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "fillOpacity": 90
+                    },
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "unit": "percent",
+                    "decimals": 1,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#DC2626",
+                                "value": 0
+                            },
+                            {
+                                "color": "#6B7280",
+                                "value": 70
+                            },
+                            {
+                                "color": "#15803d",
+                                "value": 95
+                            }
+                        ]
+                    }
+                }
+            },
+            "transformations": [
+                {
+                    "id": "reduce",
+                    "options": {
+                        "calcs": [
+                            "last"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "id": 12,
+            "type": "piechart",
+            "title": "Confidence Distribution",
+            "gridPos": {
+                "h": 9,
+                "w": 8,
+                "x": 16,
+                "y": 26
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_confidence_distribution_count",
+                    "refId": "A",
+                    "legendFormat": "{{confidence_range}}",
+                    "instant": true
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "displayLabels": [
+                    "name",
+                    "percent"
+                ]
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "90-100% (High)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#34D399"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "75-90% (Good)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#60A5FA"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "60-75% (Medium)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#FCD34D"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "< 60% (Low)"
+                        },
+                        "properties": [
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "#F87171"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 13,
+            "type": "table",
+            "title": "Sensor Activity Summary",
+            "gridPos": {
+                "h": 9,
+                "w": 24,
+                "x": 0,
+                "y": 35
+            },
+            "targets": [
+                {
+                    "expr": "ultrasonic_confidence_by_sensor_avg_confidence",
+                    "refId": "A",
+                    "format": "table",
+                    "instant": true
+                }
+            ],
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "options": {
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "displayName": "avg_confidence",
+                        "desc": true
+                    }
+                ]
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "auto",
+                        "width": "auto"
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "avg_confidence"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "percentunit"
+                            },
+                            {
+                                "id": "decimals",
+                                "value": 2
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "min_confidence"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "percentunit"
+                            },
+                            {
+                                "id": "decimals",
+                                "value": 2
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "max_confidence"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "percentunit"
+                            },
+                            {
+                                "id": "decimals",
+                                "value": 2
+                            }
+                        ]
+                    }
+                ]
+            },
+            "transformations": []
+        }
+    ]
+}
