@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, time, timezone
 from typing import Iterable, Optional, Tuple
 
 from PyQt6.QtCore import QDate, QTimer, Qt, QPointF, pyqtSignal, QUrl
@@ -19,6 +19,8 @@ from dashboard_api import DashboardApi
 # ──────────────────────────────
 # Small utils
 # ──────────────────────────────
+
+
 
 def _color_for_pct(pct: float) -> str:
     """Traffic-light color by percentage."""
@@ -427,6 +429,10 @@ class LeafDiseaseView(QWidget):
     def _range_changed(self, *_):
         self._update_range_info()
         self._filters_timer.start()
+        # If Grafana card is open and we have a selected disease, reload with new range
+        if getattr(self, "grafana_card", None) and self.grafana_card.isVisible():
+            if hasattr(self, "_sel_disease"):
+                self._on_disease_clicked(self._sel_disease)
 
     def _open_range_dialog(self):
         dlg = DateRangeDialog(self, start=self.date_from.date(), end=self.date_to.date())
@@ -461,6 +467,28 @@ class LeafDiseaseView(QWidget):
             out.append(r)
         print(f"[KPI-DBG] filter_by_dates: kept={len(out)} of {len(data)}")
         return out
+
+    def _grafana_range_params(self) -> str:
+        """
+        Build Grafana from/to range based on current date_from/date_to widgets.
+
+        Grafana expects timestamps in milliseconds since epoch.
+        We take:
+        - from = start of date_from day (00:00)
+        - to   = end of date_to day   (23:59:59.999)
+        """
+        d_from = self.date_from.date().toPyDate()
+        d_to = self.date_to.date().toPyDate()
+
+        # Start of day (UTC)
+        start_dt = datetime.combine(d_from, time.min).replace(tzinfo=timezone.utc)
+        # End of day (UTC)
+        end_dt = datetime.combine(d_to, time.max).replace(tzinfo=timezone.utc)
+
+        start_ms = int(start_dt.timestamp() * 1000)
+        end_ms = int(end_dt.timestamp() * 1000)
+
+        return f"&from={start_ms}&to={end_ms}&timezone=browser"
 
     # ───────── Update UI ─────────
 
@@ -579,18 +607,23 @@ class LeafDiseaseView(QWidget):
         disease_name = self._disease_name(disease_id)
         print(f"[LeafDiseaseView] Showing Grafana for disease: {disease_name} (ID: {disease_id})")
         
+        # Save selected disease so we can refresh on range change if needed
+        self._sel_disease = disease_id
+
         # Hide device card if open
         self.device_card.setVisible(False)
         
         # Update Grafana title and load dashboard
         self.grafana_title.setText(f"📊 Disease Analysis: {disease_name}")
         
-        # Build Grafana URL with disease_id variable
+        # Build Grafana URL with disease_id + date range
+        range_params = self._grafana_range_params()
         grafana_url = (
             f"http://host.docker.internal:3000/d/leaf-disease-detail/"
             f"leaf-disease-analysis"
             f"?orgId=1&refresh=10s&kiosk=tv"
             f"&var-disease_id={disease_id}"
+            f"{range_params}"
         )
         
         print(f"[LeafDiseaseView] Loading Grafana: {grafana_url}")

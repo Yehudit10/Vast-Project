@@ -11,24 +11,29 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Total Cases (Selected Disease)",
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "title": "Total Cases (Selected Disease, Dynamic Range)",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "targets": [
         {
-          "expr": "leaf_reports_by_disease_count{disease_id=\"$disease_id\"}",
           "refId": "A",
-          "legendFormat": "Cases"
+          "expr": "sum(sum_over_time(leaf_disease_daily_progression_sick_count{disease_id=\"$disease_id\"}[$__range]))",
+          "range": true,
+          "legendFormat": "Total cases"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
         "orientation": "auto",
-        "textMode": "auto"
+        "textMode": "valueAndName"
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
@@ -44,69 +49,9 @@
     },
     {
       "id": 2,
-      "type": "timeseries",
-      "title": "Daily Disease Progression (Last 90 Days)",
-      "gridPos": { "h": 10, "w": 18, "x": 6, "y": 0 },
-      "targets": [
-        {
-          "expr": "leaf_disease_daily_progression_sick_count{disease_id=\"$disease_id\"}",
-          "refId": "A",
-          "legendFormat": "{{disease_name}}"
-        }
-      ],
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 30,
-            "lineWidth": 2,
-            "showPoints": "auto"
-          },
-          "color": { "mode": "palette-classic" },
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 3,
-      "type": "timeseries",
-      "title": "Hourly Detection Rate (Last 7 Days)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
-      "targets": [
-        {
-          "expr": "leaf_disease_hourly_detection_count{disease_id=\"$disease_id\"}",
-          "refId": "A",
-          "legendFormat": "Detections/hour"
-        }
-      ],
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" },
-        "tooltip": { "mode": "multi" }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "lineWidth": 0
-          },
-          "color": { "mode": "palette-classic" },
-          "unit": "short"
-        }
-      }
-    },
-    {
-      "id": 4,
       "type": "bargauge",
       "title": "Disease Severity by Device (%)",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
       "targets": [
         {
           "expr": "leaf_disease_severity_by_device_sick_percentage{disease_id=\"$disease_id\"}",
@@ -139,16 +84,82 @@
       }
     },
     {
+      "id": 3,
+      "type": "piechart",
+      "title": "All Diseases Distribution",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "leaf_reports_by_disease_count",
+          "refId": "A",
+          "legendFormat": "{{disease_name}}"
+        }
+      ],
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "pieType": "donut"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Share of Selected Disease (%) — Dynamic Range",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * sum(sum_over_time(leaf_disease_daily_progression_sick_count{disease_id=\"$disease_id\"}[$__range])) / sum(sum_over_time(leaf_disease_daily_progression_sick_count[$__range]))",
+          "range": true,
+          "legendFormat": "Share"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "orientation": "auto",
+        "textMode": "valueAndName"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "orange", "value": 25 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      }
+    },
+    {
       "id": 5,
       "type": "table",
       "title": "Device Statistics",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 15 },
       "targets": [
         {
           "expr": "leaf_reports_by_device_sick_reports",
           "refId": "A",
-          "format": "table",
-          "instant": true
+          "format": "table"
         }
       ],
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -170,29 +181,6 @@
           }
         }
       ]
-    },
-    {
-      "id": 6,
-      "type": "piechart",
-      "title": "All Diseases Distribution",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
-      "targets": [
-        {
-          "expr": "leaf_reports_by_disease_count",
-          "refId": "A",
-          "legendFormat": "{{disease_name}}"
-        }
-      ],
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "options": {
-        "legend": { "displayMode": "table", "placement": "right", "showLegend": true },
-        "pieType": "donut"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" }
-        }
-      }
     }
   ],
   "templating": {

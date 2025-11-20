@@ -204,7 +204,7 @@ leaf_disease_daily_progression:
     FROM public.leaf_reports lr
     LEFT JOIN public.leaf_disease_types ldt ON lr.leaf_disease_type_id = ldt.id
     WHERE lr.sick = true
-      AND lr.ts > NOW() - INTERVAL '90 days'
+      AND lr.ts > NOW() - INTERVAL '365 days'
     GROUP BY lr.leaf_disease_type_id, ldt.name, DATE_TRUNC('day', lr.ts)
     ORDER BY date_timestamp DESC
   master: true
@@ -229,15 +229,17 @@ leaf_disease_daily_progression:
 leaf_disease_hourly_detection:
   query: |
     SELECT 
-      COALESCE(ldt.name, 'Unknown') as disease_name,
-      lr.leaf_disease_type_id::text as disease_id,
-      EXTRACT(EPOCH FROM DATE_TRUNC('hour', lr.ts))::float as hour_timestamp,
-      COUNT(*)::float as count
+      COALESCE(ldt.name, 'Unknown') AS disease_name,
+      lr.leaf_disease_type_id::text AS disease_id,
+      -- השעה האחרונה שבה נמצאה המחלה (כעצם EPOCH)
+      MAX(EXTRACT(EPOCH FROM DATE_TRUNC('hour', lr.ts)))::float AS hour_timestamp,
+      -- כמות הגילויים (אפשר להשאיר ככה, או לכוונן להגדרה אחרת)
+      COUNT(*)::float AS count
     FROM public.leaf_reports lr
     LEFT JOIN public.leaf_disease_types ldt ON lr.leaf_disease_type_id = ldt.id
     WHERE lr.sick = true
       AND lr.ts > NOW() - INTERVAL '7 days'
-    GROUP BY lr.leaf_disease_type_id, ldt.name, DATE_TRUNC('hour', lr.ts)
+    GROUP BY lr.leaf_disease_type_id, ldt.name
     ORDER BY hour_timestamp DESC
   master: true
   metrics:
@@ -249,10 +251,11 @@ leaf_disease_hourly_detection:
         description: "Disease type ID"
     - hour_timestamp:
         usage: "GAUGE"
-        description: "Hour timestamp"
+        description: "Last detection hour (epoch)"
     - count:
         usage: "GAUGE"
-        description: "Detections per hour"
+        description: "Detections count in last 7 days"
+
 
 # Disease severity by device (percentage)
 leaf_disease_severity_by_device:
