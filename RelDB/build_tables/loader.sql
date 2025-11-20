@@ -19,6 +19,11 @@ INSERT INTO devices (device_id, model, owner, active, location_lat, location_lon
   ('mic-u-2','sound-ul','TeamD',true,NULL,NULL)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO zones (name, geom) VALUES
+  ('Zone A', ST_GeomFromText('POLYGON((34.75 32.00, 34.90 32.00, 34.90 32.10, 34.75 32.10, 34.75 32.00))', 4326)),
+  ('Zone B', ST_GeomFromText('POLYGON((34.90 31.95, 35.05 31.95, 35.05 32.05, 34.90 32.05, 34.90 31.95))', 4326))
+ON CONFLICT  DO NOTHING;
+
 -- Seed data for devices_sensor table
 -- This file is automatically executed during database initialization
 

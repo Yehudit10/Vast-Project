@@ -16,6 +16,12 @@ CREATE TABLE IF NOT EXISTS devices (
   location_lon DOUBLE PRECISION
 );
 
+CREATE TABLE IF NOT EXISTS public.zones (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    geom geometry(POLYGON, 4326) NOT NULL
+);
+
 -- Predefined regions (optional: for missions crossing multiple regions)
 CREATE TABLE IF NOT EXISTS regions (
   id    bigserial PRIMARY KEY,
