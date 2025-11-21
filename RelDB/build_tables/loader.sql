@@ -212,7 +212,8 @@ DECLARE
     disease_ids int[];
     d text;
     t int;
-    start_date timestamptz := now() - interval '30 days';
+    start_date timestamptz := '2025-10-25 00:00:00+00'::timestamptz;
+    end_date timestamptz := '2025-11-25 23:59:59+00'::timestamptz;
     rand_ts timestamptz;
     conf double precision;
     sick_val boolean;
@@ -220,11 +221,11 @@ BEGIN
     -- Get all disease type IDs
     SELECT array_agg(id) INTO disease_ids FROM leaf_disease_types;
     
-    -- Insert 300 random reports
-    FOR i IN 1..300 LOOP
+    -- Insert 1000 random reports
+    FOR i IN 1..1000 LOOP
         d := devices_arr[ceil(random() * array_length(devices_arr,1))];
         t := disease_ids[ceil(random() * array_length(disease_ids,1))];
-        rand_ts := start_date + (random() * interval '30 days');
+        rand_ts := start_date + (random() * (end_date - start_date));
         conf := round(random()::numeric, 2);
         sick_val := (conf > 0.4);
         
@@ -232,5 +233,3 @@ BEGIN
         VALUES (d, t, rand_ts, conf, sick_val);
     END LOOP;
 END $$;
-
-
