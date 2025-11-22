@@ -234,9 +234,28 @@ def list_rows(
         stmt = stmt.order_by(asc(col) if order_dir.lower().startswith("asc") else desc(col))
     # filters (only allow known columns)
     if filters:
+        contract = _load_contract(resource)
+        props = contract.get("properties", {})
         for k, v in filters.items():
             if k not in allowed_cols:
                 raise ValidationFailed("invalid filter key", {"key": k})
+            # Cast filter value to correct type based on contract
+            prop = props.get(k, {})
+            t = (prop.get("type") or "string").lower()
+            fmt = (prop.get("format") or "").lower()
+            try:
+                if t == "integer":
+                    v = int(v)
+                elif t == "number":
+                    v = float(v)
+                elif t == "boolean":
+                    if isinstance(v, str):
+                        v = v.lower() in ("true", "1", "yes")
+                    else:
+                        v = bool(v)
+                # Add more type conversions if needed
+            except Exception:
+                raise ValidationFailed(f"Failed to cast filter value for {k} to {t}", {"value": v})
             stmt = stmt.where(table.c[k] == v)
 
     try:
