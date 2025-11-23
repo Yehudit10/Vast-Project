@@ -583,7 +583,7 @@ class GroundView(QWidget):
                 self._refresh_phi_for_key(key)
             else:
                 self._render_phi_none()
-                self._warn("No image selected yet. Click 'Reload list' or 'Next'.")
+                # self._warn("No image selected yet. Click 'Reload list' or 'Next'.")
         except Exception as e:
             self._render_phi_none()
             self._warn(f"Show PHI failed: {e}")
