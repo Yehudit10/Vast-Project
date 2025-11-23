@@ -1473,6 +1473,7 @@ services:
       - ag_cloud
 
  
+
   vector_service:
       build: ./services/vector_service
       container_name: vector_service
@@ -1483,7 +1484,7 @@ services:
         - DB_PASS=pg123
         - DB_NAME=missions_db
       ports:
-        - "8005:8000"
+        - "8006:8000"
       depends_on:
         - postgres
       networks:
