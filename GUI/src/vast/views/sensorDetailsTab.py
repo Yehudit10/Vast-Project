@@ -14,7 +14,6 @@ class SensorDetailsTab(QWidget):
         super().__init__(parent)
         self.api = api
         self.sensor_id = None
-        self.sensor_names = []
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(10, 10, 10, 10)
@@ -33,7 +32,7 @@ class SensorDetailsTab(QWidget):
                 border-radius:4px;
                 font-size:12px;
                 background:white;
-                min-width:150px;
+                min-width:180px;
             }
             QComboBox:hover { border:1px solid #2563eb; }
         """)
@@ -55,7 +54,8 @@ class SensorDetailsTab(QWidget):
 
         self.input_layout.addWidget(self.label)
         self.input_layout.addWidget(self.sensor_dropdown)
-        self.input_layout.addWidget(self.load_button)
+        self.add_button = self.load_button
+        self.input_layout.addWidget(self.add_button)
         main_layout.addLayout(self.input_layout)
 
         # --- Web view area ---
@@ -67,86 +67,130 @@ class SensorDetailsTab(QWidget):
         self.timer.timeout.connect(self.refresh_data)
         self.timer.start(15000)
 
-        # Load available sensors list
         self._load_sensor_list()
-        self.web.setHtml("<h3 style='text-align:center;color:#64748b;margin-top:30px;'>Please select a sensor to view details</h3>")
+
+        self.web.setHtml(
+            "<h3 style='text-align:center;color:#64748b;margin-top:30px;'>Please select a sensor to view details</h3>"
+        )
 
     # --------------------------------------------------------
     def _load_sensor_list(self):
-        """Load sensor names from the API."""
+        """
+        Load only sensors that have data:
+        - event_logs_sensors OR
+        - sensors_anomalies_modal OR
+        - sensor_anomalies
+        """
         try:
             r = self.api.http.get(f"{self.api.base}/api/tables/sensors")
-            data = r.json().get("rows", [])
-            self.sensor_names = [s["sensor_name"] for s in data if "sensor_name" in s]
+            sensors = r.json().get("rows", [])
+
             self.sensor_dropdown.clear()
-            self.sensor_dropdown.addItem("-- Select Sensor --")
-            for name in self.sensor_names:
-                self.sensor_dropdown.addItem(name)
+            self.sensor_dropdown.addItem("-- Select Sensor --", None)
+
+            for s in sensors:
+                sid = s.get("sensor_id")
+                sname = s.get("sensor_name", "")
+
+                # ---------- check if this sensor has real data ----------
+                has_data = False
+
+                # check modal anomalies
+                r_modal = self.api.http.get(
+                    f"{self.api.base}/api/tables/sensors_anomalies_modal?sensor_id={sid}&limit=1"
+                ).json().get("rows", [])
+                if r_modal:
+                    has_data = True
+
+                # check sensor anomalies table
+                if not has_data:
+                    r_anoms = self.api.http.get(
+                        f"{self.api.base}/api/tables/sensor_anomalies?sensor={sid}&limit=1"
+                    ).json().get("rows", [])
+                    if r_anoms:
+                        has_data = True
+
+                # check logs
+                if not has_data:
+                    r_logs = self.api.http.get(
+                        f"{self.api.base}/api/tables/event_logs_sensors?device_id={sid}&limit=1"
+                    ).json().get("rows", [])
+                    if r_logs:
+                        has_data = True
+
+                # add only if data exists
+                if has_data:
+                    display = f"{sid} – {sname}"
+                    self.sensor_dropdown.addItem(display, sid)
+
         except Exception as e:
             print(f"[SensorDetailsTab] Failed to load sensors list: {e}")
 
     # --------------------------------------------------------
     def _on_load_clicked(self):
-        """Triggered when user clicks 'Show Data'."""
-        selected = self.sensor_dropdown.currentText().strip()
-        if not selected or selected == "-- Select Sensor --":
-            self.web.setHtml("<h4 style='text-align:center;color:#dc2626;margin-top:20px;'>Please select a sensor from the list</h4>")
+        selected_id = self.sensor_dropdown.currentData()
+        if not selected_id:
+            self.web.setHtml("<h4 style='text-align:center;color:#dc2626;margin-top:20px;'>Please select a sensor</h4>")
             return
-        self.load_sensor(selected)
+        self.load_sensor(str(selected_id))
 
     # --------------------------------------------------------
     def load_sensor(self, sensor_id: str):
-        """Called when a sensor is selected manually or from the map."""
         self.sensor_id = sensor_id
         self.refresh_data()
 
     # --------------------------------------------------------
     def refresh_data(self):
-        """Fetch data from API and refresh the dashboard."""
         if not self.sensor_id:
             return
         try:
             # Sensors
-            r_sensor = self.api.http.get(f"{self.api.base}/api/tables/sensors?sensor_name={self.sensor_id}")
+            r_sensor = self.api.http.get(f"{self.api.base}/api/tables/sensors?sensor_id={self.sensor_id}")
             sensors = r_sensor.json().get("rows", [])
             sensor_data = sensors[0] if sensors else {}
 
             # Logs
-            r_logs = self.api.http.get(f"{self.api.base}/api/tables/event_logs_sensors?device_id={self.sensor_id}&order_by=start_ts&order_dir=desc")
-            logs = r_logs.json().get("rows", [])
+            r_logs = self.api.http.get(
+                f"{self.api.base}/api/tables/event_logs_sensors?device_id={self.sensor_id}&order_by=start_ts&order_dir=desc"
+            ).json().get("rows", [])
 
             # Modal anomalies
-            r_modal = self.api.http.get(f"{self.api.base}/api/tables/sensors_anomalies_modal?sensor_id={self.sensor_id}&order_by=ts&order_dir=desc")
-            modal = r_modal.json().get("rows", [])
+            r_modal = self.api.http.get(
+                f"{self.api.base}/api/tables/sensors_anomalies_modal?sensor_id={self.sensor_id}&order_by=ts&order_dir=desc"
+            ).json().get("rows", [])
 
             # Sensor anomalies
-            r_anoms = self.api.http.get(f"{self.api.base}/api/tables/sensor_anomalies?sensor={self.sensor_id}&limit=50&order_by=ts&order_dir=desc")
-            anoms = r_anoms.json().get("rows", [])
+            r_anoms = self.api.http.get(
+                f"{self.api.base}/api/tables/sensor_anomalies?sensor={self.sensor_id}&limit=50&order_by=ts&order_dir=desc"
+            ).json().get("rows", [])
 
             # Active alert
-            active_alert = next((a for a in logs if a.get("end_ts") is None), None)
+            active_alert = next((a for a in r_logs if a.get("end_ts") is None), None)
 
-            chart_html = self._build_plot(anoms)
-            page_html = self._build_html(sensor_data, logs, modal, active_alert, chart_html)
+            chart_html = self._build_plot(r_anoms)
+            page_html = self._build_html(sensor_data, r_logs, r_modal, active_alert, chart_html)
+
             self.web.setHtml(page_html)
+
         except Exception as e:
             traceback.print_exc()
             self.web.setHtml(f"<h4 style='color:red;text-align:center;'>Error: {e}</h4>")
 
     # --------------------------------------------------------
     def _build_plot(self, anoms):
-        """Build the Plotly chart."""
         if not anoms:
             return "<div style='text-align:center;color:#94a3b8;'>No data available for this sensor</div>"
 
         timestamps = [a.get("ts") for a in anoms]
         values = [a.get("value") for a in anoms]
+
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=timestamps, y=values, mode="lines+markers",
             line=dict(color="#2563eb", width=2),
             marker=dict(size=4)
         ))
+
         fig.update_layout(
             template="plotly_white",
             height=240,
@@ -155,12 +199,13 @@ class SensorDetailsTab(QWidget):
             yaxis_title="Value",
             font=dict(family="Inter,Segoe UI,sans-serif", size=10)
         )
+
         return fig.to_html(include_plotlyjs="cdn", full_html=False)
 
     # --------------------------------------------------------
     def _build_html(self, sensor_data, logs, modal, active_alert, chart_html):
-        """Generate the full HTML layout."""
         sensor_name = sensor_data.get("sensor_name", self.sensor_id)
+
         active_html = ""
         if active_alert:
             sev = active_alert.get("severity", "warn").capitalize()
@@ -180,6 +225,7 @@ class SensorDetailsTab(QWidget):
                 "severity": l.get("severity"),
                 "source": "event_logs_sensors"
             })
+
         for m in modal:
             is_anomaly = m.get("anomaly") not in (0, "0", False, "false", None)
             combined.append({
@@ -188,6 +234,7 @@ class SensorDetailsTab(QWidget):
                 "severity": "critical" if is_anomaly else "info",
                 "source": "sensors_anomalies_modal"
             })
+
         combined.sort(key=lambda x: x.get("time") or "", reverse=True)
 
         rows = "".join([
@@ -226,3 +273,5 @@ tr:hover td {{background:#f9fafb;}}
 <tbody>{rows}</tbody></table></div>
 </body></html>
 """
+
+

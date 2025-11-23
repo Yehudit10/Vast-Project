@@ -5,6 +5,10 @@ set -x
 export DISPLAY=:0
 rm -f /tmp/.X0-lock
 
+echo "[INFO] Starting PulseAudio..."
+pulseaudio --start --exit-idle-time=-1 --log-target=stderr
+sleep 1
+
 echo "[INFO] Starting Xvfb..."
 Xvfb :0 -screen 0 1920x1080x24 &
 sleep 3
@@ -22,10 +26,3 @@ echo "[INFO] Starting noVNC..."
 
 echo "[INFO] Starting PyQt application..."
 exec python /app/src/vast/main.py
-
-
-
-# # ------------------------------
-# # 🚀  Launch the main PyQt application
-# # ------------------------------
-# exec /opt/venv/bin/python /app/src/vast/main.py

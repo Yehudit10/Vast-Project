@@ -137,7 +137,7 @@ def get_file(bucket: str, object_key: str) -> Optional[Dict[str, Any]]:
     q = text("""
         SELECT
             file_id, bucket, object_key,
-            object_key AS key,                       -- convenient alias
+            object_key AS key,
             content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
@@ -151,27 +151,52 @@ def get_file(bucket: str, object_key: str) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
 
 
+# def get_file_by_id(file_id: int) -> Optional[Dict[str, Any]]:
+#     """Fetch by numeric file_id."""
+#     if DRY_RUN:
+#         return None
+
+#     q = text("""
+#         SELECT
+#             file_id, bucket, object_key,
+#             object_key AS key,
+#             content_type, size_bytes, etag,
+#             mission_id, device_id, tile_id,
+#             ST_AsText(footprint) AS footprint_wkt,
+#             metadata, created_at
+#         FROM files
+#         WHERE file_id = :file_id
+#         LIMIT 1;
+#     """)
+#     with session_scope() as s:
+#         row = s.execute(q, {"file_id": file_id}).mappings().first()
+#         return dict(row) if row else None
 def get_file_by_id(file_id: int) -> Optional[Dict[str, Any]]:
-    """New: fetch by numeric file_id."""
+    """New: fetch file metadata by numeric file_id using sound_new_sounds_connections (no files table)."""
     if DRY_RUN:
         return None
-
     q = text("""
         SELECT
-            file_id, bucket, object_key,
-            object_key AS key,                       -- convenient alias
-            content_type, size_bytes, etag,
-            mission_id, device_id, tile_id,
-            ST_AsText(footprint) AS footprint_wkt,
-            metadata, created_at
-        FROM files
-        WHERE file_id = :file_id
+            snsc.id AS file_id,
+            snsc.key AS key,  -- combined bucket + path, e.g. "my-bucket/path/to/file.wav"
+            split_part(snsc.key, '/', 1) AS bucket,
+            regexp_replace(snsc.key, '^[^/]+/', '') AS object_key,
+            COALESCE(sm.file_name, snsc.file_name) AS filename,
+            sm.device_id AS device_id,
+            sm.content_type AS content_type,
+            sm.duration_sec AS duration_sec,
+            COALESCE(sm.capture_time, snsc.linked_time) AS capture_time,
+            snsc.metadata AS metadata,
+            snsc.linked_time AS linked_time
+        FROM public.sound_new_sounds_connections snsc
+        LEFT JOIN public.sounds_metadata sm
+            ON sm.file_name = snsc.file_name
+        WHERE snsc.id = :file_id
         LIMIT 1;
     """)
     with session_scope() as s:
         row = s.execute(q, {"file_id": file_id}).mappings().first()
         return dict(row) if row else None
-
 
 def list_files(bucket: Optional[str], device_id: Optional[str], limit: int) -> List[Dict[str, Any]]:
     if DRY_RUN:
@@ -193,7 +218,7 @@ def list_files(bucket: Optional[str], device_id: Optional[str], limit: int) -> L
     q = text(f"""
         SELECT
             file_id, bucket, object_key,
-            object_key AS key,                       -- convenient alias
+            object_key AS key,
             content_type, size_bytes, etag,
             mission_id, device_id, tile_id,
             ST_AsText(footprint) AS footprint_wkt,
@@ -221,3 +246,17 @@ def delete_file(bucket: str, object_key: str) -> bool:
     with session_scope() as s:
         row = s.execute(q, {"bucket": bucket, "object_key": object_key}).first()
         return bool(row)
+
+
+def db_query(query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    """
+    Generic helper to execute raw SQL and return rows as dictionaries.
+    This is used by the audio-aggregates and plant-predictions endpoints.
+    """
+    if DRY_RUN:
+        return []
+
+    with session_scope() as s:
+        result = s.execute(text(query), params or {})
+        rows = result.mappings().all()
+        return [dict(r) for r in rows]

@@ -1,6 +1,7 @@
 from PyQt6 import QtWidgets, QtGui, QtCore
 import os, sys, vlc
 from datetime import datetime
+from PyQt6 import sip
 
 
 class EventsHistoryPage(QtWidgets.QWidget):
@@ -19,7 +20,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                 background-color: #f9fafb;
                 font-family: 'Segoe UI', 'DejaVu Sans', Arial, sans-serif;
                 color: #111827;
-                font-size: 14px;
+                font-size: 16px;
             }
             QHeaderView::section {
                 background-color: #f3f4f6;
@@ -36,7 +37,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                 border-radius: 10px;
                 selection-background-color: #bbf7d0;
                 selection-color: #065f46;
-                font-size: 13px;
+                font-size: 15px;
             }
             QTableWidget::item { padding: 10px; }
             QScrollBar:vertical {
@@ -55,7 +56,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                 border: 1px solid #d1d5db;
                 border-radius: 8px;
                 padding: 4px 10px;
-                font-size: 13px;
+                font-size: 14px;
                 height: 32px;
                 min-width: 120px;
                 color: #111827;
@@ -73,7 +74,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                 background-color: #ffffff;
                 padding: 6px 4px;
                 outline: none;
-                font-size: 14px;
+                font-size: 16px;
                 selection-background-color: #10b981;
                 selection-color: white;
             }
@@ -100,7 +101,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                 color: white;
                 padding: 6px 16px;
                 font-weight: 700;
-                font-size: 13px;
+                font-size: 15px;
             }
             QPushButton.view_btn:hover { background-color: #059669; }
         """)
@@ -199,18 +200,44 @@ class EventsHistoryPage(QtWidgets.QWidget):
         self.table = QtWidgets.QTableWidget()
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
-            "ID", "Device", "Anomaly", "Start Time",
-            "End Time", "Duration (s)", "Severity", "View"
+            "Device", "Anomaly", "Start Time", "End Time",
+            "Duration (m)", "Severity", "View", "Feedback"
         ])
+
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.table.verticalHeader().setDefaultSectionSize(48)
+        self.table.verticalHeader().setDefaultSectionSize(56)
         main_layout.addWidget(self.table, 1)
+        # QtCore.QTimer.singleShot(300, self.load_from_api)
+        self._load_timer = QtCore.QTimer(self)
+        self._load_timer.setSingleShot(True)
+        self._load_timer.timeout.connect(self._safe_load)
+        self._load_timer.start(300)
+    def _safe_load(self):
+        if not self.isVisible() or sip.isdeleted(self.table):
+            print("[SAFE_LOAD] Skipping load: widget closed or deleted.")
+            return
+        self.load_from_api()
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not getattr(self, "_loaded_once", False):
+            self._loaded_once = True
+            self.load_from_api()
 
-        QtCore.QTimer.singleShot(300, self.load_from_api)
+    
+    def closeEvent(self, event):
+        print("[CLOSE] EventsHistoryPage closing — stopping load timer.")
+        if hasattr(self, "_load_timer") and self._load_timer.isActive():
+            self._load_timer.stop()
+        return super().closeEvent(event)
+
+
+
+
+
 
     # ───────────── SLIDER STYLE ─────────────
     def _update_slider_style(self, value):
@@ -245,22 +272,38 @@ class EventsHistoryPage(QtWidgets.QWidget):
         except Exception:
             return 0
 
+    from datetime import datetime
+
     def _parse_time(self, t):
+        if not t:
+            return None
+
         try:
-            if not t:
-                return None
-            dt = datetime.fromisoformat(t.replace("Z", "+00:00"))
-            return dt.replace(tzinfo=None)
+            # Normalize variants:
+            # "2025-11-14 07:25:04+02:00"
+            # "2025-11-14T07:25:04+02:00"
+            # "2025-11-14 07:25:04Z"
+            nt = t.replace(" ", "T").replace("Z", "+00:00")
+            dt = datetime.fromisoformat(nt)
+
+            # Convert to naive local time for table filtering
+            return dt.astimezone().replace(tzinfo=None)
+
         except Exception:
             return None
 
+
     def _fmt_time(self, t):
-        return t.replace("T", " ").split(".")[0] if t else "-"
+        dt = self._parse_time(t)
+        if not dt:
+            return "-"
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+
 
     def load_from_api(self):
         print("[API] Fetching alerts from:", f"{self.api.base}/api/tables/alerts")
         try:
-            url = f"{self.api.base}/api/tables/alerts"
+            url = f"{self.api.base}/api/tables/alerts?limit=500"
             resp = self.api.http.get(url, timeout=8)
             resp.raise_for_status()
             data = resp.json()
@@ -275,7 +318,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                 print(f"[API][WARN] Unexpected format, using raw list of {len(rows)} items.")
 
             # ───── Filter only relevant alert types ─────
-            allowed_types = {"climbing_fence", "masked_person", "intruding_animal"}
+            allowed_types = {"climbing_fence", "masked_person", "intruding animal","fence_hole"}
             filtered = [r for r in rows if (r.get("alert_type") or "").strip() in allowed_types]
 
             print(f"[API] Filtered {len(filtered)} / {len(rows)} alerts matching allowed types {allowed_types}.")
@@ -295,7 +338,8 @@ class EventsHistoryPage(QtWidgets.QWidget):
 
     def populate_filters(self):
         devices = sorted({it.get("device_id") or "-" for it in self.all_rows})
-        anomalies = sorted({it.get("anomaly") or "-" for it in self.all_rows})
+        anomalies = sorted({it.get("alert_type") or "-" for it in self.all_rows})
+
         print(f"[FILTERS] Available devices={devices}")
         print(f"[FILTERS] Available anomalies={anomalies}")
 
@@ -337,7 +381,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
         filtered = []
         for idx, it in enumerate(self.all_rows):
             dev = it.get("device_id") or "-"
-            anom = it.get("anomaly") or "-"
+            anom = it.get("alert_type") or "-"
             sev = self._safe_int(it.get("severity"))
             started = self._parse_time(it.get("started_at"))
 
@@ -383,8 +427,8 @@ class EventsHistoryPage(QtWidgets.QWidget):
             4: lambda x: self._parse_time(x.get("started_at")) or datetime.min,
             5: lambda x: self._parse_time(x.get("ended_at")) or datetime.min,
             6: lambda x: self._parse_time(x.get("ended_at")) or datetime.min,
-            7: lambda x: (x.get("anomaly") or "").lower(),
-            8: lambda x: (x.get("anomaly") or "").lower(),
+            7: lambda x: (x.get("alert_type") or "").lower(),
+            8: lambda x: (x.get("alert_type") or "").lower(),
         }
 
         if i in keymap:
@@ -428,23 +472,117 @@ class EventsHistoryPage(QtWidgets.QWidget):
 
 
     def populate_table(self, rows):
+        if not hasattr(self, "table") or self.table is None:
+            print("[TABLE][WARN] Table not available — widget probably closed.")
+            return
+        if sip.isdeleted(self.table):
+            print("[TABLE][WARN] Table was deleted, aborting populate.")
+            return
         print(f"[TABLE] Populating table with {len(rows)} alerts.")
         self.table.setRowCount(len(rows))
 
         for r, it in enumerate(rows):
-            sid = (str(it.get("alert_id") or "")[:8] + "...") if it.get("alert_id") else "-"
-            self.table.setItem(r, 0, QtWidgets.QTableWidgetItem(sid))
-            self.table.setItem(r, 1, QtWidgets.QTableWidgetItem(it.get("device_id") or "-"))
-            self.table.setItem(r, 2, QtWidgets.QTableWidgetItem(it.get("alert_type") or "-"))
-            self.table.setItem(r, 3, QtWidgets.QTableWidgetItem(self._fmt_time(it.get("started_at"))))
-            self.table.setItem(r, 4, QtWidgets.QTableWidgetItem(self._fmt_time(it.get("ended_at"))))
-            self.table.setItem(r, 5, QtWidgets.QTableWidgetItem(f"{it.get('confidence') or 0:.2f}"))
+            # Device
+            self.table.setItem(r, 0, QtWidgets.QTableWidgetItem(it.get("device_id") or "-"))
 
-            # ACK Checkbox indicator
-            ack_value = it.get("ack", False)
-            ack_label = QtWidgets.QLabel("✅" if ack_value else "❌")
-            ack_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-            self.table.setCellWidget(r, 6, ack_label)
+            # Anomaly
+            # Anomaly
+            alert_type = it.get("alert_type") or "-"
+            raw_meta = it.get("meta") or {}
+            meta = {}
+
+            if isinstance(raw_meta, dict):
+                meta = raw_meta
+            elif isinstance(raw_meta, str):
+                try:
+                    meta = json.loads(raw_meta)
+                except Exception:
+                    try:
+                        import ast
+                        meta = ast.literal_eval(raw_meta)
+                    except Exception:
+                        meta = {}
+
+            subject = meta.get("subject")
+
+
+            label = alert_type.replace("_", " ").title()
+            if alert_type in ("intruding_animal","intruding animal", "climbing_fence") and subject:
+                label = f"{label} ({subject.title()})"
+            self.table.setItem(r, 1, QtWidgets.QTableWidgetItem(label))
+
+
+            # Start / End time
+            self.table.setItem(r, 2, QtWidgets.QTableWidgetItem(self._fmt_time(it.get("started_at"))))
+            self.table.setItem(r, 3, QtWidgets.QTableWidgetItem(self._fmt_time(it.get("ended_at"))))
+
+            # Duration (minutes)
+            started = self._parse_time(it.get("started_at"))
+            ended = self._parse_time(it.get("ended_at"))
+            duration_m = "-"
+            if started and ended:
+                duration_m = f"{(ended - started).total_seconds() / 60:.1f}"
+            self.table.setItem(r, 4, QtWidgets.QTableWidgetItem(duration_m))
+
+
+
+          ## ────── SEVERITY BAR ──────
+            sev = self._safe_int(it.get("severity"))
+            sev = max(0, min(sev, 9))   # allow 0–9
+            fill = sev / 9.0             # proportional fill
+
+            if sev == 0:
+                label_text = "None"
+                color = "#f3f4f6"
+            elif sev <= 3:
+                label_text = "Low"
+                color = "#a7f3d0"
+            elif sev <= 6:
+                label_text = "Medium"
+                color = "#34d399"
+            else:
+                label_text = "High"
+                color = "#059669"
+
+            # Background container
+            container = QtWidgets.QFrame()
+            container.setFixedHeight(20)
+            container.setStyleSheet("""
+                QFrame {
+                    background: #e5e7eb;
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                }
+            """)
+
+            layout = QtWidgets.QGridLayout(container)
+            layout.setContentsMargins(1, 1, 1, 1)
+            layout.setSpacing(0)
+
+            fill_bar = QtWidgets.QFrame(container)
+            fill_bar.setStyleSheet(f"background-color: {color}; border-radius: 7px;")
+
+            # ↓ reduce bar width from 90 → 70 for better balance
+            container_width = 150
+            fill_bar.setFixedWidth(int(container_width * fill))
+
+            layout.addWidget(fill_bar, 0, 0)
+            layout.setColumnStretch(0, 0)
+            layout.setColumnStretch(1, 1)
+
+            label = QtWidgets.QLabel(label_text, container)
+            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            label.setStyleSheet("font-weight:600; color:#064e3b; background:transparent; font-size:12px;")
+            layout.addWidget(label, 0, 0, 1, 2)
+
+            wrapper = QtWidgets.QWidget()
+            outer = QtWidgets.QHBoxLayout(wrapper)
+            outer.setContentsMargins(2, 0, 2, 0)
+            outer.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            outer.addWidget(container)
+            self.table.setCellWidget(r, 5, wrapper)
+
+
 
             # Centered “View” button for vod
             btn = QtWidgets.QPushButton("View")
@@ -456,7 +594,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
                     background-color: #10b981;
                     color: white;
                     border-radius: 6px;
-                    font-size: 12px;
+                    font-size: 13px;
                     font-weight: 600;
                     padding: 3px 6px;
                 }
@@ -471,29 +609,135 @@ class EventsHistoryPage(QtWidgets.QWidget):
             btn_layout.setContentsMargins(0, 0, 0, 0)
             btn_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
             btn_layout.addWidget(btn)
-            self.table.setCellWidget(r, 7, btn_container)
+            self.table.setCellWidget(r, 6, btn_container)
+
+
+            # ────── FEEDBACK (visible circular emoji buttons — no custom class) ──────
+            feedback_widget = QtWidgets.QWidget(self.table)
+            layout = QtWidgets.QHBoxLayout(feedback_widget)
+            layout.setContentsMargins(0, 6, 0, 6)
+            layout.setSpacing(12)
+            layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+            thumb_up = QtWidgets.QPushButton("👍")
+            thumb_down = QtWidgets.QPushButton("👎")
+
+            for btn in (thumb_up, thumb_down):
+                btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+                btn.setCheckable(True)
+                btn.setFixedSize(48, 48)
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: white;
+                        border-radius: 24px;
+                        border: 2px solid #d1d5db;
+                        font-size: 20px;
+                    }
+                    QPushButton:hover {
+                        background-color: #f3f4f6;
+                        border-color: #9ca3af;
+                    }
+                    QPushButton:checked {
+                        background-color: #e5e7eb;
+                        border-color: #4b5563;
+                    }
+                """)
+
+            feedback_widget.thumb_up = thumb_up
+            feedback_widget.thumb_down = thumb_down
+
+            # Restore state
+            meta = it.get("meta") or {}
+            if isinstance(meta, str):
+                import json
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = {}
+            is_real = meta.get("is_real")
+            if is_real is True:
+                thumb_up.setChecked(True)
+            elif is_real is False:
+                thumb_down.setChecked(True)
+
+            def handle_feedback_change(checked, alert=it, up_btn=thumb_up, down_btn=thumb_down):
+                if not checked:
+                    return
+                is_real_value = up_btn.isChecked()
+                down_btn.blockSignals(True)
+                down_btn.setChecked(not is_real_value)
+                down_btn.blockSignals(False)
+                self._send_feedback(alert, is_real_value)
+
+            thumb_up.toggled.connect(handle_feedback_change)
+            thumb_down.toggled.connect(handle_feedback_change)
+
+            layout.addWidget(thumb_up)
+            layout.addWidget(thumb_down)
+            feedback_widget.setLayout(layout)
+
+            self.table.setRowHeight(r, 68)
+            # Wrap feedback inside a centering wrapper
+            cell_wrapper = QtWidgets.QWidget()
+            cell_layout = QtWidgets.QHBoxLayout(cell_wrapper)
+            cell_layout.setContentsMargins(0, 0, 0, 0)
+            cell_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            cell_layout.addWidget(feedback_widget)
+
+            self.table.setCellWidget(r, 7, cell_wrapper)
+
 
         print("[TABLE] Done populating alerts table.")
 
 
 
-
-
-           
-
-
-
-
-
-
     def _open_video_player(self, info):
-        print(f"[VIDEO] Opening video player for alert={info.get('alert_id')}")
-        url = info.get("vod")
-        if not url:
-            QtWidgets.QMessageBox.warning(self, "No Video", "This alert has no VOD URL.")
-            return
-        self._show_vlc_popup(url)
+        print(f"[VIEW] Opening media for alert={info.get('alert_id')}")
 
+        vod_url = info.get("vod")
+        image_url = info.get("image_url")
+
+        if vod_url:
+            print("[VIEW] Found VOD — playing video.")
+            proxy_url = f"http://127.0.0.1:19100/vod?u={self.media_proxy_base}/vod/{vod_url}"
+            self._show_vlc_popup(proxy_url)
+            return
+
+        if image_url:
+            print("[VIEW] No VOD, found image — showing image popup.")
+            image_url = f"http://127.0.0.1:19100/vod?u={self.media_proxy_base}/img/{image_url}"
+            self._show_image_popup(image_url)
+            return
+
+        QtWidgets.QMessageBox.warning(self, "No Media", "This alert has neither video nor image available.")
+    
+    def _show_image_popup(self, url: str):
+        print(f"[IMAGE] Displaying still image from {url}")
+        popup = QtWidgets.QDialog(self)
+        popup.setWindowTitle("Incident Image")
+        popup.setMinimumSize(640, 480)
+        layout = QtWidgets.QVBoxLayout(popup)
+
+        label = QtWidgets.QLabel()
+        label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label, 1)
+
+        # Fetch image via Qt network
+        from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest
+        self._manager = QNetworkAccessManager()
+
+        def handle_reply(reply):
+            data = reply.readAll()
+            pixmap = QtGui.QPixmap()
+            if pixmap.loadFromData(data):
+                label.setPixmap(pixmap.scaled(label.size(), QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
+            else:
+                label.setText("❌ Failed to load image.")
+        self._manager.finished.connect(handle_reply)
+
+        req = QNetworkRequest(QtCore.QUrl(url))
+        self._manager.get(req)
+        popup.exec()
 
     def _show_vlc_popup(self, url):
         print(f"[VIDEO] Playing URL: {url}")
@@ -514,3 +758,30 @@ class EventsHistoryPage(QtWidgets.QWidget):
             mp.set_xwindow(int(player.winId()))
         mp.play()
         print("[VIDEO] Playback started.")
+    
+
+    def _send_feedback(self, alert: dict, is_real: bool):
+        """Send user feedback (👍/👎) using API contract."""
+        alert_id = alert.get("alert_id")
+        if not alert_id:
+            print("[FEEDBACK][WARN] Missing alert_id; cannot update.")
+            return
+
+        payload = {
+            "keys": {"alert_id": alert_id},
+            "data": {"meta": {**(alert.get("meta") or {}), "is_real": is_real}}
+        }
+
+        url = f"{self.api.base}/api/tables/alerts"
+        print(f"[FEEDBACK] PATCH {url} with {payload}")
+
+        try:
+            resp = self.api.http.patch(url, json=payload, timeout=6)
+            resp.raise_for_status()
+            result = resp.json()
+            print(f"[FEEDBACK] ✅ Updated meta.is_real={is_real}, affected={result.get('affected_rows')}")
+        except Exception as e:
+            print("[FEEDBACK][ERROR]", e)
+            QtWidgets.QMessageBox.warning(self, "Feedback Error", f"Failed to update feedback:\n{e}")
+
+    

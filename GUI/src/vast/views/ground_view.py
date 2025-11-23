@@ -16,6 +16,14 @@ from vast.dashboard_api import DashboardApi
 GROUND_BUCKET = os.getenv("GROUND_BUCKET", "ground")
 GROUND_PREFIX = os.getenv("GROUND_PREFIX", "")
 
+DB_API_BASE      = os.getenv("DB_API_BASE", "http://127.0.0.1:8001")
+MINIO_ENDPOINT   = os.getenv("MINIO_ENDPOINT", "127.0.0.1:9001")
+MINIO_SECURE     = os.getenv("MINIO_SECURE", "false")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin123")
+GROUND_BUCKET    = os.getenv("GROUND_BUCKET", "ground")
+GROUND_PREFIX    = os.getenv("GROUND_PREFIX", "")
+GATEWAY_URL      = os.getenv("GATEWAY_URL", "http://127.0.0.1:8000")
 # ----------------------------
 # PHI data model
 # ----------------------------
@@ -533,9 +541,9 @@ class GroundView(QWidget):
 
             # Nothing available
             self._render_phi_none()
-            self._warn("No PHI available for this image.")
+            # self._warn("No PHI available for this image.")
         except Exception as e:
-            self._warn(f"_refresh_phi_for_key error: {e}")
+            # self._warn(f"_refresh_phi_for_key error: {e}")
             self._render_phi_none()
 
     def _render_phi(self, snap: PhiSnapshot) -> None:
@@ -578,7 +586,7 @@ class GroundView(QWidget):
                 key = self._keys[self._idx]
                 if not isinstance(key, str) or not key.strip():
                     self._render_phi_none()
-                    self._warn("No valid image key selected.")
+                    # self._warn("No valid image key selected.")
                     return
                 self._refresh_phi_for_key(key)
             else:

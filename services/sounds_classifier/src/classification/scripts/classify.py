@@ -25,6 +25,11 @@ from classification.core.model_io import (
 )
 from classification.backbones.cnn14 import load_cnn14_model, run_cnn14_embeddings_batch
 from classification.scripts import alerts
+from classification.core.db_utils import open_db
+from classification.core.db_gis_helpers import (
+    fetch_gis_by_device_and_time,
+    fetch_gis_by_filename,
+)
 
 # -----------------------------
 # Environment configuration
@@ -71,6 +76,7 @@ class _Runtime:
 R = _Runtime()
 
 _MINIO_CLIENT = None
+_DB_CONN = None 
 
 def _get_minio():
     global _MINIO_CLIENT
@@ -79,6 +85,15 @@ def _get_minio():
             MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=MINIO_SECURE
         )
     return _MINIO_CLIENT
+
+def _get_db_conn():
+    """
+    Lazy-open and cache a DB connection using open_db().
+    """
+    global _DB_CONN
+    if _DB_CONN is None:
+        _DB_CONN = open_db()
+    return _DB_CONN
 
 _TS_PATTERNS = (
     # ISO-like with Z or without Z, with or without 'T'
@@ -350,9 +365,23 @@ def run_classification_job(
                 result["processing_ms"] = int(result["processing_ms"])
             except Exception:
                 pass
+            
         if result["label"] != "another" and KAFKA_BROKERS and ALERTS_TOPIC:
             device_id, started_at = _extract_device_and_started_at_from_key(s3_key)
             if device_id and started_at:
+                lat = lon = area = None
+                try:
+                    conn = _get_db_conn()
+                    lat, lon, area = fetch_gis_by_device_and_time(conn, device_id, started_at)
+                    if lat is None or lon is None:
+                        file_name = Path(s3_key).name
+                        fl, fn, fa = fetch_gis_by_filename(conn, file_name)
+                        lat = lat if lat is not None else fl
+                        lon = lon if lon is not None else fn
+                        area = area or fa
+                except Exception:
+                    pass
+                
                 try:
                     label = str(result["label"])
                     alert_type = f"suspicious_sound-{label}"
@@ -379,6 +408,12 @@ def run_classification_job(
                     if meta["processing_ms"] is None:
                         meta.pop("processing_ms")
                     message_key = f"{device_id}|{started_at}"
+                    alert_id = str(uuid.uuid4())
+                    
+                    perf_logger.info(
+                        "About to send structured alert: topic=%s key=%s type=%s lat=%s lon=%s area=%s",
+                        ALERTS_TOPIC, message_key, alert_type, lat, lon, area
+                    )
                     
                     ok = alerts.send_structured_alert(
                         brokers=KAFKA_BROKERS,
@@ -388,11 +423,13 @@ def run_classification_job(
                         started_at=started_at,
                         confidence=confidence,
                         severity=severity,
+                        area=area,
+                        lat=lat,
+                        lon=lon,
                         meta=meta,
+                        alert_id=alert_id,
                         message_key=message_key,
                     )
-                    perf_logger.info("About to send alert: topic=%s key=%s type=%s",
-                                     ALERTS_TOPIC, message_key, alert_type)
                     if ok:
                         result["sent_alert"] = True
                         result["alert_topic"] = ALERTS_TOPIC

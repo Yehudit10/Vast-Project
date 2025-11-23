@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS runs (
   notes         TEXT
 );
 
--- 3) file_aggregates: final per-file outputs; references public.files(file_id)
+-- 3) file_aggregates: final per-file outputs; references public.sounds_new_sounds_connections(id)
 CREATE TABLE IF NOT EXISTS file_aggregates (
   run_id                 TEXT   NOT NULL,
   file_id                BIGINT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS file_aggregates (
 
   PRIMARY KEY (run_id, file_id),
   FOREIGN KEY (run_id)  REFERENCES runs(run_id)        ON DELETE CASCADE,
-  FOREIGN KEY (file_id) REFERENCES public.files(file_id) ON DELETE CASCADE
+  FOREIGN KEY (file_id) REFERENCES public.sound_new_sounds_connections(id) ON DELETE CASCADE
 );
 
 -- Helpful indexes

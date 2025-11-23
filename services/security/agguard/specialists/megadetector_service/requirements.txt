@@ -1,0 +1,10 @@
+numpy==1.26.4
+pillow
+grpcio==1.62.2
+grpcio-tools==1.62.2
+protobuf==4.25.3
+requests
+PyYAML==6.0.1
+prometheus-client
+psutil
+

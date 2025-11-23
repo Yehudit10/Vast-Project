@@ -1,3 +1,8 @@
+data/rover_samples/**
+!data/rover_samples/.gitkeep
+
+# Ignore data payloads
+/data/
 # --- Secrets and Certificates ---
 *.env
 *.crt
@@ -10,12 +15,22 @@ MQTT_IMAGES/secrets/
 services/sounds/sounds_classifier/src/classification/data/
 services/sounds/sounds_classifier/src/classification/models/panns_data/
 
+# Ignore environment and IDE files
+.env
+
 # --- Python ---
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
 *.pyd
 *.pytest_cache/
+.pytest_cache/
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a
 .venv/
 venv/
 .coverage
@@ -37,3 +52,51 @@ venv/
 # --- OS files ---
 .DS_Store
 Thumbs.db
+
+
+# ==== Training/experiment outputs (never version) ====
+# Any top-level or nested "runs" folders created by Ultralytics or notebooks
+runs*/
+**/runs*/
+
+# ==== Model weights from training (PyTorch checkpoints) ====
+# Keep weights out of Git; publish via Releases/Artifacts instead.
+<<<<<<< HEAD
+!services/inference_http/models/fence_hole_detector/weights/
+!services/inference_http/models/fence_hole_detector/weights/best.onnx
+
+# ==== Model weights from training (PyTorch checkpoints) ====
+# Keep weights out of Git; publish via Releases/Artifacts instead.
+=======
+!services/fence_hole_detector/weights/
+!services/fence_hole_detector/weights/best.onnx
+
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a
+runs_fence/**/weights/*.pt
+
+# ==== Prediction artifacts (images + txt) ====
+# Generic preds folders created by `yolo predict`
+runs_fence/**/preds/**
+runs_fence/*_preds/**
+
+# Specific experiment outputs you listed (safe to ignore entirely)
+runs_fence/y8n_baseline_no_roi/**
+runs_fence/y8n_baseline_vote_soft/**
+runs_fence/y8n_realtime_preds_no_roi/**
+runs_fence/y8s_cpu_v1_preds/**
+
+# ==== Logs / plots (reproducible – don’t store) ====
+**/results.png
+**/confusion_matrix.png
+**/*.log
+
+# ==== Optional: large exported models (keep if you plan to ship them) ====
+# Uncomment to ignore ONNX as well; otherwise keep the single runtime ONNX in repo.
+runs_fence/**/weights/*.onnx
+
+models/*.pt
+<<<<<<< HEAD
+=======
+
+.coverage
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a

@@ -34,12 +34,25 @@ scrape_configs:
   
   - job_name: sound_metrics
     static_configs:
-      - targets: ['host.docker.internal:8005']
+      - targets: ['sound_metrics:8005']
 
   - job_name: 'pushgateway'
     honor_labels: true
     static_configs:
       - targets: ['pushgateway:9091']
  
+  - job_name: 'fruit_metric'
+    static_configs:
+      - targets: ['fruit_metrics:8050']
 
+  - job_name: 'security-models'
+    static_configs:
+      - targets:
+          - 'mega-detector:8007'
+          - 'animal-classifier:8008'
+          - 'anomalies-classifier:8011'
+          - 'mask-classifier:8012'
 
+  - job_name: "fruit_ripeness"
+    static_configs:
+      - targets: ["ripeness-exporter:9128"]

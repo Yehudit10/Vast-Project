@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual envs
+.venv/
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Outputs & plots
+out/
+*.png
+*.svg
+
+# Data files :
+*.csv
+*.parquet
+*.feather
+
+# Allow specific data files
+!data/
+!data/Crop_recommendationV2.csv
+
+
+private_*.py
+local_*.py
+scratch_*.ipynb
+
+# files
+analyze_dataset.py
+anomalies.py
+check_25_consistency.py
+diff_anomalies.py
+export_anomalies.py
+
+# Ignore model artifacts
+*.pkl
+*.joblib
+models/*.pkl
+models/*.joblib

@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  jobmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081" 
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092  
+      - KAFKA_GROUP_ID=flink-device-pipeline 
+    networks:
+      - ag_cloud
+    volumes:
+      - ./secrets:/opt/app/secrets
+
+  taskmanager:
+    build:
+      context: .
+      dockerfile: Dockerfile.flink
+    container_name: flink-taskmanager
+    command: taskmanager -D taskmanager.numberOfTaskSlots=4
+    depends_on:
+      - jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BROKERS=kafka:9092
+      - taskmanager.numberOfTaskSlots=4
+      - KAFKA_GROUP_ID=flink-device-pipeline
+    networks:
+      - ag_cloud
+    volumes:
+      - ./secrets:/opt/app/secrets
+
+networks:
+  ag_cloud:
+    external: true
+    name: agcloud_ag_cloud

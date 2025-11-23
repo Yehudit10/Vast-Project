@@ -7,6 +7,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+<<<<<<< HEAD
+
+# COPY certs/ /app/certs/
+# RUN if [ -d /app/certs ] && ls /app/certs/*.crt >/dev/null 2>&1; then \
+#       cp /app/certs/*.crt /usr/local/share/ca-certificates/ && update-ca-certificates; \
+=======
+>>>>>>> 4bb2e60fc0fd9a846955fa89533d661a56b1645a
 # Bring in app files (including optional ./certs)
 COPY . .
 
@@ -18,9 +25,12 @@ RUN if [ -d /app/certs ] && [ -n "$(find /app/certs -type f -name '*.crt' -print
       echo "No extra CA certs found. Skipping CA update."; \
     fi
 
+
+COPY requirements.txt .
 # Ensure pip/requests use the system CA bundle (includes optional NetFree certs)
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
     REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    # CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
@@ -44,9 +54,9 @@ ENV PYTHONUNBUFFERED=1 \
     MINIO_BUCKET=sound \
     MINIO_PREFIX=sounds/
 
-EXPOSE 8001
+EXPOSE 8005
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
-  CMD curl -fsS http://localhost:8001/metrics >/dev/null || exit 1
+  CMD curl -fsS http://localhost:8005/metrics >/dev/null || exit 1
 
 CMD ["python", "-u", "src/metrics.py"]

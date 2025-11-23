@@ -1,4 +1,5 @@
 import yaml
+import json, ast
 from string import Template
 from PyQt6.QtCore import QObject, pyqtSignal
 from vast.alerts.alert_client import AlertClient
@@ -39,7 +40,7 @@ class AlertService(QObject):
     # ────────────────────────────────
     def load_devices(self):
         try:
-            url = f"{self.api.base}/api/tables/devices"
+            url = f"{self.api.base}/api/tables/devices?limit=500"
             r = self.api.http.get(url, timeout=10)
             r.raise_for_status()
             data = r.json()
@@ -58,7 +59,7 @@ class AlertService(QObject):
     # ────────────────────────────────
     def load_initial(self):
         try:
-            url = f"{self.api.base}/api/tables/alerts"
+            url = f"{self.api.base}/api/tables/alerts?limit=500"
             r = self.api.http.get(url, timeout=10)
             r.raise_for_status()
             data = r.json()
@@ -76,21 +77,49 @@ class AlertService(QObject):
                     if not a.get("lon") and lon:
                         a["lon"] = lon
 
-                # Apply template enrichment
+                # ───────────── ENRICH ALERT WITH TEMPLATE ─────────────
                 tmpl = self.templates.get(alert_type)
                 if tmpl:
-                    a["category"] = tmpl.get("category")
+                    raw_meta = a.get("meta", {}) or {}
+                    meta = {}
+
+                    # FIX: correct meta parsing
+                    if isinstance(raw_meta, dict):
+                        meta = raw_meta
+                    elif isinstance(raw_meta, str):
+                        try:
+                            meta = json.loads(raw_meta)
+                        except Exception:
+                            try:
+                                meta = ast.literal_eval(raw_meta)
+                            except Exception:
+                                meta = {}
+
+                    subject = meta.get("subject", "animal")
+                    severity = int(a.get("severity", meta.get("severity", 1)))
+
+                    # build context
                     context = {
                         "device_id": device_id,
                         "area": a.get("area", "unknown area"),
                         "confidence": a.get("confidence", "?"),
                         "timestamp": a.get("started_at", ""),
+                        "subject": subject,
+                        "severity": severity,
+                        "started_at": a.get("startsAt", ""),
                     }
-                    # Use Template.safe_substitute to avoid KeyErrors
+
+                    # enrich record
+                    a["category"] = tmpl.get("category")
+                    a["severity"] = severity
+                    a["subject"] = subject
                     a["summary"] = Template(tmpl.get("summary", "")).safe_substitute(context)
                     a["recommendation"] = Template(tmpl.get("recommendation", "")).safe_substitute(context)
 
             self.alerts = alerts
+            self.alerts.sort(
+                key=lambda a: a.get("started_at") or a.get("startsAt") or "",
+            )
             self.alertsUpdated.emit(self.alerts)
             print(f"[AlertService] Loaded {len(alerts)} enriched alerts.")
         except Exception as e:
@@ -101,7 +130,6 @@ class AlertService(QObject):
     # ────────────────────────────────
     def _on_realtime(self, alert_msg):
         alerts = alert_msg.get("alerts", [])
-        print("[AlertService] Realtime message:", alert_msg)
 
         for a in alerts:
             labels = a.get("labels", {})
@@ -112,25 +140,20 @@ class AlertService(QObject):
             ends_at = a.get("endsAt")
             is_resolved = ends_at and not ends_at.startswith("0001-01-01")
 
-            # Find existing alert in memory
+            # Find existing alert
             existing = next((al for al in self.alerts if al.get("alert_id") == alert_id), None)
 
             if is_resolved:
-                # ✅ Don't delete — update existing alert with endedAt timestamp
                 if existing:
                     existing["endedAt"] = ends_at
                     self.alertRemoved.emit(alert_id)
                 else:
-                    # If not in memory (e.g. loaded from DB earlier)
-                    # create a minimal record so the UI can update
                     fake_alert = {"alert_id": alert_id, "endedAt": ends_at}
                     self.alerts.append(fake_alert)
                     self.alertRemoved.emit(alert_id)
                 continue
 
-            # ────────────────────────────────
-            # ACTIVE alert (new or ongoing)
-            # ────────────────────────────────
+            # ACTIVE alert
             lat = ann.get("lat")
             lon = ann.get("lon")
 
@@ -139,14 +162,44 @@ class AlertService(QObject):
                 lat, lon = self.device_locations[device_id]
                 print(f"[AlertService] Filled missing coords for {device_id}: ({lat}, {lon})")
 
-            # Enrich with template
+            # ────────────────────────────────
+            # FIXED meta parsing
+            # ────────────────────────────────
             tmpl = self.templates.get(alert_type, {})
+            raw_meta = ann.get("meta", {}) or {}
+            meta = {}
+
+            if isinstance(raw_meta, dict):
+                meta = raw_meta
+            elif isinstance(raw_meta, str):
+                try:
+                    meta = json.loads(raw_meta)
+                except Exception:
+                    try:
+                        meta = ast.literal_eval(raw_meta)
+                    except Exception:
+                        meta = {}
+
+            subject = meta.get("subject", "animal")
+            severity = int(ann.get("severity", 1))
+            started_at = a.get("startsAt") or ""
+
             summary = Template(tmpl.get("summary", "")).safe_substitute(
                 device_id=device_id,
                 area=ann.get("area", ""),
                 confidence=ann.get("confidence", ""),
+                subject=subject,
+                severity=severity,
+                started_at=started_at,
             )
-            recommendation = tmpl.get("recommendation", "")
+
+            recommendation = Template(tmpl.get("recommendation", "")).safe_substitute(
+                device_id=device_id,
+                area=ann.get("area", ""),
+                subject=subject,
+                severity=severity,
+            )
+
             category = tmpl.get("category")
 
             normalized = {
@@ -155,7 +208,7 @@ class AlertService(QObject):
                 "device_id": device_id,
                 "lat": lat,
                 "lon": lon,
-                "severity": int(ann.get("severity", 1)),
+                "severity": severity,
                 "summary": summary,
                 "recommendation": recommendation,
                 "category": category,
@@ -165,29 +218,31 @@ class AlertService(QObject):
                 "startsAt": a.get("startsAt"),
             }
 
-            # Update if it already exists, else append
             if existing:
                 existing.update(normalized)
             else:
                 self.alerts.append(normalized)
 
+            self.alerts.sort(
+                key=lambda a: a.get("started_at") or a.get("startsAt") or "",
+            )
+
             self.alertAdded.emit(normalized)
 
-            
+    # ────────────────────────────────
+    # Mark all as acknowledged
+    # ────────────────────────────────
     def mark_all_acknowledged(self):
-        """Mark all alerts as acknowledged both locally and in DB (PATCH /api/tables/alerts)."""
         unacked = [a for a in self.alerts if not a.get("ack", False)]
         if not unacked:
             return
 
-        # Update local memory first
         for a in unacked:
             a["ack"] = True
 
-        # Push updates asynchronously to DB
         def _patch_ack(alert):
             try:
-                url = f"{self.api.base}/api/tables/alerts"
+                url = f"{self.api.base}/api/tables/alerts?limit=500"
                 payload = {
                     "keys": {"alert_id": alert["alert_id"]},
                     "data": {"ack": True},
@@ -203,7 +258,3 @@ class AlertService(QObject):
 
         self.alertsUpdated.emit(self.alerts)
         print(f"[AlertService] Marked {len(unacked)} alerts as acknowledged.")
-        
-
-
-

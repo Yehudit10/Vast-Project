@@ -21,6 +21,11 @@ echo "[bootstrap] Waiting for COLD (${COLD_ENDPOINT})..."
 until mc ls "${MC_ALIAS_COLD}" >/dev/null 2>&1; do sleep 2; done
 
 echo "[bootstrap] Creating buckets..."
+
+# Allow anonymous download on all HOT buckets
+mc anonymous set download "${MC_ALIAS_HOT}/sound" || true
+mc anonymous set download "${MC_ALIAS_HOT}/imagery" || true
+
 mc mb "${MC_ALIAS_HOT}/imagery"   || true
 mc mb "${MC_ALIAS_HOT}/sound" || true
 mc mb "${MC_ALIAS_COLD}/imagery"   || true
@@ -171,7 +176,7 @@ mc event add "${MC_ALIAS_HOT}/imagery" \
 mc event add "${MC_ALIAS_HOT}/imagery" \
   arn:minio:sqs::fruits:kafka \
   --event put \
-  --prefix "fruits/"
+  --prefix "fruit/tree"
 
 mc event add "${MC_ALIAS_HOT}/imagery" \
   arn:minio:sqs::leaves:kafka \

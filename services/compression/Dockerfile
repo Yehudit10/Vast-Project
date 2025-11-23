@@ -12,7 +12,7 @@ COPY certs /app/certs
 
 # Install certificates
 RUN cp /app/certs/*.crt /usr/local/share/ca-certificates/ && \
-    update-ca-certificates
+update-ca-certificates
 
 # Copy requirements and install
 COPY requirements.txt .

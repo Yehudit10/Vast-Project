@@ -47,8 +47,21 @@ class Col(Expr):
 class Literal(Expr):
     """A literal value that becomes a bound parameter (with a placeholder)."""
     value: Any
-    def compile(self, ctx: CompileCtx) -> str: return ctx.add_param(self.value)
-    def to_ir(self) -> Dict[str, Any]: return {"literal": self.value}
+
+    def compile(self, ctx: CompileCtx) -> str:
+        # Detect SQL expressions that should be inlined (not parameterized)
+        if isinstance(self.value, str) and any(
+            kw in self.value.lower()
+            for kw in ("now()", "interval", "date_trunc", "current_date", "current_timestamp")
+        ):
+            return self.value  # inline directly as SQL expression
+
+        # Default: treat as bound parameter
+        return ctx.add_param(self.value)
+
+    def to_ir(self) -> Dict[str, Any]:
+        return {"literal": self.value}
+
 
 def ensure_expr(x: Any) -> Expr:
     """Coerce Python values to Literal, leave Expr as-is."""
@@ -105,24 +118,53 @@ def expr_from_ir(d: Dict[str, Any]) -> Expr:
 
 
 def cond_from_ir(d: Dict[str, Any]) -> Cond:
-    """Decode a strict Cond IR object into Cond."""
-    if not isinstance(d, dict): raise TypeError("Cond node must be an object")
+    """Decode a strict Cond IR object into Cond with defensive validation."""
+    # ───────────── DEBUG LOG ─────────────
+    import traceback
+    print("\n[DEBUG cond_from_ir] called with:", repr(d))
+    # Optional: print call stack to see which Op invoked this
+    # print("".join(traceback.format_stack(limit=3)))
+
+    if not isinstance(d, dict):
+        raise TypeError(f"Cond node must be an object, got {type(d).__name__}: {d}")
+
     keys = set(d.keys())
+
+    # ───── Logical AND
     if keys == {"all"}:
         arr = d["all"]
-        if not isinstance(arr, list): raise TypeError("all must be an array of Cond")
+        if not isinstance(arr, list):
+            raise TypeError(f"'all' must be a list of condition objects, got {type(arr).__name__}")
+        for i, item in enumerate(arr):
+            if not isinstance(item, dict):
+                raise TypeError(f"List argument at index {i} must be a dict, got {type(item).__name__}: {item}")
         return All(*[cond_from_ir(x) for x in arr])
+
+    # ───── Logical OR
     if keys == {"any"}:
         arr = d["any"]
-        if not isinstance(arr, list): raise TypeError("any must be an array of Cond")
+        if not isinstance(arr, list):
+            raise TypeError(f"'any' must be a list of condition objects, got {type(arr).__name__}")
+        for i, item in enumerate(arr):
+            if not isinstance(item, dict):
+                raise TypeError(f"List argument at index {i} must be a dict, got {type(item).__name__}: {item}")
         return Any(*[cond_from_ir(x) for x in arr])
+
+    # ───── Predicate
     if keys == {"op", "left", "right"}:
         try:
-            op = BinOp(d["op"])  # raises ValueError if unknown -> nice error
+            op = BinOp(d["op"])
         except ValueError as e:
             allowed = ", ".join(o.value for o in BinOp)
             raise ValueError(f"Operator {d['op']!r} not allowed. Allowed: [{allowed}]") from e
         return Predicate(expr_from_ir(d["left"]), op, expr_from_ir(d["right"]))
+
+    if "col" in d and "literal" in d:
+        return Predicate(expr_from_ir({"col": d["col"]}), BinOp.EQ, expr_from_ir({"literal": d["literal"]}))
+
+    raise ValueError(f"Invalid condition node: {d}")
+
+
 
 # Convenience aliases
 AND = All
