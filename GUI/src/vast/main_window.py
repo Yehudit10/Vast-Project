@@ -931,6 +931,9 @@ from vast.alerts.alert_service import AlertService
 
 
 
+# === Irrigation imports ===
+from views.irrigation.irrigation_view import IrrigationView
+
 
 class MainWindow(QMainWindow):
     logoutRequested = pyqtSignal()
@@ -1138,7 +1141,7 @@ class MainWindow(QMainWindow):
 
         for name in [
             "Home", "Sensors", "Sound", "Ground Image",
-            "Aerial Image", "Fruits", "Security", "Settings", "Notifications"
+            "Aerial Image", "Fruits", "Security", "Settings", "Notifications", "Irrigation"
         ]:
             QListWidgetItem(f"  {name}", self.nav_list)
 
@@ -1175,6 +1178,21 @@ class MainWindow(QMainWindow):
         self.notification_view = NotificationView(self)
         self.security_view = IncidentPlayerVLC(api, self.alert_service, self)
         self.fruits_view = FruitsView(api, self)
+        self.ground_view = GroundView(api, self)
+        self.auth_status = AuthStatusView(api, self)
+
+        self.sensors_status_summary = SensorsStatusSummary(api, self)
+        self.sensors_health = SensorsView(api, self)
+        self.sensors_main = SensorsMainView(api, self)
+        print("[DEBUG] Creating IrrigationView...")
+        try:
+            self.irrigation_view = IrrigationView(api, self)
+            print("[DEBUG] IrrigationView created successfully")
+        except Exception as e:
+            print(f"[ERROR] Failed to create IrrigationView: {e}")
+            import traceback
+            traceback.print_exc()
+            self.irrigation_view = QWidget()  # Fallback empty widget
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -1185,6 +1203,9 @@ class MainWindow(QMainWindow):
             "Notifications": self.notification_view,
             "Security": self.security_view,
             "Fruits": self.fruits_view,
+            "Ground Image": self.ground_view,
+            "Irrigation": self.irrigation_view,
+            "Auth": self.auth_status
             
         }
         for view in self.views.values():
@@ -1242,16 +1263,23 @@ class MainWindow(QMainWindow):
     # ───────────────────────────────
     def _on_nav_change(self, row: int) -> None:
         name = self.nav_list.item(row).text().strip()
+        print(f"[DEBUG] _on_nav_change: row={row}, name='{name}'")
+        print(f"[DEBUG] Available views: {list(self.views.keys())}")
         if name in self.views:
+            print(f"[DEBUG] Navigating to '{name}'")
             self.navigate_to(self.views[name])
         else:
+            print(f"[DEBUG] Section '{name}' not found in views")
             self.statusBar().showMessage(f"Section '{name}' not implemented yet.")
 
     def navigate_to(self, widget):
+        print(f"[DEBUG] navigate_to called with widget: {widget.__class__.__name__}")
         current = self.stack.currentWidget()
         if current not in self.history:
             self.history.append(current)
+        print(f"[DEBUG] Setting current widget to: {widget.__class__.__name__}")
         self.stack.setCurrentWidget(widget)
+        print(f"[DEBUG] Current widget is now: {self.stack.currentWidget().__class__.__name__}")
 
     def go_back(self):
         if self.history:

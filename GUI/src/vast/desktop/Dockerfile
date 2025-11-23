@@ -71,7 +71,7 @@ RUN useradd -m -s /bin/bash appuser && \
     mkdir -p /app /tmp/.X11-unix && chown -R appuser:appuser /app /tmp /opt/noVNC /var/tmp
 
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
-
+RUN pip install psycopg2-binary
 COPY src/vast /app/src/vast
 COPY src/vast/desktop/start.sh /app/start.sh
 RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh && chown -R appuser:appuser /app
