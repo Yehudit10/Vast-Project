@@ -842,3 +842,42 @@ CREATE INDEX IF NOT EXISTS ix_sensors_name ON sensors (sensor_name);
 CREATE INDEX IF NOT EXISTS ix_sensors_type ON sensors (sensor_type);
 CREATE INDEX IF NOT EXISTS ix_sensors_status ON sensors (status);
 CREATE INDEX IF NOT EXISTS ix_sensors_location ON sensors (lat, lon);
+CREATE TABLE IF NOT EXISTS sensor_embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    sensor_id BIGINT NOT NULL,
+    vec vector(5),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE OR REPLACE FUNCTION generate_sensor_embedding()
+RETURNS trigger AS $$
+DECLARE
+    name_len INT;
+    type_len INT;
+    status_score FLOAT;
+    vec vector(5);
+BEGIN
+    name_len := COALESCE(LENGTH(NEW.sensor_name), 0);
+    type_len := COALESCE(LENGTH(NEW.sensor_type), 0);
+    status_score := CASE WHEN LOWER(COALESCE(NEW.status, '')) = 'active' THEN 1 ELSE 0 END;
+
+    vec := ARRAY[
+        COALESCE(NEW.lat, 0),
+        COALESCE(NEW.lon, 0),
+        name_len,
+        type_len,
+        status_score
+    ]::vector;
+
+    DELETE FROM sensor_embeddings WHERE sensor_id = NEW.sensor_id;
+
+    INSERT INTO sensor_embeddings(sensor_id, vec)
+    VALUES (NEW.sensor_id, vec);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_generate_embedding
+AFTER INSERT OR UPDATE ON sensors
+FOR EACH ROW
+EXECUTE FUNCTION generate_sensor_embedding();
