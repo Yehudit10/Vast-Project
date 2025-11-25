@@ -34,24 +34,6 @@ class SQLiteDialect(Dialect):
     def placeholder(self, idx: int) -> str:
         return "?"  # qmark style
 
-# class PostgresDialect(Dialect):
-#     def __init__(self, style: str = "psycopg"):
-#         """style:
-#         - 'psycopg'  → %s style placeholders (psycopg2/3)
-#         - 'numeric'  → $1, $2, ... style placeholders (asyncpg)
-#         """
-        
-#         if style not in ("psycopg", "numeric"):
-#             raise ValueError("PostgresDialect.style must be 'psycopg' or 'numeric'")
-#         self.style = style
-#     def quote_ident(self, name: str) -> str:
-#         parts = name.split(".")
-#         return ".".join('"' + p.replace('"', '""') + '"' for p in parts)
-#     def normalize_bool(self, v: Any) -> Any:
-#         return v  # PostgreSQL has a real boolean type
-#     def placeholder(self, idx: int) -> str:
-#         return "%s" if self.style == "psycopg" else f"${idx}"
-# dialects.py
 class PostgresDialect(Dialect):
     def __init__(self, style: str = "named"):
         """
