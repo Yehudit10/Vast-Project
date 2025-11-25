@@ -3,6 +3,7 @@ from __future__ import annotations
 import os, re, mimetypes
 from typing import Optional
 from fastapi import FastAPI, Header, HTTPException, Request
+from botocore.exceptions import ClientError
 from fastapi.responses import Response, StreamingResponse
 import yaml
 
@@ -128,25 +129,90 @@ def get_segment(camera: str, incident: str, name: str, request: Request, range: 
         headers["Content-Range"] = cr
         status = 206
     return StreamingResponse(obj["Body"].iter_chunks(), headers=headers, status_code=status, media_type=headers["Content-Type"])
-
 # ---------- FINAL MP4 (VOD) ----------
 @app.get("/vod/{camera}/{incident}/final.mp4")
-def get_final_mp4(camera: str, incident: str, request: Request, range: Optional[str] = Header(default=None)):
-    print("requesting vod")
+def get_final_mp4(
+    camera: str,
+    incident: str,
+    request: Request,
+    range: Optional[str] = Header(default=None)
+):
     _require_auth(request)
     key = _object_key_for_hls(camera, incident, "final.mp4")
+
+   
+
     try:
         obj = s3.get_object_stream(BUCKET, key, range_header=range)
-    except Exception:
-        raise HTTPException(status_code=404, detail="vod not found")
 
-    headers = {"Accept-Ranges": "bytes", "Content-Type": _MP4_CT}
+    except ClientError as e:
+        code = e.response["Error"]["Code"]
+
+        # File NOT found → real 404
+        if code in ("NoSuchKey", "404"):
+            raise HTTPException(status_code=404, detail="VOD not found")
+
+        # VLC requests ranges beyond file end → MUST return 416, NOT 404
+        if code == "InvalidRange":
+            raise HTTPException(status_code=416, detail="Invalid Range")
+
+        # Any other S3 problem is a server issue
+        raise HTTPException(status_code=502, detail=f"S3 error: {code}")
+
+    # Non-S3 exceptions (timeout, disconnect, etc.)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Internal proxy error: {type(e).__name__}")
+
+
+    body = obj["Body"]
+    content_length = obj.get("ContentLength")
+    content_range = obj.get("ContentRange") or obj.get("Content-Range")
+
+    headers = {
+    "Accept-Ranges": "bytes",
+    "Content-Type": _MP4_CT,
+    }
+
+    # Important for VLC
+    if "ContentLength" in obj:
+        headers["Content-Length"] = str(obj["ContentLength"])
+
+
     status = 200
-    cr = obj.get("ContentRange") or obj.get("Content-Range")
-    if cr:
-        headers["Content-Range"] = cr
+    if content_range:
+        headers["Content-Range"] = content_range
         status = 206
-    return StreamingResponse(obj["Body"].iter_chunks(), headers=headers, status_code=status, media_type=_MP4_CT)
+    if content_length and status == 200:
+        headers["Content-Length"] = str(content_length)
+
+    # --- SAFE STREAMING GENERATOR ---
+    def stream_body():
+        try:
+            while True:
+                chunk = body.read(256 * 1024)
+
+                # S3 can return b'' BEFORE true EOF → retry once
+                if chunk == b"":
+                    more = body.read(256 * 1024)
+                    if more == b"":
+                        break
+                    yield more
+                    continue
+
+                if not chunk:
+                    break
+
+                yield chunk
+
+        except Exception as e:
+            print("[MEDIA_PROXY][STREAM ERROR]", e)
+
+    return StreamingResponse(
+        stream_body(),
+        headers=headers,
+        status_code=status,
+        media_type=_MP4_CT,
+    )
 
 @app.get("/img/{camera}/{incident}/{filename}")
 def get_image(camera: str, incident: str, filename: str, request: Request):
