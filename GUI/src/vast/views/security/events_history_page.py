@@ -686,10 +686,38 @@ class EventsHistoryPage(QtWidgets.QWidget):
 
             self.table.setCellWidget(r, 7, cell_wrapper)
 
+            # self.table.setCellWidget(r, 7, feedback_widget)
+
+
+
+
+
+
+
+
+
+
+
+
 
         print("[TABLE] Done populating alerts table.")
 
 
+
+
+
+           
+    
+
+
+
+    # def _open_video_player(self, info):
+    #     print(f"[VIDEO] Opening video player for alert={info.get('alert_id')}")
+    #     url = info.get("vod")
+    #     if not url:
+    #         QtWidgets.QMessageBox.warning(self, "No Video", "This alert has no VOD URL.")
+    #         return
+        
 
     def _open_video_player(self, info):
         print(f"[VIEW] Opening media for alert={info.get('alert_id')}")
@@ -743,7 +771,7 @@ class EventsHistoryPage(QtWidgets.QWidget):
         print(f"[VIDEO] Playing URL: {url}")
         popup = QtWidgets.QDialog(self)
         popup.setWindowTitle("Incident Video Playback")
-        popup.setMinimumSize(640, 400)
+        popup.setMinimumSize(1280, 720)
         vbox = QtWidgets.QVBoxLayout(popup)
         player = QtWidgets.QFrame()
         player.setStyleSheet("background:black;border-radius:8px;")
@@ -758,6 +786,48 @@ class EventsHistoryPage(QtWidgets.QWidget):
             mp.set_xwindow(int(player.winId()))
         mp.play()
         print("[VIDEO] Playback started.")
+    # def _show_vlc_popup(self, url):
+    #     print(f"[VIDEO] Playing URL: {url}")
+
+    #     popup = QtWidgets.QDialog(self)
+    #     popup.setWindowTitle("Incident Video Playback")
+    #     popup.setMinimumSize(1280, 720)
+    #     vbox = QtWidgets.QVBoxLayout(popup)
+
+    #     player = QtWidgets.QFrame()
+    #     player.setStyleSheet("background:black;border-radius:8px;")
+    #     vbox.addWidget(player, 1)
+
+    #     # --- VLC instance with MP4-friendly options ---
+    #     inst = vlc.Instance([
+    #         "--quiet",
+    #         "--no-video-title-show",
+    #         "--demux=avformat",         # important for MP4
+    #         "--network-caching=800",
+    #         "--file-caching=800",
+    #         "--avcodec-hw=none",        # safer decoding
+    #     ])
+
+    #     mp = inst.media_player_new()
+
+    #     # --- Media object with same options ---
+    #     media = inst.media_new(url)
+    #     media.add_option(":no-audio")
+    #     media.add_option(":network-caching=800")
+    #     media.add_option(":file-caching=800")
+    #     media.add_option(":demux=avformat")
+
+    #     mp.set_media(media)
+
+    #     popup.show()
+    #     if sys.platform.startswith("win"):
+    #         mp.set_hwnd(int(player.winId()))
+    #     else:
+    #         mp.set_xwindow(int(player.winId()))
+    #     mp.play()
+
+    #     print("[VIDEO] Playback started.")
+
     
 
     def _send_feedback(self, alert: dict, is_real: bool):

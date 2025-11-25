@@ -28,11 +28,7 @@ class SQLState:
     "select", "from", "where", "group_by", "having", "order_by", "limit", "offset"
 ])
 
-    # Helper methods to avoid importing Clause classes in ops
-    def add_select(self, columns: List[str]) -> None:
-        self.clauses["select"].append(SelectClause(columns))
-    def add_where(self, cond) -> None:
-        self.clauses["where"].append(WhereClause(cond))
+
     def add_clause(self, clause: Clause) -> None:
         self.clauses[clause.phase].append(clause)
 

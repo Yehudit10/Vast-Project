@@ -28,18 +28,19 @@ class Op(ABC):
 class SelectOp(Op):
     op_type = "select"
     def apply(self, st: "SQLState") -> None:
-        cols = self.payload.get("columns")
-        st.add_select(cols or [])
+        cols = self.payload.get("columns", [])
+        st.add_clause(SelectClause(cols))
+        
         
 class WhereOp(Op):
     op_type = "where"
     def apply(self, st: "SQLState") -> None:
         cond_ir = self.payload.get("cond")
         if not isinstance(cond_ir, dict):
-            raise TypeError(
-                f"Invalid WHERE condition: expected dict, got {type(cond_ir).__name__} → {cond_ir}"
-            )
-        st.add_where(cond_from_ir(cond_ir))
+            raise TypeError("Invalid WHERE condition")
+        expr = cond_from_ir(cond_ir)
+        st.add_clause(WhereClause(expr))
+
 
 
 class HavingOp(Op):

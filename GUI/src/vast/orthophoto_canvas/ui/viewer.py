@@ -12,7 +12,7 @@ from PyQt6.QtGui import QPixmap, QPainter, QPen, QColor
 from PyQt6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem
 )
-
+from PyQt6.QtGui import QPixmap, QTransform
 # ==== Tunables ====
 TILE_SIZE = 512
 TARGET_TILE_PX_FOR_LOD = 512.0
@@ -25,18 +25,7 @@ class OrthophotoViewer(QGraphicsView):
     def __init__(self, tiles: Union[TileStore, str, Path]) -> None:
         super().__init__()
 
-        # ─────────────────────────────
-        # Load tiles
-        # ─────────────────────────────
-        # if isinstance(tiles, TileStore):
-        #     self.ts = tiles
-        # else:
-        #     self.ts = TileStore(Path(tiles))
-
-        # self.min_zoom_fs = self.ts.min_zoom
-        # self.max_zoom_fs = self.ts.max_zoom
-        # self.z_ranges = self.ts.z_ranges
-        # self.is_tms = self.ts.is_tms
+      
         # ─────────────────────────────
 # Load tiles
 # ─────────────────────────────
@@ -125,8 +114,58 @@ class OrthophotoViewer(QGraphicsView):
         # ─────────────────────────────
         # Initial tile rendering
         # ─────────────────────────────
+        self._custom_bg_item: Optional[QGraphicsPixmapItem] = None
+        self._tiles_visible: bool = True
         self.update_tiles()
- 
+
+    def _apply_tile_visibility(self):
+        """Apply visibility/opacity preference to existing tile items."""
+        for item in self.tile_items.values():
+            # You can choose to hide or fade; here we just hide/show them.
+            item.setVisible(self._tiles_visible)
+            # If you prefer fading:
+            # item.setOpacity(0.2 if not self._tiles_visible else 1.0)
+
+    
+
+    def set_custom_background_image(self, path: str, hide_tiles: bool = False):
+        """
+        Place a single static image as the map background, scaled to the scene extents.
+        It will zoom & pan together with all other items.
+        """
+        pix = QPixmap(path)
+        p = Path(path)
+        print("[OrthophotoViewer] Exists?", p.exists())
+        if pix.isNull():
+            print(f"[OrthophotoViewer] ❌ Failed to load background image: {path}")
+            return
+
+        # Remove previous bg if exists
+        if self._custom_bg_item is not None:
+            self.scene.removeItem(self._custom_bg_item)
+            self._custom_bg_item = None
+
+        scene_rect = self.scene.sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        item = QGraphicsPixmapItem(pix)
+        item.setZValue(-1000)  # behind tiles, regions, sensors
+
+        # Scale to fill the entire scene rect
+        sx = width / pix.width() if pix.width() > 0 else 1.0
+        sy = height / pix.height() if pix.height() > 0 else 1.0
+        item.setTransform(QTransform().scale(sx, sy))
+
+        # Position at the scene rect origin (you use a small margin, so respect that)
+        item.setPos(scene_rect.left(), scene_rect.top())
+
+        self.scene.addItem(item)
+        self._custom_bg_item = item
+
+        if hide_tiles:
+            self._tiles_visible = False
+            self._apply_tile_visibility()
 
     # ─────────────────────────────
     # Scene geometry
@@ -227,6 +266,9 @@ class OrthophotoViewer(QGraphicsView):
         for key in list(self.tile_items.keys()):
             if key not in want:
                 self.scene.removeItem(self.tile_items.pop(key))
+
+        # 🔹 Ensure visibility style is applied to all tiles (including new ones)
+        self._apply_tile_visibility()
 
     # ─────────────────────────────
     # Tile placement / upgrade

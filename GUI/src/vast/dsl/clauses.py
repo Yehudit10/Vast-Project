@@ -94,10 +94,8 @@ class OrderByClause(Clause):
     def fragment(self, ctx):
         def quote_or_passthrough(col: str) -> str:
             # Skip quoting if it's clearly an SQL expression or aggregate
-            if any(token in col.upper() for token in (
-                "(", ")", " AS ", "COUNT", "AVG", "SUM", "MAX", "MIN"
-            )):
-                return col  # leave expressions as-is
+            if "(" in col or ")" in col:
+                return col
             return ctx.dialect.quote_ident(col)
 
         cols = [quote_or_passthrough(c) for c in self.columns]

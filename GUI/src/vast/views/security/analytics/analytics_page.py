@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import date
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QDateEdit, QFrame, QSizePolicy,
@@ -18,6 +19,88 @@ from src.vast.views.security.analytics.analytics_provider import (
 )
 from src.vast.views.security.analytics.popup_panel import AnalyticsPanel
 from src.vast.views.security.analytics import analytics_provider as ap
+
+
+class AgGuardMessageBox(QFrame):
+    def __init__(self, parent=None, title="Message", text=""):
+        super().__init__(parent)
+
+        self.setWindowFlags(
+            Qt.WindowType.Dialog |
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint
+        )
+        # no translucent background → no black corners
+        self.setAutoFillBackground(True)
+        pal = self.palette()
+        pal.setColor(self.backgroundRole(), QColor("#fefefe"))
+        self.setPalette(pal)
+
+        # Light drop shadow
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(28)
+        shadow.setOffset(0, 3)
+        shadow.setColor(QColor(200, 200, 200, 90))
+        self.setGraphicsEffect(shadow)
+
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #fefefe;
+                border-radius: 16px;
+                border: 1px solid #f3f4f6;
+            }
+            QLabel#title {
+                font-size: 18px;
+                font-weight: 700;
+                color: #1f2937;
+            }
+            QLabel#text {
+                font-size: 14px;
+                color: #4b5563;
+            }
+            QPushButton#ok_btn {
+                background-color: #10b981;
+                color: white;
+                border-radius: 10px;
+                padding: 6px 18px;
+                font-weight: 600;
+                min-width: 80px;
+            }
+            QPushButton#ok_btn:hover {
+                background-color: #059669;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(22, 22, 22, 22)
+        layout.setSpacing(14)
+
+        title_lbl = QLabel(title)
+        title_lbl.setObjectName("title")
+
+        text_lbl = QLabel(text)
+        text_lbl.setObjectName("text")
+        text_lbl.setWordWrap(True)
+
+        btn = QPushButton("OK")
+        btn.setObjectName("ok_btn")
+        btn.clicked.connect(self.close)
+
+        layout.addWidget(title_lbl)
+        layout.addWidget(text_lbl)
+        layout.addStretch()
+        layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignRight)
+
+        self.adjustSize()
+        self.setMinimumWidth(360)
+
+    def show_centered(self):
+        if self.parent():
+            parent_geo = self.parent().geometry()
+            x = parent_geo.x() + (parent_geo.width() - self.width()) // 2
+            y = parent_geo.y() + (parent_geo.height() - self.height()) // 2
+            self.move(x, y)
+        self.show()
 
 
 class GeoAnalyticsView(QWidget):
@@ -181,7 +264,6 @@ class GeoAnalyticsView(QWidget):
         self.query_input.setMinimumWidth(420)
         self.query_input.setFixedHeight(38)
 
-        # ✅ Text-based Send button
         self.query_send = QPushButton("Send")
         self.query_send.setObjectName("send_btn")
         self.query_send.clicked.connect(self._on_query_sent)
@@ -189,7 +271,6 @@ class GeoAnalyticsView(QWidget):
         query_layout.addWidget(self.query_input, stretch=1)
         query_layout.addWidget(self.query_send)
 
-        # Floating drop shadow
         query_shadow = QGraphicsDropShadowEffect()
         query_shadow.setBlurRadius(22)
         query_shadow.setOffset(0, 3)
@@ -205,26 +286,101 @@ class GeoAnalyticsView(QWidget):
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
         splitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #e5e7eb;
+            }
+            QSplitter::handle:hover {
+                background-color: #10b981;
+            }
+        """)
 
-        # LEFT SIDE — map + query box
+        # ─────────────────────────────
+        # LEFT SIDE — map card + query box
+        # ─────────────────────────────
         map_container = QWidget()
-        map_layout = QVBoxLayout(map_container)
-        map_layout.setContentsMargins(0, 0, 0, 0)
-        map_layout.setSpacing(8)
+        map_container_layout = QVBoxLayout(map_container)
+        map_container_layout.setContentsMargins(0, 0, 0, 0)
+        map_container_layout.setSpacing(0)
+
+        # Outer shell (white card with strong round corners + shadow)
+        map_shell = QFrame()
+        map_shell.setObjectName("mapShell")
+        map_shell.setStyleSheet("""
+            QFrame#mapShell {
+                background-color: #ffffff;
+                border-radius: 24px;
+                border: 1px solid #e5e7eb;
+            }
+        """)
+        map_shell_shadow = QGraphicsDropShadowEffect()
+        map_shell_shadow.setBlurRadius(26)
+        map_shell_shadow.setOffset(0, 8)
+        map_shell_shadow.setColor(QColor(15, 23, 42, 55))
+        map_shell.setGraphicsEffect(map_shell_shadow)
+
+        shell_layout = QVBoxLayout(map_shell)
+        shell_layout.setContentsMargins(14, 14, 14, 14)
+        shell_layout.setSpacing(10)
+
+        # Inner rounded frame that actually clips the map
+        map_frame = QFrame()
+        map_frame.setObjectName("mapFrame")
+        map_frame.setStyleSheet("""
+            QFrame#mapFrame {
+                background-color: #020617;    /* dark slate */
+                border-radius: 18px;
+                border: none;
+            }
+        """)
+        map_frame.setContentsMargins(0, 0, 0, 0)
+        map_frame_layout = QVBoxLayout(map_frame)
+        map_frame_layout.setContentsMargins(0, 0, 0, 0)
+        map_frame_layout.setSpacing(0)
 
         tiles_root = "./src/vast/orthophoto_canvas/data/tiles"
         self.viewer = create_orthophoto_viewer(tiles_root, forced_scheme=None, parent=self)
+
+        # Make the view itself frameless and rounded
+        self.viewer.setFrameShape(QFrame.Shape.NoFrame)
+        self.viewer.setStyleSheet("""
+            QGraphicsView {
+                background-color: transparent;
+                border: none;
+            }
+            QGraphicsView::viewport {
+                border-radius: 18px;   /* real rounded viewport */
+                background-color: #020617;
+            }
+        """)
+        self.viewer.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        # Optional static background instead of tiles
+        self.viewer.set_custom_background_image(
+            "./src/vast/orthophoto_canvas/ui/fields.png",
+            hide_tiles=True
+        )
         self.viewer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        map_layout.addWidget(self.viewer, stretch=1)
-        map_layout.addWidget(query_frame, stretch=0)
+
+        map_frame_layout.addWidget(self.viewer, stretch=1)
+
+        # Query bar sits under the map, inside the same shell
         query_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
+        shell_layout.addWidget(map_frame, stretch=1)
+        shell_layout.addWidget(query_frame, stretch=0)
+
+        map_container_layout.addWidget(map_shell)
         splitter.addWidget(map_container)
 
+
+        # ─────────────────────────────
         # RIGHT SIDE — analytics panel
-        self.analytics_panel = AnalyticsPanel("All Regions", {},parent=self)
+        # ─────────────────────────────
+        self.analytics_panel = AnalyticsPanel("All Regions", {}, parent=self)
         self.analytics_panel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         splitter.addWidget(self.analytics_panel)
+
         root.addWidget(splitter, stretch=1)
 
         # ─────────────────────────────
@@ -236,6 +392,28 @@ class GeoAnalyticsView(QWidget):
         # Initial load
         self._load_regions()
         self._update_analytics_panel()
+        self._initial_fit_done = False
+        QtCore.QTimer.singleShot(0, self._fit_map_to_container)
+
+    # Ensure map always fills its container nicely
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        QtCore.QTimer.singleShot(0, self._fit_map_to_container)
+
+    def _fit_map_to_container(self):
+        """
+        Make the map fill the entire map container (no gray bars).
+        Run after layouts/child resizes using QTimer.singleShot.
+        """
+        if not hasattr(self, "viewer") or self.viewer is None:
+            return
+
+        scene_rect = self.viewer.scene.sceneRect()
+        if scene_rect.isNull():
+            return
+
+        self.viewer.fitInView(scene_rect, Qt.AspectRatioMode.KeepAspectRatioByExpanding)
+        self.viewer.centerOn(scene_rect.center())
 
     # ─────────────────────────────
     # FREE TEXT QUERY HANDLER
@@ -248,13 +426,20 @@ class GeoAnalyticsView(QWidget):
 
         # Change button state
         self.query_send.setEnabled(False)
-        self.query_send.setText("...")  # show dots while sending
+        self.query_send.setText("...")
         QApplication.processEvents()
 
         try:
             result = ap.select_entities_from_prompt(prompt)
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Query failed: {e}")
+            dlg = AgGuardMessageBox(
+                self,
+                title="Invalid Query",
+                text="We couldn't understand your request.\nPlease try rephrasing your query or using clearer terms."
+            )
+            dlg.show_centered()
+
+            # restore state and abort
             self.query_send.setEnabled(True)
             self.query_send.setText("Send")
             return
@@ -366,8 +551,6 @@ class GeoAnalyticsView(QWidget):
             data = get_device_analytics(device_list or None, self.start_date, self.end_date)
             title = "All Devices" if not device_list else ", ".join(device_list)
             self.analytics_panel.update_data(title, data)
-   
-
 
     def _update_layer_visibility(self):
         if self.current_mode == "region":

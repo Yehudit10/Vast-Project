@@ -8,7 +8,12 @@ What’s new in this build:
   tail segments in /live.m3u8 so VLC never requests unavailable parts.
   (Decay back to normal once stable.)
 - No DVR freeze on resolve (removed items disappear; playback stops/advances).
+- DVR seek/scrub still works *after* incident is marked resolved, using the
+  segments already buffered in memory.
 - No-cache headers on HLS endpoints.
+- Smoother stream:
+  * DVR poll interval tightened (REFRESH_MS default 300 ms).
+  * VLC network caching default increased (800 ms).
 """
 
 from __future__ import annotations
@@ -21,12 +26,14 @@ from PyQt6 import QtCore, QtWidgets, QtGui
 from PyQt6.QtCore import Qt, QUrl, QTimer
 from PyQt6.QtWebSockets import QWebSocket
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest
+
 import vlc  # python-vlc
+
 from aiohttp import web, ClientSession
+from aiohttp.client_exceptions import ClientConnectionError, ClientPayloadError
+
 from vast.views.security.events_history_page import EventsHistoryPage
-
 from src.vast.views.security.analytics.analytics_page import GeoAnalyticsView
-
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -40,19 +47,22 @@ class Config:
     PORT = int(os.getenv("PORT", "19100"))
 
     # Poll upstream playlist ~2–4x per segment (1.0s segments -> 300ms is good)
-    REFRESH_MS = int(os.getenv("REFRESH_MS", "20000"))
+    # ↓ Previously 20000 ms, which caused "segment → pause → segment" behaviour in DVR.
+    REFRESH_MS = int(os.getenv("REFRESH_MS", "300"))
 
     # Show this many segments in the live window…
     LIVE_EDGE_SEGMENTS = int(os.getenv("LIVE_EDGE_SEGMENTS", "3"))
     # …but hide the freshest N (stay behind live edge to avoid stalls)
     LIVE_LAG_SEGMENTS = int(os.getenv("LIVE_LAG_SEGMENTS", "1"))
 
-    # VLC network caching (ms)
-    NETWORK_CACHING = int(os.getenv("NETWORK_CACHING", "320"))
+    # VLC network caching (ms) — slightly higher default for smoother playback
+    NETWORK_CACHING = int(os.getenv("NETWORK_CACHING", "800"))
 
     ALERTS_WS = os.getenv("ALERTS_WS", "ws://host.docker.internal:8010/ws/alerts")
     ALERTS_SNAPSHOT_HTTP = os.getenv("ALERTS_SNAPSHOT_HTTP", "")
-    ALLOWED_TYPES = {"climbing_fence", "masked_person","intruding animal"}
+    ALLOWED_TYPES = {"climbing_fence", "masked_person", "intruding animal"}
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Upstream fetcher + DVR state
 # ──────────────────────────────────────────────────────────────────────────────
@@ -61,6 +71,7 @@ class Segment:
     uri: str
     duration: float
     abs_url: str  # absolute URL to fetch
+
 
 class DvrState:
     def __init__(self, upstream_index_url: str, auth_token: str = "", refresh_ms: int = 800):
@@ -216,14 +227,85 @@ class DvrState:
 
         return "\n".join(out) + "\n", float(total)
 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Aiohttp proxy app
 # ──────────────────────────────────────────────────────────────────────────────
 import socket
 
+
 def is_port_in_use(port=19090, host="127.0.0.1"):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex((host, port)) == 0
+class VlcWidget(QtWidgets.QFrame):
+    positionChanged = QtCore.pyqtSignal(float)
+    timeChanged = QtCore.pyqtSignal(int)
+    ended = QtCore.pyqtSignal()      # <-- final, real signal
+
+    def __init__(self, instance: vlc.Instance, parent=None):
+        super().__init__(parent)
+        self.instance = instance
+        self.mediaplayer = self.instance.media_player_new()
+        self.setMinimumSize(640, 360)
+
+        # Timer that emits position/time
+        self._timer = QtCore.QTimer(self)
+        self._timer.setInterval(200)
+        self._timer.timeout.connect(self._on_tick)
+        self._timer.start()
+
+        # Attach VLC "end reached" event
+        em = self.mediaplayer.event_manager()
+        em.event_attach(vlc.EventType.MediaPlayerEndReached, self._on_media_end)
+
+    def _on_media_end(self, _event):
+        print("[VLC] Media end reached")
+        # Emit Qt signal so IncidentPlayerVLC can react
+        self.ended.emit()
+
+    def _on_tick(self):
+        if self.mediaplayer:
+            try:
+                pos = self.mediaplayer.get_position()
+                t = self.mediaplayer.get_time()
+                if pos >= 0:
+                    self.positionChanged.emit(pos)
+                if t >= 0:
+                    self.timeChanged.emit(t)
+            except Exception:
+                pass
+
+    def set_media(self, mrl: str, options: Optional[List[str]] = None):
+        print(f"[VLC] set_media {mrl} opts={options or []}")
+        media = self.instance.media_new(mrl)
+        for opt in (options or []):
+            media.add_option(opt)
+        self.mediaplayer.set_media(media)
+
+    def play(self):
+        if sys.platform.startswith('linux'):
+            self.mediaplayer.set_xwindow(int(self.winId()))
+        elif sys.platform.startswith('win'):
+            self.mediaplayer.set_hwnd(int(self.winId()))
+        else:
+            self.mediaplayer.set_nsobject(int(self.winId()))
+        print("[VLC] play()")
+        self.mediaplayer.play()
+
+    def pause(self):
+        print("[VLC] pause()")
+        self.mediaplayer.pause()
+
+    def set_position(self, pos01: float):
+        p = max(0.0, min(1.0, float(pos01)))
+        print(f"[VLC] set_position {p:.3f}")
+        self.mediaplayer.set_position(p)
+
+    def set_time_ms(self, t_ms: int):
+        t = int(max(0, t_ms))
+        print(f"[VLC] set_time {t}ms")
+        self.mediaplayer.set_time(t)
+
 
 class ProxyServer:
     def __init__(self, media_base: str, camera: Optional[str], incident: Optional[str],
@@ -253,8 +335,6 @@ class ProxyServer:
         self._app.router.add_get("/vod", self.handle_vod)
         self._app.router.add_get("/img", self.handle_img)
 
-
-
         # DEBUG routes
         self._app.router.add_get('/debug/upstream', self.handle_debug_upstream)
         self._app.router.add_get('/debug/dvr', self.handle_debug_dvr)
@@ -263,7 +343,7 @@ class ProxyServer:
         self._runner: Optional[web.AppRunner] = None
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
-    
+
     async def handle_img(self, request):
         img_url = request.query.get("u")
         if not img_url:
@@ -278,11 +358,20 @@ class ProxyServer:
                 async with session.get(img_url, headers=headers, timeout=15) as resp:
                     body = await resp.read()
                     ctype = resp.headers.get("Content-Type", "image/jpeg")
-                    return web.Response(body=body, content_type=ctype, status=resp.status, headers=self._nocache_headers())
+                    return web.Response(
+                        body=body,
+                        content_type=ctype,
+                        status=resp.status,
+                        headers=self._nocache_headers(),
+                    )
         except Exception as e:
             print(f"[HTTP] image fetch error: {e!r}")
-            return web.Response(text=f"image fetch error: {type(e).__name__}: {e}", content_type="text/plain", status=502)
-
+            return web.Response(
+                text=f"image fetch error: {type(e).__name__}: {e}",
+                content_type="text/plain",
+                status=502,
+                headers=self._nocache_headers(),
+            )
 
     # no-cache headers helper
     def _nocache_headers(self) -> dict:
@@ -300,13 +389,14 @@ class ProxyServer:
             segs = list(self.dvr.segments)
             total_ms = int(sum(s.duration for s in segs) * 1000)
             edge = max(1, int(getattr(Config, "LIVE_EDGE_SEGMENTS", 3)))
-            lag  = max(0, int(getattr(Config, "LIVE_LAG_SEGMENTS", 0)))
+            lag = max(0, int(getattr(Config, "LIVE_LAG_SEGMENTS", 0)))
             # Apply dynamic lag here too so UI stays coherent with playlist
             lag += self._current_extra_lag()
             keep = min(len(segs), max(1, edge + lag))
             last = segs[-keep:] if keep <= len(segs) else segs
             live_win_ms = int(sum(s.duration for s in last) * 1000)
         return (total_ms, live_win_ms)
+
     async def handle_vod(self, request):
         vod_url = request.query.get("u")
         if not vod_url:
@@ -336,8 +426,10 @@ class ProxyServer:
                     if "Content-Range" in resp.headers:
                         response_headers["Content-Range"] = resp.headers["Content-Range"]
 
-                    print(f"[HTTP] vod {resp.status} -> {vod_url} "
-                        f"({resp.headers.get('Content-Length', '?')} bytes, range={range_hdr})")
+                    print(
+                        f"[HTTP] vod {resp.status} -> {vod_url} "
+                        f"({resp.headers.get('Content-Length', '?')} bytes, range={range_hdr})"
+                    )
 
                     proxy_resp = web.StreamResponse(status=resp.status, headers=response_headers)
                     await proxy_resp.prepare(request)
@@ -345,14 +437,19 @@ class ProxyServer:
                     try:
                         async for chunk in resp.content.iter_chunked(8192):
                             await proxy_resp.write(chunk)
-                        await proxy_resp.write_eof()
-                    except (asyncio.CancelledError, ConnectionResetError, ClientConnectionError, ClientPayloadError) as e:
-                        # ✅ harmless — VLC moved to another range
+                    except (asyncio.CancelledError,
+                            ConnectionResetError,
+                            ClientConnectionError,
+                            ClientPayloadError) as e:
+                        # Harmless — VLC moved to another range
                         print(f"[HTTP] client disconnected early ({type(e).__name__}) — OK")
                     except Exception as e:
                         print(f"[HTTP] stream write error: {type(e).__name__}: {e}")
                     finally:
-                        await proxy_resp.write_eof()
+                        try:
+                            await proxy_resp.write_eof()
+                        except Exception:
+                            pass
 
                     return proxy_resp
 
@@ -364,7 +461,6 @@ class ProxyServer:
                 status=502,
                 headers=self._nocache_headers(),
             )
-
 
     # Dynamic lag amount based on recent 404s
     def _current_extra_lag(self) -> int:
@@ -410,17 +506,35 @@ class ProxyServer:
                         body
                     ]
                     print(f"[HTTP] debug_upstream {resp.status}")
-                    return web.Response(text="\n".join(out), content_type='text/plain', status=resp.status, headers=self._nocache_headers())
+                    return web.Response(
+                        text="\n".join(out),
+                        content_type='text/plain',
+                        status=resp.status,
+                        headers=self._nocache_headers(),
+                    )
         except Exception as e:
-            return web.Response(text=f"fetch error: {type(e).__name__}: {e}\n", content_type="text/plain", status=500, headers=self._nocache_headers())
+            return web.Response(
+                text=f"fetch error: {type(e).__name__}: {e}\n",
+                content_type="text/plain",
+                status=500,
+                headers=self._nocache_headers(),
+            )
 
     async def handle_debug_dvr(self, _request: web.Request):
         if not self.dvr:
-            return web.Response(text="(no DVR yet)\n", content_type="text/plain", headers=self._nocache_headers())
+            return web.Response(
+                text="(no DVR yet)\n",
+                content_type="text/plain",
+                headers=self._nocache_headers(),
+            )
         m3u8, total = self.dvr.render_dvr_vod_playlist(endlist=self.resolved)
         hdr = f"# segment_count={len(self.dvr.segments)} total_duration_seconds={total:.3f} resolved={self.resolved}\n"
         print(f"[HTTP] debug_dvr segments={len(self.dvr.segments)} total_s={total:.3f} endlist={self.resolved}")
-        return web.Response(text=hdr + m3u8, content_type="text/plain", headers=self._nocache_headers())
+        return web.Response(
+            text=hdr + m3u8,
+            content_type="text/plain",
+            headers=self._nocache_headers(),
+        )
 
     async def handle_debug_state(self, _request: web.Request):
         info = {
@@ -438,7 +552,6 @@ class ProxyServer:
         return web.json_response(info, headers=self._nocache_headers())
 
     # URL helpers
-
     def _rewrite_to_media_base(self, any_hls_url: str) -> str:
         if not any_hls_url:
             return any_hls_url
@@ -478,11 +591,15 @@ class ProxyServer:
         while i < len(lines):
             l = lines[i]
             if l.startswith("#EXT-X-VERSION:"):
-                try: version = int(l.split(":", 1)[1])
-                except: pass
+                try:
+                    version = int(l.split(":", 1)[1])
+                except Exception:
+                    pass
             elif l.startswith("#EXT-X-MEDIA-SEQUENCE:"):
-                try: media_seq = int(l.split(":", 1)[1])
-                except: media_seq = 0
+                try:
+                    media_seq = int(l.split(":", 1)[1])
+                except Exception:
+                    media_seq = 0
             elif l.startswith("#EXT-X-MAP:"):
                 m = re.search(r'URI="([^"]+)"', l)
                 if m:
@@ -496,7 +613,8 @@ class ProxyServer:
                 attached = []
                 j = i + 1
                 while j < len(lines) and lines[j].startswith("#"):
-                    attached.append(lines[j]); j += 1
+                    attached.append(lines[j])
+                    j += 1
                 if j < len(lines):
                     uri = lines[j]
                     segments.append((dur, attached, uri))
@@ -508,7 +626,7 @@ class ProxyServer:
             i += 1
 
         base_edge = max(1, int(getattr(Config, "LIVE_EDGE_SEGMENTS", 3)))
-        base_lag  = max(0, int(getattr(Config, "LIVE_LAG_SEGMENTS", 0)))
+        base_lag = max(0, int(getattr(Config, "LIVE_LAG_SEGMENTS", 0)))
         # Add dynamic lag derived from recent 404s
         effective_lag = base_lag + self._current_extra_lag()
 
@@ -554,12 +672,6 @@ class ProxyServer:
         self._last_seg_404_ts = 0.0
         self._extra_lag_floor = 0
 
-        # if upstream_hls:
-        #     self.upstream_index = self._rewrite_to_media_base(upstream_hls)
-        # else:
-        #     if not (self.camera and self.incident):
-        #         return
-        #     self.upstream_index = f"{self.media_base}/hls/{self.camera}/{self.incident}/index.m3u8"
         if upstream_hls:
             # Always normalize, even if relative like "CAM-482A/incident-123/index.m3u8"
             self.upstream_index = self._rewrite_to_media_base(upstream_hls)
@@ -569,8 +681,6 @@ class ProxyServer:
             self.upstream_index = self._rewrite_to_media_base(rel_path)
         else:
             return
-        
-    
 
         print(f"[SRC] switch to upstream={self.upstream_index}")
 
@@ -588,32 +698,70 @@ class ProxyServer:
             self._loop.call_soon_threadsafe(_start)
 
     def mark_resolved(self):
+        """Mark incident as resolved: stop polling upstream,
+        keep buffered segments for DVR scrubbing."""
         if self.resolved:
             return
         self.resolved = True
         if self.dvr:
             try:
-                self.dvr.stop()
+                self.dvr.stop()   # stop adding more segments, keep existing
             except Exception:
                 pass
-        self.upstream_index = None
-        print("[SRC] incident resolved; upstream disabled; no DVR freeze")
+        # Do NOT clear upstream_index or dvr here; DVR is still usable.
+        print("[SRC] incident resolved; upstream disabled; DVR segments kept for scrubbing")
 
     # HTTP handlers
     async def handle_root(self, _request: web.Request):
         return web.Response(text='OK', content_type='text/plain', headers=self._nocache_headers())
 
     async def handle_dvr(self, _request: web.Request):
-        # No DVR freeze behavior
-        return web.Response(text="#EXTM3U\n#EXT-X-ENDLIST\n", content_type='application/vnd.apple.mpegurl', status=410, headers=self._nocache_headers())
+        # No global DVR playlist anymore
+        return web.Response(
+            text="#EXTM3U\n#EXT-X-ENDLIST\n",
+            content_type='application/vnd.apple.mpegurl',
+            status=410,
+            headers=self._nocache_headers(),
+        )
 
     async def handle_live(self, _request: web.Request):
-        if self.resolved or not self.upstream_index:
-            return web.Response(text="#EXTM3U\n#EXT-X-ENDLIST\n", content_type='application/vnd.apple.mpegurl', status=410, headers=self._nocache_headers())
+        # 1. After resolve: serve a static DVR playlist from buffered segments
+        if self.resolved:
+            if not self.dvr or not self.dvr.segments:
+                # No DVR buffer -> nothing to play
+                return web.Response(
+                    text="#EXTM3U\n#EXT-X-ENDLIST\n",
+                    content_type="application/vnd.apple.mpegurl",
+                    status=410,
+                    headers=self._nocache_headers(),
+                )
 
+            m3u8_body, total = self.dvr.render_dvr_vod_playlist(endlist=True)
+            print(
+                f"[HTTP] live.m3u8 (resolved) serving DVR snapshot: "
+                f"{len(self.dvr.segments)} segs, total={total:.3f}s"
+            )
+            return web.Response(
+                text=m3u8_body,
+                content_type="application/vnd.apple.mpegurl",
+                status=200,
+                headers=self._nocache_headers(),
+            )
+
+        # 2. No source yet -> nothing to serve
+        if not self.upstream_index:
+            return web.Response(
+                text="#EXTM3U\n#EXT-X-ENDLIST\n",
+                content_type="application/vnd.apple.mpegurl",
+                status=410,
+                headers=self._nocache_headers(),
+            )
+
+        # 3. Normal live mode (your existing logic...)
         headers = {}
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
+
         try:
             async with ClientSession() as session:
                 async with session.get(self.upstream_index, headers=headers, timeout=10) as resp:
@@ -622,14 +770,33 @@ class ProxyServer:
                         print(f"[HTTP] live.m3u8 upstream {resp.status}")
                         if resp.status in (404, 410):
                             self.mark_resolved()
-                            return web.Response(text="#EXTM3U\n#EXT-X-ENDLIST\n", content_type='application/vnd.apple.mpegurl', status=410, headers=self._nocache_headers())
-                        return web.Response(text=f"# upstream {resp.status}\n{text}", content_type='text/plain', status=resp.status, headers=self._nocache_headers())
+                            return web.Response(
+                                text="#EXTM3U\n#EXT-X-ENDLIST\n",
+                                content_type='application/vnd.apple.mpegurl',
+                                status=410,
+                                headers=self._nocache_headers(),
+                            )
+                        return web.Response(
+                            text=f"# upstream {resp.status}\n{text}",
+                            content_type='text/plain',
+                            status=resp.status,
+                            headers=self._nocache_headers(),
+                        )
         except Exception as e:
             print(f"[HTTP] live.m3u8 fetch error: {e!r}")
-            return web.Response(text=f"# fetch error: {type(e).__name__}: {e}\n", content_type='text/plain', status=502, headers=self._nocache_headers())
+            return web.Response(
+                text=f"# fetch error: {type(e).__name__}: {e}\n",
+                content_type='text/plain',
+                status=502,
+                headers=self._nocache_headers(),
+            )
 
         text = self._normalize_live_playlist(text, self.upstream_index)
-        return web.Response(text=text, content_type='application/vnd.apple.mpegurl', headers=self._nocache_headers())
+        return web.Response(
+            text=text,
+            content_type='application/vnd.apple.mpegurl',
+            headers=self._nocache_headers(),
+        )
 
     async def handle_seg(self, request: web.Request):
         url = request.query.get('u')
@@ -648,17 +815,30 @@ class ProxyServer:
                     # On 404/410, bump lag so subsequent /live.m3u8 hides fresher segs
                     if status in (404, 410):
                         self._bump_extra_lag(floor_to=2)
-                    return web.Response(body=body, content_type=ctype, status=status, headers=self._nocache_headers())
+                    return web.Response(
+                        body=body,
+                        content_type=ctype,
+                        status=status,
+                        headers=self._nocache_headers(),
+                    )
         except Exception as e:
             print(f"[HTTP] seg fetch error: {e!r} <- {url}")
-            return web.Response(text=f"segment fetch error: {type(e).__name__}: {e}", content_type="text/plain", status=502, headers=self._nocache_headers())
+            return web.Response(
+                text=f"segment fetch error: {type(e).__name__}: {e}",
+                content_type="text/plain",
+                status=502,
+                headers=self._nocache_headers(),
+            )
 
     async def handle_dvr_seek(self, request: web.Request):
-        if self.resolved or not self.dvr:
-            return web.Response(text="#EXTM3U\n#EXT-X-ENDLIST\n",
-                                content_type='application/vnd.apple.mpegurl',
-                                status=410,
-                                headers=self._nocache_headers())
+        # IMPORTANT: allow DVR seek even when resolved, as long as we still have a DVR buffer.
+        if not self.dvr:
+            return web.Response(
+                text="#EXTM3U\n#EXT-X-ENDLIST\n",
+                content_type='application/vnd.apple.mpegurl',
+                status=410,
+                headers=self._nocache_headers(),
+            )
 
         t_ms_str = request.query.get('t', '0')
         try:
@@ -700,7 +880,6 @@ class ProxyServer:
         out.append(f'#EXT-X-MEDIA-SEQUENCE:{media_seq}')
 
         # PRECISE intra-segment start (many players honor this; helps VLC too)
-        # Start "intra_ms" seconds *into* the first segment of this playlist.
         out.append(f'#EXT-X-START:TIME-OFFSET={intra_ms/1000.0:.3f},PRECISE=YES')
 
         if init_url:
@@ -711,12 +890,16 @@ class ProxyServer:
             out.append(f'/seg?u={s.abs_url}')
 
         body = "\n".join(out) + "\n"
-        print(f"[HTTP] dvr_seek.m3u8 t={t_ms}ms -> start_idx={start_idx} intra={int(intra_ms)}ms segs={len(trimmed)} resolved={self.resolved}")
-        # Optional debug header — handy to confirm behavior in logs/curl:
+        print(
+            f"[HTTP] dvr_seek.m3u8 t={t_ms}ms -> start_idx={start_idx} "
+            f"intra={int(intra_ms)}ms segs={len(trimmed)} resolved={self.resolved}"
+        )
         headers = self._nocache_headers() | {"X-Start-Offset-Ms": str(int(intra_ms))}
-        return web.Response(text=body,
-                            content_type='application/vnd.apple.mpegurl',
-                            headers=headers)
+        return web.Response(
+            text=body,
+            content_type='application/vnd.apple.mpegurl',
+            headers=headers,
+        )
 
     # Lifecycle
     def start(self):
@@ -734,8 +917,10 @@ class ProxyServer:
             finally:
                 loop.run_until_complete(self._runner.cleanup())
                 loop.stop()
-        if is_port_in_use(19090):
-            print("[INFO] DVR proxy already running on port 19090, reusing it.")
+
+        # Use the configured port, not a hardcoded one
+        if is_port_in_use(self.port, self.bind):
+            print(f"[INFO] DVR proxy already running on port {self.port}, reusing it.")
         else:
             self._thread = threading.Thread(target=_run_loop, daemon=True)
             self._thread.start()
@@ -744,8 +929,9 @@ class ProxyServer:
         if self.dvr:
             self.dvr.stop()
 
+
 # ──────────────────────────────────────────────────────────────────────────────
-# LEFT PANE + UI — unchanged except: no DVR freeze on resolve
+# LEFT PANE + UI — unchanged except: DVR seek allowed after resolve
 # ──────────────────────────────────────────────────────────────────────────────
 class AlertsModel(QtCore.QAbstractListModel):
     def __init__(self):
@@ -787,11 +973,11 @@ class AlertsModel(QtCore.QAbstractListModel):
         return (str(it.get("camera") or ""), str(it.get("incident_id") or ""))
 
     def as_dict(self) -> dict[tuple[str, str], dict]:
-        return { self._key(it): it for it in self._items }
+        return {self._key(it): it for it in self._items}
 
-    def replace_with(self, merged: dict[tuple[str,str], dict]):
+    def replace_with(self, merged: dict[tuple[str, str], dict]):
         self.set_alerts(list(merged.values()))
-    
+
     def remove_by_key(self, camera: str, incident_id: str):
         k = (str(camera or ""), str(incident_id or ""))
         for i, it in enumerate(self._items):
@@ -801,6 +987,7 @@ class AlertsModel(QtCore.QAbstractListModel):
                 self.endRemoveRows()
                 return True
         return False
+
 
 class AlertItemDelegate(QtWidgets.QStyledItemDelegate):
     def paint(self, painter: QtGui.QPainter, option: QtWidgets.QStyleOptionViewItem, index: QtCore.QModelIndex):
@@ -832,25 +1019,33 @@ class AlertItemDelegate(QtWidgets.QStyledItemDelegate):
 
         inc = str(a.get("incident_id") or "")[:8]
 
-        title_font = QtGui.QFont(option.font); title_font.setPointSizeF(option.font.pointSizeF() + 1); title_font.setBold(True)
-        sub_font = QtGui.QFont(option.font);   sub_font.setPointSizeF(option.font.pointSizeF() - 1)
+        title_font = QtGui.QFont(option.font)
+        title_font.setPointSizeF(option.font.pointSizeF() + 1)
+        title_font.setBold(True)
+        sub_font = QtGui.QFont(option.font)
+        sub_font.setPointSizeF(option.font.pointSizeF() - 1)
 
         painter.setPen(QtGui.QColor("#111827"))
         painter.setFont(title_font)
-        painter.drawText(QtCore.QRect(x, r.top() + 4, r.width() - 20, 18),
-                         QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
-                         f"{cam} • {anom}")
+        painter.drawText(
+            QtCore.QRect(x, r.top() + 4, r.width() - 20, 18),
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
+            f"{cam} • {anom}",
+        )
 
         painter.setPen(QtGui.QColor("#6b7280"))
         painter.setFont(sub_font)
-        painter.drawText(QtCore.QRect(x, r.top() + 22, r.width() - 20, 16),
-                         QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
-                         f"Incident: {inc}…  •  Status: {status}")
+        painter.drawText(
+            QtCore.QRect(x, r.top() + 22, r.width() - 20, 16),
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
+            f"Incident: {inc}…  •  Status: {status}",
+        )
 
         painter.restore()
 
     def sizeHint(self, option: QtWidgets.QStyleOptionViewItem, _index: QtCore.QModelIndex) -> QtCore.QSize:
         return QtCore.QSize(220, 42)
+
 
 LEFT_LIST_QSS = """
 QListView {
@@ -867,6 +1062,7 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 #LeftHeader { color: #6b7280; font-weight: 600; letter-spacing: 0.4px; margin: 0 6px 6px 6px; }
 """
 
+
 class SeekSlider(QtWidgets.QSlider):
     hovered = QtCore.pyqtSignal(int)
     clickedTo = QtCore.pyqtSignal(int)
@@ -877,7 +1073,7 @@ class SeekSlider(QtWidgets.QSlider):
         self._press_x: Optional[float] = None
         self._moved: bool = False
         self._CLICK_EPS = 4.0
-        self._EDGE_SNAP_PX = 8  # ← new: snap zone near the ends
+        self._EDGE_SNAP_PX = 8  # snap zone near the ends
 
     def mousePressEvent(self, ev: QtGui.QMouseEvent):
         if ev.button() == Qt.MouseButton.LeftButton:
@@ -920,12 +1116,12 @@ class SeekSlider(QtWidgets.QSlider):
             QtWidgets.QStyle.ComplexControl.CC_Slider,
             opt,
             QtWidgets.QStyle.SubControl.SC_SliderGroove,
-            self
+            self,
         )
         if groove.width() <= 0:
             return self.value()
 
-        # NEW: snap to exact min/max if you're near the ends
+        # snap to exact min/max if you're near the ends
         if x <= groove.left() + self._EDGE_SNAP_PX:
             return self.minimum()
         if x >= groove.right() - self._EDGE_SNAP_PX:
@@ -949,65 +1145,10 @@ class VideoSurface(QtWidgets.QStackedWidget):
     def show_loading(self, on: bool):
         self.setCurrentIndex(1 if on else 0)
 
-class VlcWidget(QtWidgets.QFrame):
-    positionChanged = QtCore.pyqtSignal(float)
-    timeChanged = QtCore.pyqtSignal(int)
 
-    def __init__(self, instance: vlc.Instance, parent=None):
-        super().__init__(parent)
-        self.instance = instance
-        self.mediaplayer = self.instance.media_player_new()
-        self.setMinimumSize(640, 360)
-        self._timer = QtCore.QTimer(self)
-        self._timer.setInterval(200)
-        self._timer.timeout.connect(self._on_tick)
-        self._timer.start()
-
-    def _on_tick(self):
-        if self.mediaplayer:
-            try:
-                pos = self.mediaplayer.get_position()
-                t = self.mediaplayer.get_time()
-                if pos >= 0:
-                    self.positionChanged.emit(pos)
-                if t >= 0:
-                    self.timeChanged.emit(t)
-            except Exception:
-                pass
-
-    def set_media(self, mrl: str, options: Optional[List[str]] = None):
-        print(f"[VLC] set_media {mrl} opts={options or []}")
-        media = self.instance.media_new(mrl)
-        for opt in (options or []):
-            media.add_option(opt)
-        self.mediaplayer.set_media(media)
-
-    def play(self):
-        if sys.platform.startswith('linux'):
-            self.mediaplayer.set_xwindow(int(self.winId()))
-        elif sys.platform.startswith('win'):
-            self.mediaplayer.set_hwnd(int(self.winId()))
-        else:
-            self.mediaplayer.set_nsobject(int(self.winId()))
-        print("[VLC] play()")
-        self.mediaplayer.play()
-
-    def pause(self):
-        print("[VLC] pause()")
-        self.mediaplayer.pause()
-
-    def set_position(self, pos01: float):
-        p = max(0.0, min(1.0, float(pos01)))
-        print(f"[VLC] set_position {p:.3f}")
-        self.mediaplayer.set_position(p)
-
-    def set_time_ms(self, t_ms: int):
-        t = int(max(0, t_ms))
-        print(f"[VLC] set_time {t}ms")
-        self.mediaplayer.set_time(t)
 
 class IncidentPlayerVLC(QtWidgets.QWidget):
-    def __init__(self, api,alert_service, parent=None):
+    def __init__(self, api, alert_service, parent=None):
         super().__init__(parent)
         self.api = api
         self.alert_service = alert_service
@@ -1061,8 +1202,10 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self.vlc_instance = vlc.Instance(*vlc_opts)
         self.vlcw = VlcWidget(self.vlc_instance)
         self.videoSurface = VideoSurface(self.vlcw)
-        self.videoSurface.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
-                                        QtWidgets.QSizePolicy.Policy.Expanding)
+        self.videoSurface.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
 
         # Controls
         self.btnLive = QtWidgets.QPushButton('Go Live')
@@ -1077,8 +1220,10 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
 
         # LEFT PANE
         leftContainer = QtWidgets.QGroupBox("Alerts")
-        leftContainer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed,
-                                    QtWidgets.QSizePolicy.Policy.Expanding)
+        leftContainer.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Fixed,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
         leftContainer.setMinimumWidth(300)
         leftContainer.setMaximumWidth(340)
 
@@ -1103,8 +1248,10 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
 
         # Details inside player pane
         self.detailGroup = QtWidgets.QGroupBox("Details")
-        self.detailGroup.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
-                                       QtWidgets.QSizePolicy.Policy.Fixed)
+        self.detailGroup.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Preferred,
+            QtWidgets.QSizePolicy.Policy.Fixed,
+        )
         grid = QtWidgets.QGridLayout(self.detailGroup)
         grid.setContentsMargins(12, 8, 12, 12)
         grid.setHorizontalSpacing(24)
@@ -1176,7 +1323,6 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         rightLayout.addLayout(ctrls, 0)
         rightLayout.addWidget(self.detailGroup, 0)
 
-
         self.rightStack.addWidget(self.emptyPane)
         self.rightStack.addWidget(self.playerPane)
         self.rightStack.setCurrentIndex(0)
@@ -1193,60 +1339,15 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         outer = QtWidgets.QVBoxLayout(self)
         outer.setContentsMargins(6, 6, 6, 6)
         outer.setSpacing(6)
-        # outer.addWidget(splitter)
-        # --- Navigation bar ---
-        navBar = QtWidgets.QHBoxLayout()
-        navBar.setContentsMargins(6, 6, 6, 6)
-        navBar.setSpacing(8)
 
-        btnLiveView = QtWidgets.QPushButton("Live Incidents")
-        btnLiveView.setCheckable(True)
-        btnLiveView.setChecked(True)
-        btnHistory = QtWidgets.QPushButton("Events History")
-        btnHistory.setCheckable(True)
-        btnGeo = QtWidgets.QPushButton("Analytics")
-        btnGeo.setCheckable(True)
+        # Live page only; history/analytics in external navigation
+        livePage = QtWidgets.QWidget()
+        liveLayout = QtWidgets.QVBoxLayout(livePage)
+        liveLayout.setContentsMargins(0, 0, 0, 0)
+        liveLayout.setSpacing(0)
+        liveLayout.addWidget(splitter)
 
-        btnStyle = """
-        QPushButton {
-            background:#e5e7eb; border:none; border-radius:8px;
-            padding:6px 12px; font-weight:600;
-        }
-        QPushButton:checked { background:#10b981; color:white; }
-        """
-        btnLiveView.setStyleSheet(btnStyle)
-        btnHistory.setStyleSheet(btnStyle)
-        btnGeo.setStyleSheet(btnStyle) 
-
-        navBar.addWidget(btnLiveView)
-        navBar.addWidget(btnHistory)
-        navBar.addWidget(btnGeo)
-        navBar.addStretch(1)
-
-
-        # --- Main content stack ---
-        self.stack = QtWidgets.QStackedWidget()
-        self.livePage = QtWidgets.QWidget()
-        self.liveLayout = QtWidgets.QVBoxLayout(self.livePage)
-        self.liveLayout.setContentsMargins(0, 0, 0, 0)
-        self.liveLayout.addWidget(splitter)
-        self.historyPage = EventsHistoryPage(api=self.api, parent=self)
-        self.analyticsPage = GeoAnalyticsView(parent=self) 
-
-        self.stack.addWidget(self.livePage)
-        self.stack.addWidget(self.historyPage)
-        self.stack.addWidget(self.analyticsPage) 
-
-        # --- Combine all together ---
-        outer.addLayout(navBar)
-        outer.addWidget(self.stack)
-
-        # --- Navigation logic ---
-        btnLiveView.clicked.connect(lambda: self._switch_page(0, btnLiveView, btnHistory, btnGeo))
-        btnHistory.clicked.connect(lambda: self._switch_page(1, btnHistory, btnLiveView, btnGeo))
-        btnGeo.clicked.connect(lambda: self._switch_page(2, btnGeo, btnLiveView, btnHistory))
-
-
+        outer.addWidget(livePage)
 
         # State
         self.mode_live = False
@@ -1255,6 +1356,8 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self.current_camera: Optional[str] = None
         self.current_incident: Optional[str] = None
         self.current_status: str = "firing"
+        self.current_alert: Optional[dict] = None
+
 
         self._last_abs_t_ms: int = 0
         self._playlist_offset_ms: int = 0
@@ -1266,7 +1369,7 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self._live_sync.setInterval(800)
         self._live_sync.timeout.connect(self._maybe_sync_live_timeline)
 
-        #new
+        # grows DVR slider while paused/seeked
         self._dvr_growth = QTimer(self)
         self._dvr_growth.setInterval(1200)
         self._dvr_growth.timeout.connect(self._maybe_grow_dvr_range_only)
@@ -1284,7 +1387,6 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             print("[IncidentPlayer] Using cached alerts:", len(self.alert_service.alerts))
             self._on_alerts_updated(self.alert_service.alerts)
 
-
         # Connections
         self.btnLive.clicked.connect(self._go_live)
         self.slider.hovered.connect(self._on_slider_hover)
@@ -1292,16 +1394,58 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self.slider.draggedTo.connect(self._on_slider_drag_released)
         self.vlcw.positionChanged.connect(self._on_vlc_pos)
         self.vlcw.timeChanged.connect(self._on_vlc_time)
+        self.vlcw.ended.connect(self._on_vlc_end) 
         self.alertList.clicked.connect(self._on_pick_alert_from_list)
 
         self._show_player(False)
         self._set_idle()
-    
+    def _on_vlc_end(self):
+        print("[VLC] end reached (proxy.resolved=%s, alerts_empty=%s)"
+            % (self.proxy.resolved, self.alertModel.is_empty()))
+
+        # If incident is resolved and there are no *firing* alerts left,
+        # we can fully tear down the player and hide the panels.
+        if self.proxy.resolved:
+            have_firing = any(
+                (a.get("status") or "firing").lower() == "firing"
+                for a in self.alertModel._items
+            )
+
+            if not have_firing:
+                # Stop VLC
+                try:
+                    self.vlcw.mediaplayer.stop()
+                except Exception:
+                    pass
+
+                # Optionally drop the current resolved incident from the list,
+                # so the left list is also "clean".
+                if self.current_camera and self.current_incident:
+                    self.alertModel.remove_by_key(self.current_camera,
+                                                self.current_incident)
+
+                # Clear current state
+                self.current_camera = None
+                self.current_incident = None
+                self.current_alert = None
+                self.dvr_duration_ms = 0
+
+                # Reset UI + hide player
+                self._set_idle()
+                self._show_player(False)   # switch to NO-ALERTS pane
+                print("[MODE] DVR clip finished; no firing alerts → hiding player")
+                return
+
+        # Case 2: still have firing alerts or proxy not resolved — normal DVR mode
+        self.mode_live = False
+        self._set_live_badge(False)
+        print("[MODE] clip finished; staying in DVR mode")
+
+
 
     def showEvent(self, event):
         super().showEvent(event)
 
-        # Only run when *actually* visible in the QStackedWidget
         if not self.isVisible():
             return
 
@@ -1318,11 +1462,9 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
                 self._show_player(True)
                 self._play_alert(self.alertModel._items[0])
 
-
     def hideEvent(self, event):
         super().hideEvent(event)
 
-        # Only deactivate once
         if self._is_current_page:
             self._is_current_page = False
             self.allow_autoplay = False
@@ -1331,7 +1473,7 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             # Stop VLC safely
             try:
                 self.vlcw.mediaplayer.stop()
-            except:
+            except Exception:
                 pass
 
             # Hide video surface to stop painting
@@ -1339,12 +1481,9 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
 
             self._set_idle()
 
-
-
     def _on_alerts_updated(self, alerts: list):
         """Called when AlertService emits full list (on initial load)."""
         print(f"[AlertService] Full update: {len(alerts)} alerts")
-        # print("[DEBUG] alerts from AlertService:", alerts)
         self._apply_firing_list(alerts)
 
     def _on_alert_added(self, alert: dict):
@@ -1353,12 +1492,42 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self._merge_firing_deltas([alert])
 
     def _on_alert_removed(self, alert_id: str):
-        """Called when an alert is resolved/removed."""
         print(f"[AlertService] Alert removed: {alert_id}")
-        self.alertModel.set_alerts([
-            a for a in self.alertModel._items if a.get("alert_id") != alert_id
-        ])
+
+        is_current = (self.current_incident == alert_id)
+
+        new_items: list[dict] = []
+        for a in self.alertModel._items:
+            if a.get("incident_id") != alert_id:
+                new_items.append(a)
+            else:
+                # This is the removed alert
+                if is_current and self.proxy.dvr and len(self.proxy.dvr.segments) > 0:
+                    updated = dict(a)
+                    updated["status"] = "resolved"
+                    new_items.append(updated)
+                # else: drop it completely
+
+        self.alertModel.set_alerts(new_items)
+
+        if is_current:
+            self.current_status = "resolved"
+            # Update cached alert metadata if we still have it
+            self.current_alert = next(
+                (a for a in new_items if a.get("incident_id") == alert_id),
+                self.current_alert,
+            )
+            try:
+                self.proxy.mark_resolved()
+            except Exception as e:
+                print(f"[IncidentPlayer] mark_resolved failed: {e!r}")
+
+            # UI: DVR-only mode
+            self.mode_live = False
+            self._set_live_badge(False)
+
         self._update_right_pane_visibility()
+
 
 
     def _fetch_active_alerts_from_db(self):
@@ -1379,16 +1548,30 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             print(f"[DB] Error fetching alerts: {e}")
             return []
 
-
     # ───── NO-ALERTS helpers ─────
     def _show_player(self, on: bool):
         self.rightStack.setCurrentIndex(1 if on else 0)
         print(f"[UI] right pane -> {'PLAYER' if on else 'NO-ALERTS'}")
 
     def _update_right_pane_visibility(self):
-        have_any = not self.alertModel.is_empty()
-        print("_update_right_pane_visibility called have any",have_any)
-        if not have_any:
+        have_any_list = not self.alertModel.is_empty()
+
+        # We also keep the player visible if we have a "current" incident
+        # (even if it is resolved) and we still have a DVR buffer to scrub.
+        have_current_dvr = (
+            self.current_camera is not None
+            and self.current_incident is not None
+            and self.proxy.dvr is not None
+            and len(self.proxy.dvr.segments) > 0
+        )
+
+        print(
+            "_update_right_pane_visibility called: "
+            f"have_any_list={have_any_list}, have_current_dvr={have_current_dvr}"
+        )
+
+        if not have_any_list and not have_current_dvr:
+            # Nothing in the list and nothing to scrub → fully idle.
             try:
                 self.vlcw.mediaplayer.stop()
             except Exception:
@@ -1396,50 +1579,43 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             self._set_idle()
             self._show_player(False)
         else:
+            # Either we have firing alerts or a resolved incident with DVR buffer.
             self._show_player(True)
-    
-    def _switch_page(self, index: int, active_btn: QtWidgets.QPushButton, *others: QtWidgets.QPushButton):
-        self.stack.setCurrentIndex(index)
-        active_btn.setChecked(True)
-        for b in others:
-            b.setChecked(False)
-        print(f"[UI] switched to page index={index}")
 
 
     # ───── alerts helpers ─────
     def _key(self, it: dict) -> tuple[str, str]:
         return (str(it.get('camera') or ''), str(it.get('incident_id') or ''))
 
-    
     def _normalize_alert(self, it: dict) -> dict:
         meta = it.get("meta") or {}
         if isinstance(meta, str):
-            import json
             try:
                 meta = json.loads(meta)
             except Exception:
                 meta = {}
+        ended = (
+            it.get("ended_at") or
+            it.get("endsAt") or
+            it.get("endedAt")
+        )
         return {
             "camera": it.get("device_id") or it.get("camera"),
             "incident_id": it.get("alert_id") or it.get("incident_id"),
             "anomaly": it.get("alert_type") or it.get("anomaly"),
-            "subject": it.get("subject") or meta.get("subject"),   # 👈 added line
+            "subject": it.get("subject") or meta.get("subject"),
             "hls": it.get("hls"),
             "vod": it.get("vod"),
             "image_url": it.get("image_url"),
             "summary": it.get("summary"),
             "severity": it.get("severity"),
             "started_at": it.get("started_at") or it.get("startsAt"),
-            "ended_at": it.get("ended_at") or it.get("endsAt"),
-            "status": "firing" if not (it.get("ended_at") or it.get("endsAt")) else "resolved",
+            "ended_at": ended,
+            "status": "resolved" if ended else "firing",
         }
 
-
-
-
-    ##new
+    # Only expand DVR while paused/seeked (DVR mode). Never move the thumb.
     def _maybe_grow_dvr_range_only(self):
-        # Only expand the slider max while paused/seeked (DVR mode). Never move the thumb.
         if self.mode_live:
             self._dvr_growth.stop()
             return
@@ -1450,19 +1626,17 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
                 self.dvr_duration_ms = new_max
                 self.slider.setRange(0, self.dvr_duration_ms)
 
-
     def _apply_firing_list(self, firing: list[dict]):
         firing = [self._normalize_alert(it) for it in (firing or []) if it]
-        # print("[DEBUG] normalized firing list:", firing)
-        
-        # ⬇️ Only keep desired alert types
 
+        # only keep desired alert types that are still firing
         firing = [
             it for it in firing
             if (it.get("status") or "firing").lower() == "firing"
             and (it.get("anomaly") or "").lower() in self.cfg.ALLOWED_TYPES
         ]
 
+        # Track currently selected item (optional; same as before)
         sel = self.alertList.selectionModel().currentIndex() if self.alertList.selectionModel() else QtCore.QModelIndex()
         selected_inc = selected_cam = None
         if sel.isValid():
@@ -1473,43 +1647,50 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
             except Exception:
                 pass
 
-        self.alertModel.set_alerts(firing)
-        self._update_right_pane_visibility()
-
-        if selected_inc is not None:
-            for row, it in enumerate(firing):
-                if it.get('incident_id') == selected_inc and it.get('camera') == selected_cam:
-                    idx = self.alertModel.index(row, 0)
-                    self.alertList.selectionModel().select(idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect)
-                    self.alertList.setCurrentIndex(idx)
-                    break
-
         cur_cam = self.current_camera
         cur_inc = self.current_incident or self.cfg.INCIDENT
+        has_current = bool(cur_cam and cur_inc)
+
         still_there = any(
-            it.get('camera') == cur_cam and it.get('incident_id') == cur_inc
+            it.get('camera') == cur_cam and
+            (it.get('incident_id') or it.get('alert_id')) == cur_inc
             for it in firing
-        ) if (cur_cam and cur_inc) else False
+        ) if has_current else False
 
-        if (cur_cam and cur_inc) and not still_there:
-            if self.current_camera and self.current_incident:
-                self.alertModel.remove_by_key(self.current_camera, self.current_incident)
+        effective_list = list(firing)
+
+        # Case: the current incident is no longer "firing" in the upstream list → resolved
+        if has_current and not still_there:
             self.current_status = "resolved"
-            self.proxy.mark_resolved()
             try:
-                self.vlcw.mediaplayer.stop()
-            except Exception:
-                pass
+                self.proxy.mark_resolved()
+            except Exception as e:
+                print(f"[IncidentPlayer] mark_resolved failed in _apply_firing_list: {e!r}")
 
-            if firing:
-                self._show_player(True)
-                self._play_alert(firing[0])
-            else:
-                self._set_idle()
-                self._show_player(False)
+            # Keep it in the left list while we still have DVR segments
+            if self.proxy.dvr is not None and len(self.proxy.dvr.segments) > 0:
+                base = dict(self.current_alert or {})
+                base.setdefault("camera", cur_cam)
+                base.setdefault("incident_id", cur_inc)
+                base["status"] = "resolved"
+                if (base.get("anomaly") or "").lower() in self.cfg.ALLOWED_TYPES:
+                    key = (base.get("camera"), base.get("incident_id"))
+                    if not any(
+                        it.get("camera") == key[0] and it.get("incident_id") == key[1]
+                        for it in effective_list
+                    ):
+                        effective_list.append(base)
+
+            self.alertModel.set_alerts(effective_list)
+            self._update_right_pane_visibility()
             return
 
-        if firing and not still_there:
+        # Normal case: just "firing" alerts + (possibly) already kept resolved ones
+        self.alertModel.set_alerts(effective_list)
+        self._update_right_pane_visibility()
+
+        # Autoplay only when there was NO current incident at all (e.g., first load)
+        if firing and not has_current:
             if self.allow_autoplay:
                 self._show_player(True)
                 self._play_alert(firing[0])
@@ -1517,41 +1698,53 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
                 print("[IncidentPlayer] Ignored new alert (page not visible)")
 
 
-
     def _merge_firing_deltas(self, deltas: list[dict]):
         current = self.alertModel.as_dict()
         changed = False
 
-
-
         for raw in (deltas or []):
             it = self._normalize_alert(raw)
             if (it.get("anomaly") or "").lower() not in self.cfg.ALLOWED_TYPES:
-                continue  # ⬅️ skip other alert types
-            k = self._key(it)
+                continue  # skip other alert types
 
-            if it.get('status') == 'firing':
+            k = self._key(it)
+            status = (it.get("status") or "firing").lower()
+
+            if status == 'firing':
                 if current.get(k) != it:
                     current[k] = it
                     changed = True
             else:
-                if k in current:
-                    current.pop(k, None)
+                # resolved / non-firing
+                keep_on_left = (
+                    (self.current_camera, self.current_incident) == k
+                    and self.proxy.dvr is not None
+                    and len(self.proxy.dvr.segments) > 0
+                )
+                if keep_on_left:
+                    stored = dict(current.get(k, it))
+                    stored.update(it)
+                    stored["status"] = "resolved"
+                    current[k] = stored
                     changed = True
+                else:
+                    if k in current:
+                        current.pop(k, None)
+                        changed = True
 
-            if (self.current_camera, self.current_incident) == k and it.get('status') != 'firing':
+            if (self.current_camera, self.current_incident) == k and status != 'firing':
+                # Current incident resolved: stop polling upstream,
+                # but keep DVR and keep it in the list so UI doesn't "blink out".
                 self.current_status = "resolved"
+                self.current_alert = it
                 self.proxy.mark_resolved()
-                if self.current_camera and self.current_incident:
-                    self.alertModel.remove_by_key(self.current_camera, self.current_incident)
-                try:
-                    self.vlcw.mediaplayer.stop()
-                except Exception:
-                    pass
+                print("[IncidentPlayer] Current incident resolved via delta; DVR-only mode")
+                # Do NOT remove from model and do NOT stop the mediaplayer here.
 
         if not changed:
             return
 
+        # Same selection-restore logic as before
         sel = self.alertList.selectionModel().currentIndex() if self.alertList.selectionModel() else QtCore.QModelIndex()
         selected_key = None
         if sel.isValid():
@@ -1559,23 +1752,37 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
                 cur = self.alertModel.get(sel.row())
                 selected_key = self._key(cur)
             except Exception:
-                pass
+                selected_key = None
 
         self.alertModel.replace_with(current)
-        self._update_right_pane_visibility()
-
-        if selected_key:
-            items = list(current.values())
-            for row, it in enumerate(items):
-                if self._key(it) == selected_key:
-                    idx = self.alertModel.index(row, 0)
-                    self.alertList.selectionModel().select(idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect)
-                    self.alertList.setCurrentIndex(idx)
-                    break
 
         cur_cam = self.current_camera
         cur_inc = self.current_incident or self.cfg.INCIDENT
         has_current = (cur_cam and cur_inc and (cur_cam, cur_inc) in current)
+
+        # Restore selection for any remaining alert (same as before)
+        if self.alertList.selectionModel() and self.alertList.selectionModel().currentIndex().isValid():
+            selected_key = None
+            try:
+                cur = self.alertModel.get(self.alertList.selectionModel().currentIndex().row())
+                selected_key = self._key(cur)
+            except Exception:
+                selected_key = None
+
+            if selected_key:
+                items = list(current.values())
+                for row, it in enumerate(items):
+                    if self._key(it) == selected_key:
+                        idx = self.alertModel.index(row, 0)
+                        self.alertList.selectionModel().select(
+                            idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect
+                        )
+                        self.alertList.setCurrentIndex(idx)
+                        break
+
+        # Now decide visibility using the helper (which also checks DVR)
+        self._update_right_pane_visibility()
+
         if not has_current:
             items = list(current.values())
             if items:
@@ -1592,14 +1799,7 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
                 self._set_idle()
                 self._show_player(False)
 
-            # if items:
-            #     self._show_player(True)
-            #     self._play_alert(items[0])
-            # else:
-            #     try: self.vlcw.mediaplayer.stop()
-            #     except Exception: pass
-            #     self._set_idle()
-            #     self._show_player(False)
+
 
     # ───── helpers ─────
     def _freeze_ui(self, seconds: float = 0.8):
@@ -1643,6 +1843,11 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         self._play_alert(it)
 
     def _play_alert(self, it: dict):
+        # Remember the previous "current" before we switch
+        old_cam = self.current_camera
+        old_inc = self.current_incident
+        old_status = getattr(self, "current_status", "firing")
+
         # Normalize to ensure keys like 'camera', 'anomaly', 'incident_id', 'started_at' exist
         it = self._normalize_alert(it)
 
@@ -1650,9 +1855,15 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         inc = it.get('incident_id') or self.cfg.INCIDENT
         hls_url = it.get('hls') or None
 
+        # If we are leaving a resolved incident that we were keeping only
+        # for DVR scrubbing, remove it from the list now (no video anymore).
+        if old_cam and old_inc and old_status == "resolved":
+            self.alertModel.remove_by_key(old_cam, old_inc)
+
         self.current_camera = cam
         self.current_incident = inc
         self.current_status = (it.get('status') or 'firing').lower()
+        self.current_alert = it  # keep the latest metadata for this incident
 
         self.proxy.switch_source(camera=cam, incident=inc, upstream_hls=hls_url)
         self.setWindowTitle("AgGuard — Live Incidents")
@@ -1665,7 +1876,7 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
     def _update_details(self, it: dict):
         subject = it.get("subject")
         anom = it.get("anomaly") or "–"
-        if anom.lower() in ("intruding animal", "intruding_animal","climbing_fence") and subject:
+        if anom.lower() in ("intruding animal", "intruding_animal", "climbing_fence") and subject:
             anom = f"{anom.title()} ({subject.title()})"
 
         vals = [
@@ -1677,7 +1888,6 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         ]
         for lbl, v in zip(self.lblVals, vals):
             lbl.setText(v)
-
 
     # ───── slider / playback helpers ─────
     def _fmt(self, ms: int) -> str:
@@ -1691,10 +1901,16 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
     def _set_live_badge(self, live: bool):
         if live:
             self.liveBadge.setText("LIVE")
-            self.liveBadge.setStyleSheet("background:#10b981; color:white; padding:3px 8px; border-radius:12px; font-weight:700;")
+            self.liveBadge.setStyleSheet(
+                "background:#10b981; color:white; padding:3px 8px; "
+                "border-radius:12px; font-weight:700;"
+            )
         else:
             self.liveBadge.setText("DVR")
-            self.liveBadge.setStyleSheet("background:#9ca3af; color:white; padding:3px 8px; border-radius:12px; font-weight:700;")
+            self.liveBadge.setStyleSheet(
+                "background:#9ca3af; color:white; padding:3px 8px; "
+                "border-radius:12px; font-weight:700;"
+            )
 
     def _set_idle(self):
         self.mode_live = False
@@ -1709,15 +1925,24 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         print("[MODE] IDLE")
 
     def _go_live(self):
+        # If the proxy is already resolved, there is no live stream any more.
+        # We keep DVR scrubbing only – do not try to attach /live.m3u8.
+        if self.proxy.resolved:
+            print("[MODE] proxy resolved; live disabled, staying in DVR-only mode")
+            self.mode_live = False
+            self._set_live_badge(False)
+            return
+
         # resume live sync; stop DVR growth
         if not self._live_sync.isActive():
             self._live_sync.start()
         self._dvr_growth.stop()
 
-        if self.current_status == "resolved":
-            print("[MODE] resolved; not going live")
-            self._set_idle()
-            return
+        # ❌ OLD: blocked when current_status == "resolved"
+        # if self.current_status == "resolved":
+        #     print("[MODE] resolved; not going live")
+        #     self._set_idle()
+        #     return
 
         if not self.proxy.upstream_index:
             return
@@ -1791,8 +2016,10 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         if not self._dvr_growth.isActive():
             self._dvr_growth.start()
 
-        if self.current_status == "resolved" or not self.proxy.dvr:
-            print("[SEEK] ignored (no DVR while resolved)")
+        # IMPORTANT: allow seeking even when current_status == "resolved".
+        # Only block if there is no DVR.
+        if not self.proxy.dvr:
+            print("[SEEK] ignored (no DVR)")
             return
 
         t_ms = max(0, min(int(t_ms), max(0, self.dvr_duration_ms)))
@@ -1867,12 +2094,10 @@ class IncidentPlayerVLC(QtWidgets.QWidget):
         m, s = divmod(s, 60)
         txt = f"{h:d}:{m:02d}:{s:02d}" if h else f"{m:d}:{s:02d}"
         self.timeLeft.setText(txt)
-    
+
     def closeEvent(self, event: QtGui.QCloseEvent):
         try:
             self.proxy.stop()
         except Exception:
             pass
         super().closeEvent(event)
-
-

@@ -62,6 +62,22 @@ class Literal(Expr):
     def to_ir(self) -> Dict[str, Any]:
         return {"literal": self.value}
 
+@dataclass
+class Func(Expr):
+    name: str
+    args: list[Expr]
+
+    def compile(self, ctx: CompileCtx) -> str:
+        compiled = ", ".join(arg.compile(ctx) for arg in self.args)
+        return f"{self.name.upper()}({compiled})"
+
+    def to_ir(self) -> Dict[str, Any]:
+        return {
+            "func": self.name,
+            "args": [arg.to_ir() for arg in self.args]
+        }
+
+
 
 def ensure_expr(x: Any) -> Expr:
     """Coerce Python values to Literal, leave Expr as-is."""
@@ -85,7 +101,7 @@ class Predicate(Cond):
     op: BinOp
     right: Expr
     def __post_init__(self):
-        if not isinstance(self.left, (Col, Literal)) or not isinstance(self.right, (Col, Literal)):
+        if not isinstance(self.left, (Col, Literal,Func)) or not isinstance(self.right, (Col, Literal,Func)):
             raise TypeError("Predicate must compare columns and/or literals only")
     def compile(self, ctx: CompileCtx) -> str:
         return f"({self.left.compile(ctx)} {self.op.value} {self.right.compile(ctx)})"
@@ -109,12 +125,25 @@ class Any(Cond):  # OR
 # ---- Strict IR decoding ----
 
 def expr_from_ir(d: Dict[str, Any]) -> Expr:
-    """Decode a strict Expr IR object into Expr."""
-    if not isinstance(d, dict): raise TypeError("Expr leaf must be an object")
+    if not isinstance(d, dict):
+        raise TypeError("Expr leaf must be an object")
+
     keys = set(d.keys())
-    if keys == {"col"}: return Col(d["col"])
-    if keys == {"literal"}: return Literal(d["literal"])
-    raise ValueError("Expr leaf must be either {\"col\": name} or {\"literal\": value}")
+
+    if keys == {"col"}:
+        return Col(d["col"])
+
+    if keys == {"literal"}:
+        return Literal(d["literal"])
+
+    if keys == {"func", "args"}:
+        return Func(
+            d["func"],
+            [expr_from_ir(arg) for arg in d["args"]]
+        )
+
+    raise ValueError(f"Invalid Expr IR: {d}")
+
 
 
 def cond_from_ir(d: Dict[str, Any]) -> Cond:
