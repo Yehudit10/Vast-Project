@@ -22,6 +22,7 @@ _CT = {
     ".mp4": "video/mp4",
 }
 
+
 @dataclass
 class HlsConfig:
     # Fixed cadence; 4–6 fps works well for security UIs
@@ -52,6 +53,9 @@ class HlsRecorder:
     prefix: str
     cfg: HlsConfig = field(default_factory=HlsConfig)
 
+    # Minimum delay between stop() and any delete_*()
+    MIN_DELETE_DELAY: float = 120.0  # seconds
+
     _tmpdir: Optional[str] = None
     _proc: Optional[subprocess.Popen] = None
 
@@ -69,6 +73,10 @@ class HlsRecorder:
     _frame_shape: Optional[Tuple[int, int]] = None
     _first_frame_evt: threading.Event = field(default_factory=threading.Event)
 
+    # State after stop()
+    _stopped_tmpdir: Optional[str] = None
+    _stopped_at: Optional[float] = None
+
     # ────────────────────────────────────────────────────────────────────────
     # Public API
     # ────────────────────────────────────────────────────────────────────────
@@ -82,6 +90,10 @@ class HlsRecorder:
         self._frame_shape = (H, W)
         self._tmpdir = tempfile.mkdtemp(prefix="hls_")
         out = pathlib.Path(self._tmpdir)
+
+        # reset stop metadata on reuse
+        self._stopped_tmpdir = None
+        self._stopped_at = None
 
         seg_ext = ".m4s" if self.cfg.use_cmaf else ".ts"
         seg_pattern = str(out / f"segment_%05d{seg_ext}")
@@ -110,7 +122,10 @@ class HlsRecorder:
 
         # Optional silent audio (improves compatibility)
         if self.cfg.add_silent_audio:
-            cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
+            cmd += [
+                "-f", "lavfi",
+                "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+            ]
             map_args = ["-map", "0:v:0", "-map", "1:a:0"]
         else:
             map_args = ["-map", "0:v:0"]
@@ -184,8 +199,6 @@ class HlsRecorder:
         if not self._first_frame_evt.is_set():
             self._first_frame_evt.set()
 
-
-
     # ────────────────────────────────────────────────────────────────────────
     # Internals
     # ────────────────────────────────────────────────────────────────────────
@@ -195,8 +208,6 @@ class HlsRecorder:
         period = 1.0 / float(fps)
 
         # Wait for the first real frame to avoid initial black.
-        # Since your aggregator calls write_bgr() immediately after start(),
-        # this should trigger right away.
         self._first_frame_evt.wait(timeout=3.0)
 
         # If absolutely nothing arrived, we can still fall back to blank.
@@ -221,9 +232,6 @@ class HlsRecorder:
                     pass
             dt = time.perf_counter() - t0
             time.sleep(max(0.0, period - dt))
-    
-
-    
 
     def _parse_tail_refs(self, m3u8_path: pathlib.Path) -> list[str]:
         """
@@ -242,6 +250,7 @@ class HlsRecorder:
             # keep raw line (local filename)
             uris.append(os.path.basename(s))
         return uris
+
     def _make_publishable_index(self, m3u8_path: pathlib.Path, exist_names: set[str]) -> Optional[pathlib.Path]:
         """
         Create a temp 'index.publish.m3u8' that is identical to the local m3u8
@@ -292,8 +301,8 @@ class HlsRecorder:
         out: list[str] = ["#EXTM3U"]
         # normalize a few important headers; keep original others
         have_version = any(h.startswith("#EXT-X-VERSION:") for h in headers)
-        have_indep   = any(h.startswith("#EXT-X-INDEPENDENT-SEGMENTS") for h in headers)
-        have_target  = any(h.startswith("#EXT-X-TARGETDURATION:") for h in headers)
+        have_indep = any(h.startswith("#EXT-X-INDEPENDENT-SEGMENTS") for h in headers)
+        have_target = any(h.startswith("#EXT-X-TARGETDURATION:") for h in headers)
 
         if not have_version:
             out.append("#EXT-X-VERSION:6")
@@ -362,8 +371,6 @@ class HlsRecorder:
                     key = f"{self.prefix}/{p.name}"
                     if seen.get(key) == sig:
                         continue
-                    # Because ffmpeg uses -hls_flags temp_file, a segment appears atomically
-                    # when fully written; we can upload immediately.
                     self.s3.put_file(self.bucket, key, str(p), _CT.get(p.suffix.lower(), "application/octet-stream"))
                     seen[key] = sig
                     self._uploaded_keys.add(key)
@@ -384,14 +391,12 @@ class HlsRecorder:
                     if stat.st_size <= 0:
                         continue
 
-                    # Build set of locally existing segment names (what we can publish)
-                    existing = {q.name for q in segs}  # segs you already built in step 2
+                    existing = {q.name for q in segs}
                     if self.cfg.use_cmaf:
-                        existing |= {q.name for q in init_files}  # init.mp4 is allowed in MAP
+                        existing |= {q.name for q in init_files}
 
                     publishable = self._make_publishable_index(p, existing)
                     if not publishable:
-                        # Nothing safe to publish yet; try next loop
                         continue
 
                     pub_stat = publishable.stat()
@@ -403,7 +408,6 @@ class HlsRecorder:
                         self._uploaded_keys.add(key)
                         have_index = True
 
-
                 if have_index and have_init and not self._ready_evt.is_set():
                     self._ready_evt.set()
 
@@ -412,7 +416,6 @@ class HlsRecorder:
                 pass
 
             time.sleep(interval)
-
 
     def wait_ready(self, timeout: float = 6.0) -> bool:
         """Block until the playlist (+ init for CMAF) has been uploaded once (or timeout)."""
@@ -425,51 +428,11 @@ class HlsRecorder:
         finally:
             self._tmpdir = None
 
-   
-
-
     # ────────────────────────────────────────────────────────────────────────
-    # Playlist freezing / reconstruction for finalize
+    # Stop
     # ────────────────────────────────────────────────────────────────────────
-    def _build_temp_playlist(
-        self,
-        workdir: pathlib.Path,
-        segs_ts: list[pathlib.Path],
-        segs_m4s: list[pathlib.Path],
-        have_cmaf: bool,
-    ) -> Optional[pathlib.Path]:
-        """Create a local m3u8 referencing all segments we have."""
-        if have_cmaf:
-            if not segs_m4s:
-                return None
-            td = 1
-            p = workdir / "reconstructed.m3u8"
-            with p.open("w", encoding="utf-8") as f:
-                f.write("#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-PLAYLIST-TYPE:EVENT\n")
-                f.write("#EXT-X-INDEPENDENT-SEGMENTS\n")
-                f.write(f"#EXT-X-TARGETDURATION:{td}\n")
-                if (workdir / "init.mp4").exists():
-                    f.write('#EXT-X-MAP:URI="init.mp4"\n')
-                for s in segs_m4s:
-                    f.write("#EXTINF:1.000,\n")
-                    f.write(f"{s.name}\n")
-            return p
-        else:
-            if not segs_ts:
-                return None
-            td = 1
-            p = workdir / "reconstructed.m3u8"
-            with p.open("w", encoding="utf-8") as f:
-                f.write("#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-PLAYLIST-TYPE:EVENT\n")
-                f.write("#EXT-X-INDEPENDENT-SEGMENTS\n")
-                f.write(f"#EXT-X-TARGETDURATION:{td}\n")
-                for s in segs_ts:
-                    f.write("#EXTINF:1.000,\n")
-                    f.write(f"{s.name}\n")
-            return p
-        
     def stop(self):
-        """Stop all threads and kill ffmpeg reliably."""
+        """Stop all threads and kill ffmpeg reliably (no deletion here)."""
         try:
             # Stop feeder
             self._feeder_stop.set()
@@ -485,7 +448,7 @@ class HlsRecorder:
             if self._proc and self._proc.stdin:
                 try:
                     self._proc.stdin.close()
-                except:
+                except Exception:
                     pass
 
             # HARD kill ffmpeg no matter what
@@ -499,30 +462,23 @@ class HlsRecorder:
                     try:
                         self._proc.kill()
                         self._proc.wait(timeout=0.5)
-                    except:
+                    except Exception:
                         pass
 
         finally:
             # Always mark tmpdir as stopped
             self._stopped_tmpdir = self._tmpdir
+            self._stopped_at = time.time()
             self._tmpdir = None
             self._proc = None
+            print(f"[HlsRecorder] stop() called; _stopped_at={self._stopped_at:.3f}, dir={self._stopped_tmpdir}")
 
-
-
-
-
-
+    # ────────────────────────────────────────────────────────────────────────
+    # Playlist freezing / reconstruction for finalize (unchanged)
+    # ────────────────────────────────────────────────────────────────────────
     def _freeze_local_playlist(self, m3u8_path: pathlib.Path, workdir: pathlib.Path) -> pathlib.Path:
-        """
-        Produce a 'finalize.m3u8' that:
-          - keeps essential headers (normalized),
-          - rewrites URIs to local filenames,
-          - appends #EXT-X-ENDLIST,
-          - avoids HTTP or proxy (/seg?u=) paths so ffmpeg won't poll.
-        """
         def _maybe_localize_uri(uri: str) -> str:
-            m = re.search(r'[?&]u=([^&]+)', uri)
+            m = re.search(r"[?&]u=([^&]+)", uri)
             inner = m.group(1) if m else uri
             u = urlparse(inner)
             candidate = os.path.basename(u.path if u.scheme in ("http", "https") else inner)
@@ -555,9 +511,7 @@ class HlsRecorder:
                         body.append(f'#EXT-X-MAP:URI="{_maybe_localize_uri(m.group(1))}"')
                 elif s.startswith("#EXTINF:"):
                     body.append(s)
-                # ignore PROGRAM-DATE-TIME, PLAYLIST-TYPE, MEDIA-SEQUENCE, etc.
                 continue
-            # media URI
             body.append(_maybe_localize_uri(s))
 
         frozen = ["#EXTM3U", f"#EXT-X-VERSION:{version}"]
@@ -571,34 +525,53 @@ class HlsRecorder:
         out_path.write_text("\n".join(frozen) + "\n", encoding="utf-8")
         return out_path
 
+    # ────────────────────────────────────────────────────────────────────────
+    # Deletion helpers (with hard guard)
+    # ────────────────────────────────────────────────────────────────────────
+    def _can_delete(self, kind: str) -> bool:
+        """
+        Common guard: we only allow delete if stop() was called and at least
+        MIN_DELETE_DELAY seconds have passed.
+        """
+        if self._stopped_at is None:
+            print(f"[HlsRecorder] ⛔ {kind}: stop() was never called → NOT deleting.")
+            return False
+
+        dt = time.time() - self._stopped_at
+        if dt < self.MIN_DELETE_DELAY:
+            print(
+                f"[HlsRecorder] ⏳ {kind}: only {dt:.1f}s since stop "
+                f"(need {self.MIN_DELETE_DELAY}s) → NOT deleting."
+            )
+            return False
+
+        print(f"[HlsRecorder] ✅ {kind}: {dt:.1f}s since stop → OK to delete.")
+        return True
+
     def delete_hls_files_only(self) -> None:
         """
         Delete all HLS-related files (.ts, .m3u8, .m4s, .aac, .wav, .mp3, .tmp)
         from the directory where HLS was recorded.
         """
+        if not self._can_delete("local delete"):
+            return
 
-        # Use the directory saved in stop()
-        base = getattr(self, "_stopped_tmpdir", None) or self._tmpdir
+        base = self._stopped_tmpdir or self._tmpdir
         if not base or not os.path.isdir(base):
             print("[HLS DEBUG] No directory to clean:", base)
             return
 
         base_dir = pathlib.Path(base)
 
-        exts_to_delete = {
-            ".ts", ".m3u8", ".m4s",
-            ".aac", ".wav", ".mp3",
-            ".tmp"
-        }
+        exts_to_delete = {".ts", ".m3u8", ".m4s", ".aac", ".wav", ".mp3", ".tmp"}
 
-        print("\n[HLS DEBUG] BEFORE DELETE:")
+        print("\n[HLS DEBUG] BEFORE DELETE (local):")
         for p in base_dir.iterdir():
             print(" -", p.name)
 
         for p in base_dir.iterdir():
             if not p.is_file():
                 continue
-
             suffix = p.suffix.lower()
             if suffix in exts_to_delete or p.name.endswith(".tmp") or p.name == "init.mp4":
                 try:
@@ -606,27 +579,26 @@ class HlsRecorder:
                 except Exception as e:
                     print(f"[HlsRecorder] ⚠️ Failed to delete {p}: {e}")
 
-        print("\n[HLS DEBUG] AFTER DELETE:")
+        print("\n[HLS DEBUG] AFTER DELETE (local):")
         for p in base_dir.iterdir():
             print(" -", p.name)
 
         print(f"[HlsRecorder] ✅ Deleted HLS files in {base}")
-    
+
     def delete_remote_hls(self):
         """
         Delete ALL uploaded HLS fragments from S3/MinIO except final.mp4.
-        Uses S3Client.delete_prefix for efficiency.
+        Uses the underlying boto client for efficiency.
         """
+        if not self._can_delete("remote delete"):
+            return
+
         prefix = self.prefix.rstrip("/") + "/"
 
         print("[HLS] Deleting remote HLS under prefix:", prefix)
 
-        # 1️⃣ List objects under this prefix
         try:
-            resp = self.s3.s3.list_objects_v2(
-                Bucket=self.bucket,
-                Prefix=prefix
-            )
+            resp = self.s3.s3.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
         except Exception as e:
             print("[HLS] ❌ Failed to list remote objects:", e)
             return
@@ -636,7 +608,6 @@ class HlsRecorder:
             print("[HLS] (no remote objects found)")
             return
 
-        # 2️⃣ Build deletion list EXCEPT final.mp4
         to_delete = []
         for obj in objects:
             key = obj["Key"]
@@ -648,13 +619,8 @@ class HlsRecorder:
             print("[HLS] No HLS fragments to delete (only final.mp4 exists).")
             return
 
-        # 3️⃣ Batch delete
         try:
-            self.s3.s3.delete_objects(
-                Bucket=self.bucket,
-                Delete={"Objects": to_delete}
-            )
+            self.s3.s3.delete_objects(Bucket=self.bucket, Delete={"Objects": to_delete})
             print(f"[HLS] ✅ Deleted {len(to_delete)} remote HLS objects.")
         except Exception as e:
             print("[HLS] ❌ Failed remote batch delete:", e)
-
